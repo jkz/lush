@@ -27,6 +27,14 @@ import (
 	"io"
 )
 
+type CmdStatus uint
+
+const (
+	Preparation CmdStatus = iota
+	Running
+	Done
+)
+
 // A shell command state similar to os/exec.Cmd
 type Cmd interface {
 	Id() CmdId
@@ -46,6 +54,7 @@ type Cmd interface {
 	SetStdout(w io.Writer)
 	// Connect the stderr to this writer.
 	SetStderr(w io.Writer)
+	Status() CmdStatus
 }
 
 type Session interface {

@@ -39,6 +39,7 @@ func ParseCmdId(idstr string) (CmdId, error) {
 type cmd struct {
 	id      CmdId
 	execCmd *exec.Cmd
+	status  CmdStatus
 }
 
 func (c *cmd) Id() CmdId {
@@ -54,11 +55,21 @@ func (c *cmd) Argv() []string {
 }
 
 func (c *cmd) Run() error {
-	return c.execCmd.Run()
+	err := c.execCmd.Run()
+	if err != nil {
+		return err
+	}
+	c.status = Done
+	return nil
 }
 
 func (c *cmd) Start() error {
-	return c.execCmd.Start()
+	err := c.execCmd.Start()
+	if err != nil {
+		return err
+	}
+	c.status = Running
+	return nil
 }
 
 func (c *cmd) Wait() error {
@@ -75,4 +86,16 @@ func (c *cmd) SetStdout(w io.Writer) {
 
 func (c *cmd) SetStderr(w io.Writer) {
 	c.execCmd.Stderr = w
+}
+
+func (c *cmd) Status() CmdStatus {
+	return c.status
+}
+
+func (s CmdStatus) Started() bool {
+	return s > Preparation
+}
+
+func (s CmdStatus) Finished() bool {
+	return s > Running
 }
