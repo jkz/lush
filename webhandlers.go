@@ -21,6 +21,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 
 	"github.com/hraban/lush/liblush"
@@ -31,12 +32,22 @@ var tmplRoot = template.Must(template.New("/").Parse(`
 <body>
 {{with .}}
 {{range .}}
-<li><form method=post action=/{{.}}/start>{{.}} <button>start</li>
+<li><form method=post action=/{{.}}/start>{{.}} <button>start</form></li>
 {{end}}
 {{else}}
 <p>No active commands
 {{end}}
-<p><form method=post action=/1234/start><button>test</p>
+<h1>New command</h1>
+<p><form method=post action=/new>
+ name <input name=name><br>
+ args:
+   <input size=10 name=arg1>
+   <input size=10 name=arg2>
+   <input size=10 name=arg3><br>
+ <button>prepare</button>
+ </form>
+<h1>misc</h1>
+<p><form method=post action=/1234/start><button>test starting fake id</form>
 </body>
 `))
 
@@ -63,9 +74,25 @@ func handlePostStart(ctx *web.Context, idstr string) (string, error) {
 	return "<a href=/>continue", nil
 }
 
+func handlePostNew(ctx *web.Context) (string, error) {
+	s := ctx.User.(liblush.Session)
+	argv := []string{}
+	for i := 1; ; i++ {
+		key := fmt.Sprintf("arg%d", i)
+		val := ctx.Params[key]
+		if val == "" {
+			break
+		}
+		argv = append(argv, val)
+	}
+	s.NewCommand(ctx.Params["name"], argv...)
+	return "<a href=/>continue", nil
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *web.Server) {
 		s.Get(`/`, handleGetRoot)
 		s.Post(`/(\d+)/start`, handlePostStart)
+		s.Post(`/new`, handlePostNew)
 	})
 }
