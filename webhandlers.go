@@ -31,11 +31,12 @@ var tmplRoot = template.Must(template.New("/").Parse(`
 <body>
 {{with .}}
 {{range .}}
-<li>{{.}}</li>
+<li><form method=post action=/{{.}}/start>{{.}} <button>start</li>
 {{end}}
 {{else}}
 <p>No active commands
 {{end}}
+<p><form method=post action=/1234/start><button>test</p>
 </body>
 `))
 
@@ -48,8 +49,23 @@ func handleGetRoot(ctx *web.Context) (string, error) {
 	return "", nil
 }
 
+func handlePostStart(ctx *web.Context, idstr string) (string, error) {
+	id, _ := liblush.ParseCmdId(idstr)
+	s := ctx.User.(liblush.Session)
+	c := s.GetCommand(id)
+	if c == nil {
+		return "", web.WebError{404, "no such command: " + idstr}
+	}
+	err := c.Start()
+	if err != nil {
+		return err.Error(), nil
+	}
+	return "<a href=/>continue", nil
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *web.Server) {
-		s.Get("/", handleGetRoot)
+		s.Get(`/`, handleGetRoot)
+		s.Post(`/(\d+)/start`, handlePostStart)
 	})
 }
