@@ -21,6 +21,7 @@
 package liblush
 
 import (
+	"fmt"
 	"io"
 	"os/exec"
 )
@@ -28,6 +29,12 @@ import (
 // Guaranteed to be unique for every command at one specific point in time but
 // once a command is cleaned up another may reuse his id.
 type CmdId int64
+
+func ParseCmdId(idstr string) (CmdId, error) {
+	var i int64
+	_, err := fmt.Sscan(idstr, &i)
+	return CmdId(i), err
+}
 
 type cmd struct {
 	id      CmdId
