@@ -32,7 +32,14 @@ var tmplts = template.Must(template.ParseGlob("templates/*.html"))
 
 func handleGetRoot(ctx *web.Context) (string, error) {
 	s := ctx.User.(liblush.Session)
-	err := tmplts.ExecuteTemplate(ctx, "/", s.GetCommandIds())
+	c := make(chan liblush.Cmd)
+	go func() {
+		for _, id := range s.GetCommandIds() {
+			c <- s.GetCommand(id)
+		}
+		close(c)
+	}()
+	err := tmplts.ExecuteTemplate(ctx, "/", c)
 	if err != nil {
 		return "", err
 	}

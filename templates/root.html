@@ -5,9 +5,12 @@
 </head>
 <body>
 {{with .}}
+<ol style='list-style: none;'>
 {{range .}}
-<li><form method=post action=/{{.}}/start>{{.}} <button>start</form></li>
+<li><form method=post action="/{{.Id}}/start">{{.Id}}:
+    <tt>{{range .Argv}}{{.}} {{end}}</tt> <button>start</form></li>
 {{end}}
+</ol>
 {{else}}
 <p>No active commands
 {{end}}
