@@ -45,7 +45,10 @@ func (s *session) NewCommand(name string, arg ...string) Cmd {
 }
 
 func (s *session) GetCommand(id CmdId) Cmd {
-	return s.cmds[id]
+	if c, ok := s.cmds[id]; ok {
+		return c
+	}
+	return nil
 }
 
 func (s *session) GetCommandIds() []CmdId {
