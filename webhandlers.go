@@ -28,32 +28,11 @@ import (
 	"github.com/hraban/web"
 )
 
-var tmplRoot = template.Must(template.New("/").Parse(`
-<body>
-{{with .}}
-{{range .}}
-<li><form method=post action=/{{.}}/start>{{.}} <button>start</form></li>
-{{end}}
-{{else}}
-<p>No active commands
-{{end}}
-<h1>New command</h1>
-<p><form method=post action=/new>
- name <input name=name><br>
- args:
-   <input size=10 name=arg1>
-   <input size=10 name=arg2>
-   <input size=10 name=arg3><br>
- <button>prepare</button>
- </form>
-<h1>misc</h1>
-<p><form method=post action=/1234/start><button>test starting fake id</form>
-</body>
-`))
+var tmplts = template.Must(template.ParseGlob("templates/*.html"))
 
 func handleGetRoot(ctx *web.Context) (string, error) {
 	s := ctx.User.(liblush.Session)
-	err := tmplRoot.Execute(ctx, s.GetCommandIds())
+	err := tmplts.ExecuteTemplate(ctx, "/", s.GetCommandIds())
 	if err != nil {
 		return "", err
 	}
