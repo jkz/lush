@@ -21,20 +21,35 @@
 package main
 
 import (
+	"html/template"
+
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
 
-var serverinitializers []func(*web.Server)
+var tmplRoot = template.Must(template.New("/").Parse(`
+<body>
+{{with .}}
+{{range .}}
+<li>{{.}}</li>
+{{end}}
+{{else}}
+<p>No active commands
+{{end}}
+</body>
+`))
 
-func main() {
-	s := liblush.NewSession()
-	s.NewCommand("/bin/echo", "test", "foobar")
-	server := web.NewServer()
-	server.User = s
-	for _, f := range serverinitializers {
-		f(server)
+func handleGetRoot(ctx *web.Context) (string, error) {
+	s := ctx.User.(liblush.Session)
+	err := tmplRoot.Execute(ctx, s.GetCommandIds())
+	if err != nil {
+		return "", err
 	}
-	server.Run("localhost:8081")
-	return
+	return "", nil
+}
+
+func init() {
+	serverinitializers = append(serverinitializers, func(s *web.Server) {
+		s.Get("/", handleGetRoot)
+	})
 }
