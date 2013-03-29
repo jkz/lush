@@ -45,6 +45,14 @@ func (c *cmd) Id() CmdId {
 	return c.id
 }
 
+func (c *cmd) Name() string {
+	return c.execCmd.Path
+}
+
+func (c *cmd) Argv() []string {
+	return c.execCmd.Args
+}
+
 func (c *cmd) Run() error {
 	return c.execCmd.Run()
 }

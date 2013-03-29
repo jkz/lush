@@ -30,6 +30,8 @@ import (
 // A shell command state similar to os/exec.Cmd
 type Cmd interface {
 	Id() CmdId
+	Name() string
+	Argv() []string
 	// Run command and wait for it to exit
 	Run() error
 	// Start the command in the background. Follow by Wait() to get exit status
