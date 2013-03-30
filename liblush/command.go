@@ -24,23 +24,27 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"sync"
 )
 
-type simplestat int
+type cmdstatus struct {
+	phase int
+	err   error
+}
 
-// Status just an int alias (for now)
+// command life-time phases
 const (
-	preparation simplestat = iota
+	preparation = iota
 	running
 	done
 )
 
-func (s simplestat) Started() bool {
-	return s > preparation
+func (s cmdstatus) Started() bool {
+	return s.phase > preparation
 }
 
-func (s simplestat) Finished() bool {
-	return s > running
+func (s cmdstatus) Finished() bool {
+	return s.phase > running
 }
 
 // Guaranteed to be unique for every command at one specific point in time but
@@ -56,7 +60,9 @@ func ParseCmdId(idstr string) (CmdId, error) {
 type cmd struct {
 	id      CmdId
 	execCmd *exec.Cmd
-	status  simplestat
+	status  cmdstatus
+	// Released when command finishes
+	done sync.WaitGroup
 }
 
 func (c *cmd) Id() CmdId {
@@ -72,25 +78,23 @@ func (c *cmd) Argv() []string {
 }
 
 func (c *cmd) Run() error {
-	err := c.execCmd.Run()
-	if err != nil {
-		return err
-	}
-	c.status = done
-	return nil
+	defer func() {
+		c.status.phase = done
+		c.done.Done()
+	}()
+	c.status.phase = running
+	c.status.err = c.execCmd.Run()
+	return c.status.err
 }
 
 func (c *cmd) Start() error {
-	err := c.execCmd.Start()
-	if err != nil {
-		return err
-	}
-	c.status = running
+	go c.Run()
 	return nil
 }
 
 func (c *cmd) Wait() error {
-	return c.execCmd.Wait()
+	c.done.Wait()
+	return c.status.err
 }
 
 func (c *cmd) SetStdin(r io.Reader) {

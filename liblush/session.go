@@ -40,6 +40,7 @@ func (s *session) NewCommand(name string, arg ...string) Cmd {
 		id:      s.newid(),
 		execCmd: exec.Command(name, arg...),
 	}
+	c.done.Add(1)
 	s.cmds[c.id] = c
 	return c
 }
