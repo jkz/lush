@@ -23,12 +23,23 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"net/url"
 
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
 
 var tmplts = template.Must(template.ParseGlob("templates/*.html"))
+
+func redirect(ctx *web.Context, loc *url.URL) {
+	if _, ok := ctx.Params["noredirect"]; ok {
+		return
+	}
+	loc = ctx.Request.URL.ResolveReference(loc)
+	ctx.Header().Set("Location", loc.String())
+	ctx.WriteHeader(303)
+	fmt.Fprintf(ctx, "redirecting to %s", loc)
+}
 
 func handleGetRoot(ctx *web.Context) (string, error) {
 	s := ctx.User.(liblush.Session)
