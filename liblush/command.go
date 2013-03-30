@@ -47,6 +47,10 @@ func (s cmdstatus) Exited() bool {
 	return s.phase > running
 }
 
+func (s cmdstatus) Success() bool {
+	return s.err == nil
+}
+
 // Guaranteed to be unique for every command at one specific point in time but
 // once a command is cleaned up another may reuse his id.
 type CmdId int64

@@ -30,6 +30,7 @@ import (
 type CmdStatus interface {
 	Started() bool
 	Exited() bool
+	Success() bool
 }
 
 // A shell command state similar to os/exec.Cmd
