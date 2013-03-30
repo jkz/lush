@@ -9,7 +9,15 @@
 {{range .}}
 <li><form method=post action="/{{.Id}}/start">{{.Id}}:
     <tt>{{range .Argv}}{{.}} {{end}}</tt>
-    {{if not .Status.Started}} <button>start{{end}}
+    {{if .Status.Finished}}
+        ✓
+    {{else}}
+        {{if .Status.Started}}
+            ⌚
+        {{else}}
+            <button>start</button>
+        {{end}}
+    {{end}}
 </form></li>
 {{end}}
 </ol>
