@@ -68,7 +68,8 @@ func handlePostStart(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return err.Error(), nil
 	}
-	return "<a href=/>continue", nil
+	redirect(ctx, &url.URL{Path: "/"})
+	return "", nil
 }
 
 func handlePostNew(ctx *web.Context) (string, error) {
@@ -83,7 +84,8 @@ func handlePostNew(ctx *web.Context) (string, error) {
 		argv = append(argv, val)
 	}
 	s.NewCommand(ctx.Params["name"], argv...)
-	return "<a href=/>continue", nil
+	redirect(ctx, &url.URL{Path: "/"})
+	return "", nil
 }
 
 func init() {
