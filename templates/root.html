@@ -2,32 +2,40 @@
 <html>
 <head>
     <title>lush - Luyat shell</title>
+
+<style>
+
+.start-btn {
+    display: inline;
+}
+
+</style>
+
 </head>
 <body>
-{{with .}}
-<ol style='list-style: none;'>
+
 {{range .}}
-<li><form method=post action="/{{.Id}}/start">{{.Id}}:
-    <tt>{{range .Argv}}{{.}} {{end}}</tt>
-    {{if .Status.Exited}}
-        {{if .Status.Success}}
-            ✓
-        {{else}}
-            ✗
-        {{end}}
+<div class="cmd" id="cmd{{.Id}}">
+{{.Id}}:
+<tt>{{range .Argv}}{{.}} {{end}}</tt>
+{{if .Status.Exited}}
+    {{if .Status.Success}}
+        ✓
     {{else}}
-        {{if .Status.Started}}
-            ⌚
-        {{else}}
-            <button>start</button>
-        {{end}}
+        ✗
     {{end}}
-</form></li>
-{{end}}
-</ol>
 {{else}}
-<p>No active commands
+    {{if .Status.Started}}
+        ⌚
+    {{else}}
+        <form method=post action="/{{.Id}}/start" class="start-btn">
+            <button>start</button>
+        </form>
+    {{end}}
 {{end}}
+</div>
+{{end}}
+
 <h1>New command</h1>
 <p><form method=post action=/new>
  name <input name=name><br>
