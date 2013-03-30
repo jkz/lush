@@ -43,7 +43,7 @@ func (s cmdstatus) Started() bool {
 	return s.phase > preparation
 }
 
-func (s cmdstatus) Finished() bool {
+func (s cmdstatus) Exited() bool {
 	return s.phase > running
 }
 
