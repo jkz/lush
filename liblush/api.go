@@ -27,13 +27,10 @@ import (
 	"io"
 )
 
-type CmdStatus uint
-
-const (
-	Preparation CmdStatus = iota
-	Running
-	Done
-)
+type CmdStatus interface {
+	Started() bool
+	Finished() bool
+}
 
 // A shell command state similar to os/exec.Cmd
 type Cmd interface {

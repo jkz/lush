@@ -26,6 +26,23 @@ import (
 	"os/exec"
 )
 
+type simplestat int
+
+// Status just an int alias (for now)
+const (
+	preparation simplestat = iota
+	running
+	done
+)
+
+func (s simplestat) Started() bool {
+	return s > preparation
+}
+
+func (s simplestat) Finished() bool {
+	return s > running
+}
+
 // Guaranteed to be unique for every command at one specific point in time but
 // once a command is cleaned up another may reuse his id.
 type CmdId int64
@@ -39,7 +56,7 @@ func ParseCmdId(idstr string) (CmdId, error) {
 type cmd struct {
 	id      CmdId
 	execCmd *exec.Cmd
-	status  CmdStatus
+	status  simplestat
 }
 
 func (c *cmd) Id() CmdId {
@@ -59,7 +76,7 @@ func (c *cmd) Run() error {
 	if err != nil {
 		return err
 	}
-	c.status = Done
+	c.status = done
 	return nil
 }
 
@@ -68,7 +85,7 @@ func (c *cmd) Start() error {
 	if err != nil {
 		return err
 	}
-	c.status = Running
+	c.status = running
 	return nil
 }
 
@@ -90,12 +107,4 @@ func (c *cmd) SetStderr(w io.Writer) {
 
 func (c *cmd) Status() CmdStatus {
 	return c.status
-}
-
-func (s CmdStatus) Started() bool {
-	return s > Preparation
-}
-
-func (s CmdStatus) Finished() bool {
-	return s > Running
 }
