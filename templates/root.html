@@ -10,7 +10,11 @@
 <li><form method=post action="/{{.Id}}/start">{{.Id}}:
     <tt>{{range .Argv}}{{.}} {{end}}</tt>
     {{if .Status.Exited}}
-        ✓
+        {{if .Status.Success}}
+            ✓
+        {{else}}
+            ✗
+        {{end}}
     {{else}}
         {{if .Status.Started}}
             ⌚
