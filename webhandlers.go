@@ -75,9 +75,9 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	}
 	stdout := make([]byte, 1000)
 	stderr := make([]byte, 1000)
-	n := c.LastStdout(stdout)
+	n := c.Stdout().Last(stdout)
 	stdout = stdout[:n]
-	n = c.LastStderr(stderr)
+	n = c.Stderr().Last(stderr)
 	stderr = stderr[:n]
 	tmplCtx := cmdctx{c, string(stdout), string(stderr)}
 	err := tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)

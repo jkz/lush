@@ -74,11 +74,10 @@ type cmd struct {
 	execCmd *exec.Cmd
 	status  cmdstatus
 	// Released when command finishes
-	done sync.WaitGroup
-	// last n bytes of stdout and stderr
-	fifoout ringbuf
-	fifoerr ringbuf
-	inpipe  io.WriteCloser
+	done   sync.WaitGroup
+	stdout *richpipe
+	stderr *richpipe
+	inpipe io.WriteCloser
 }
 
 func (c *cmd) Id() CmdId {
@@ -106,16 +105,6 @@ func (c *cmd) Run() error {
 			return err
 		}
 	}
-	if c.execCmd.Stdout == nil {
-		c.execCmd.Stdout = c.fifoout
-	} else {
-		c.execCmd.Stdout = io.MultiWriter(c.execCmd.Stdout, c.fifoout)
-	}
-	if c.execCmd.Stderr == nil {
-		c.execCmd.Stderr = c.fifoerr
-	} else {
-		c.execCmd.Stderr = io.MultiWriter(c.execCmd.Stderr, c.fifoerr)
-	}
 	now := time.Now()
 	c.status.started = &now
 	c.status.err = c.execCmd.Run()
@@ -136,24 +125,16 @@ func (c *cmd) SetStdin(r io.Reader) {
 	c.execCmd.Stdin = r
 }
 
-func (c *cmd) SetStdout(w io.Writer) {
-	c.execCmd.Stdout = w
+func (c *cmd) Stdout() OutStream {
+	return c.stdout
 }
 
-func (c *cmd) SetStderr(w io.Writer) {
-	c.execCmd.Stderr = w
+func (c *cmd) Stderr() OutStream {
+	return c.stderr
 }
 
 func (c *cmd) Status() CmdStatus {
 	return c.status
-}
-
-func (c *cmd) LastStdout(p []byte) int {
-	return c.fifoout.Last(p)
-}
-
-func (c *cmd) LastStderr(p []byte) int {
-	return c.fifoerr.Last(p)
 }
 
 // Create new ringbuffer and copy the old data over. Not a pretty nor an
@@ -166,11 +147,6 @@ func resize(r ringbuf, i int) ringbuf {
 	buf = buf[:n]
 	r2.Write(buf)
 	return r2
-}
-
-func (c *cmd) SetFifoSize(bytes int) {
-	c.fifoout = resize(c.fifoout, bytes)
-	c.fifoerr = resize(c.fifoerr, bytes)
 }
 
 func (c *cmd) SendToStdin(data []byte) (n int64, err error) {
@@ -191,12 +167,24 @@ func (c *cmd) CloseStdin() error {
 	return c.inpipe.Close()
 }
 
+type devnull struct{}
+
+func (d devnull) Write(data []byte) (int, error) {
+	return len(data), nil
+}
+
+// stdout and stderr data is discarded by default, call Stdout/err().PipeTo()
+// to save
 func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
 	c := &cmd{
 		id:      id,
 		execCmd: execcmd,
-		fifoout: newRingbuf(1000),
-		fifoerr: newRingbuf(1000),
+		stdout:  newRichPipe(1000),
+		stderr:  newRichPipe(1000),
 	}
+	c.stdout.PipeTo(devnull{})
+	c.stderr.PipeTo(devnull{})
+	c.execCmd.Stdout = c.stdout
+	c.execCmd.Stderr = c.stderr
 	return c
 }

@@ -38,6 +38,14 @@ type CmdStatus interface {
 	Err() error
 }
 
+// Output stream of a command
+type OutStream interface {
+	// Send all output to this writer. Output is blocked until this method is
+	// called.
+	PipeTo(w io.Writer)
+	Last(p []byte) int
+}
+
 // A shell command state similar to os/exec.Cmd
 type Cmd interface {
 	Id() CmdId
@@ -53,18 +61,9 @@ type Cmd interface {
 	// the command. If this method is not called the stdin can be controlled
 	// explicitly using the other stdin related methods.
 	SetStdin(r io.Reader)
-	// Connect the stdout to this writer.
-	SetStdout(w io.Writer)
-	// Connect the stderr to this writer.
-	SetStderr(w io.Writer)
+	Stdout() OutStream
+	Stderr() OutStream
 	Status() CmdStatus
-	// Last n bytes of stdout. Returns the number of bytes written to the start
-	// of p.
-	LastStdout(p []byte) int
-	LastStderr(p []byte) int
-	// Control the number of most recent stdout bytes to remember (also used
-	// for stderr)
-	SetFifoSize(bytes int)
 	// Send bytes to stdin. Does NOT send EOF to stdin to allow multiple calls.
 	// Dont call if a stdin reader was set using SetStdin.
 	SendToStdin(data []byte) (n int64, err error)
