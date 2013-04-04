@@ -37,9 +37,14 @@
 {{end}}
 </div>
 
+{{with .Cmd.Status.Started}}
+<p>started: {{.}}</p>
+{{end}}
+
 {{if .Cmd.Status.Exited}}
+<p>exited: {{.Cmd.Status.Exited}}</p>
 {{with .Cmd.Status.Err}}
-<h1>exit status</h1>
+<h2>exit status</h2>
 <p>{{.Error}}</p>
 {{end}}
 {{end}}
