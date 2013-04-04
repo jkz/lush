@@ -27,11 +27,13 @@ import (
 	"io"
 	"os/exec"
 	"sync"
+	"time"
 )
 
 type cmdstatus struct {
-	phase int
-	err   error
+	started *time.Time
+	exited  *time.Time
+	err     error
 }
 
 // command life-time phases
@@ -41,12 +43,12 @@ const (
 	done
 )
 
-func (s cmdstatus) Started() bool {
-	return s.phase > preparation
+func (s cmdstatus) Started() *time.Time {
+	return s.started
 }
 
-func (s cmdstatus) Exited() bool {
-	return s.phase > running
+func (s cmdstatus) Exited() *time.Time {
+	return s.exited
 }
 
 func (s cmdstatus) Success() bool {
@@ -93,7 +95,8 @@ func (c *cmd) Argv() []string {
 
 func (c *cmd) Run() error {
 	defer func() {
-		c.status.phase = done
+		now := time.Now()
+		c.status.exited = &now
 		c.done.Done()
 	}()
 	if c.execCmd.Stdin == nil {
@@ -113,7 +116,8 @@ func (c *cmd) Run() error {
 	} else {
 		c.execCmd.Stderr = io.MultiWriter(c.execCmd.Stderr, c.fifoerr)
 	}
-	c.status.phase = running
+	now := time.Now()
+	c.status.started = &now
 	c.status.err = c.execCmd.Run()
 	return c.status.err
 }

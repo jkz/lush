@@ -25,11 +25,14 @@ package liblush
 
 import (
 	"io"
+	"time"
 )
 
 type CmdStatus interface {
-	Started() bool
-	Exited() bool
+	// Time the command was started or nil if not started yet
+	Started() *time.Time
+	// When the command stopped, nil if still running / not started
+	Exited() *time.Time
 	Success() bool
 	// nil iff Success() == true
 	Err() error
