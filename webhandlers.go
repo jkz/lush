@@ -41,6 +41,10 @@ func redirect(ctx *web.Context, loc *url.URL) {
 	fmt.Fprintf(ctx, "redirecting to %s", loc)
 }
 
+func cmdloc(c liblush.Cmd) *url.URL {
+	return &url.URL{Path: fmt.Sprintf("/%d/", c.Id())}
+}
+
 func handleGetRoot(ctx *web.Context) (string, error) {
 	s := ctx.User.(liblush.Session)
 	c := make(chan liblush.Cmd)
@@ -91,7 +95,7 @@ func handlePostStart(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return err.Error(), nil
 	}
-	redirect(ctx, &url.URL{Path: "/"})
+	redirect(ctx, cmdloc(c))
 	return "", nil
 }
 
@@ -109,7 +113,7 @@ func handlePostSend(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return err.Error(), nil
 	}
-	redirect(ctx, &url.URL{Path: "/" + idstr + "/"})
+	redirect(ctx, cmdloc(c))
 	return "", nil
 }
 
@@ -127,7 +131,7 @@ func handlePostClose(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return err.Error(), nil
 	}
-	redirect(ctx, &url.URL{Path: "/" + idstr + "/"})
+	redirect(ctx, cmdloc(c))
 	return "", nil
 }
 
