@@ -61,6 +61,7 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	type cmdctx struct {
 		Cmd    liblush.Cmd
 		Stdout []byte
+		Stderr []byte
 	}
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(liblush.Session)
@@ -69,9 +70,12 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 		return "", web.WebError{404, "no such command: " + idstr}
 	}
 	stdout := make([]byte, 1000)
+	stderr := make([]byte, 1000)
 	n := c.LastStdout(stdout)
 	stdout = stdout[:n]
-	tmplCtx := cmdctx{c, stdout}
+	n = c.LastStderr(stderr)
+	stderr = stderr[:n]
+	tmplCtx := cmdctx{c, stdout, stderr}
 	err := tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)
 	return "", err
 }
