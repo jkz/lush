@@ -36,10 +36,7 @@ func (s *session) newid() CmdId {
 
 // Start a new command in this shell session. Returned object is not threadsafe
 func (s *session) NewCommand(name string, arg ...string) Cmd {
-	c := &cmd{
-		id:      s.newid(),
-		execCmd: exec.Command(name, arg...),
-	}
+	c := newcmd(s.newid(), exec.Command(name, arg...))
 	c.done.Add(1)
 	s.cmds[c.id] = c
 	return c

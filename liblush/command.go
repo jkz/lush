@@ -67,6 +67,9 @@ type cmd struct {
 	status  cmdstatus
 	// Released when command finishes
 	done sync.WaitGroup
+	// last n bytes of stdout and stderr
+	fifoout *ringbuf
+	fifoerr *ringbuf
 }
 
 func (c *cmd) Id() CmdId {
@@ -86,6 +89,16 @@ func (c *cmd) Run() error {
 		c.status.phase = done
 		c.done.Done()
 	}()
+	if c.execCmd.Stdout == nil {
+		c.execCmd.Stdout = c.fifoout
+	} else {
+		c.execCmd.Stdout = io.MultiWriter(c.execCmd.Stdout, c.fifoout)
+	}
+	if c.execCmd.Stderr == nil {
+		c.execCmd.Stderr = c.fifoerr
+	} else {
+		c.execCmd.Stderr = io.MultiWriter(c.execCmd.Stderr, c.fifoerr)
+	}
 	c.status.phase = running
 	c.status.err = c.execCmd.Run()
 	return c.status.err
@@ -115,4 +128,39 @@ func (c *cmd) SetStderr(w io.Writer) {
 
 func (c *cmd) Status() CmdStatus {
 	return c.status
+}
+
+func (c *cmd) LastStdout(p []byte) int {
+	return c.fifoout.Last(p)
+}
+
+func (c *cmd) LastStderr(p []byte) int {
+	return c.fifoerr.Last(p)
+}
+
+// Create new ringbuffer and copy the old data over. Not a pretty nor an
+// efficient implementation but it gets the job done.
+func resize(r *ringbuf, i int) *ringbuf {
+	r2 := newRingbuf(i)
+	buf := make([]byte, r.Size())
+	// Useful bytes
+	n := r2.Last(buf)
+	buf = buf[:n]
+	r2.Write(buf)
+	return r2
+}
+
+func (c *cmd) SetFifoSize(bytes int) {
+	c.fifoout = resize(c.fifoout, bytes)
+	c.fifoerr = resize(c.fifoerr, bytes)
+}
+
+func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
+	c := &cmd{
+		id:      id,
+		execCmd: execcmd,
+		fifoout: newRingbuf(1000),
+		fifoerr: newRingbuf(1000),
+	}
+	return c
 }

@@ -53,6 +53,13 @@ type Cmd interface {
 	// Connect the stderr to this writer.
 	SetStderr(w io.Writer)
 	Status() CmdStatus
+	// Last n bytes of stdout. Returns the number of bytes written to the start
+	// of p.
+	LastStdout(p []byte) int
+	LastStderr(p []byte) int
+	// Control the number of most recent stdout bytes to remember (also used
+	// for stderr)
+	SetFifoSize(bytes int)
 }
 
 type Session interface {
