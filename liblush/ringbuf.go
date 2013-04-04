@@ -75,11 +75,14 @@ func (r *ringbuf) Last(p []byte) (n int) {
 	return
 }
 
+// Never fails, always returns the number of bytes read from input. If that is
+// more than the size of the buffer only the last n bytes are actually kept in
+// memory.
 func (r *ringbuf) Write(p []byte) (n int, err error) {
-	inputlen := len(p)
+	n = len(p)
 	defer func() {
 		if err == nil {
-			r.seen += inputlen
+			r.seen += n
 		}
 	}()
 	overflow := len(p) - len(r.buf)
@@ -91,13 +94,11 @@ func (r *ringbuf) Write(p []byte) (n int, err error) {
 	part1 := len(r.buf) - r.head
 	// first option: theres enough space left to copy in 1 block
 	if len(p) <= part1 {
-		n = copy(r.buf[r.head:], p)
-		r.head += n
+		r.head += copy(r.buf[r.head:], p)
 		return
 	}
 	// last resort: split my buf in 2 pieces
-	n = copy(r.buf[r.head:], p[:part1])
+	copy(r.buf[r.head:], p[:part1])
 	r.head = copy(r.buf[:r.head], p[part1:])
-	n += r.head
 	return
 }

@@ -32,7 +32,7 @@ func TestRingbuf(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Write error: %v", err)
 	}
-	if n != 5 {
+	if n != len(buf) {
 		t.Error("Unexpected write byte-count: ", n)
 	}
 	buf2 := make([]byte, 3)
@@ -49,7 +49,7 @@ func TestRingbuf(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Write error: %v", err)
 	}
-	if n != 3 {
+	if n != len(buf3) {
 		t.Error("Unexpected write byte-count: ", n)
 	}
 	buf4 := make([]byte, 20)
