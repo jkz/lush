@@ -29,7 +29,7 @@ import (
 	"github.com/hraban/web"
 )
 
-var tmplts = template.Must(template.ParseGlob("templates/*.html"))
+var tmplts *template.Template
 
 func redirect(ctx *web.Context, loc *url.URL) {
 	if _, ok := ctx.Params["noredirect"]; ok {

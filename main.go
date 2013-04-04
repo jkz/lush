@@ -21,15 +21,28 @@
 package main
 
 import (
+	"go/build"
+	"html/template"
+	"log"
+
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
+
+const basePkg = "github.com/hraban/lush/"
 
 var serverinitializers []func(*web.Server)
 
 func main() {
 	s := liblush.NewSession()
+	p, err := build.Default.Import(basePkg, "", build.FindOnly)
+	if err != nil {
+		log.Fatalf("Couldn't find lush resource files")
+	}
+	root := p.Dir
+	tmplts = template.Must(template.ParseGlob(root + "/templates/*.html"))
 	server := web.NewServer()
+	server.Config.StaticDir = root + "/static"
 	server.User = s
 	for _, f := range serverinitializers {
 		f(server)
