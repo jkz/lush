@@ -113,6 +113,24 @@ func handlePostSend(ctx *web.Context, idstr string) (string, error) {
 	return "", nil
 }
 
+func handlePostClose(ctx *web.Context, idstr string) (string, error) {
+	id, _ := liblush.ParseCmdId(idstr)
+	s := ctx.User.(liblush.Session)
+	c := s.GetCommand(id)
+	if c == nil {
+		return "", web.WebError{404, "no such command: " + idstr}
+	}
+	if ctx.Params["stream"] != "stdin" {
+		return "", web.WebError{400, "must send to stdin"}
+	}
+	err := c.CloseStdin()
+	if err != nil {
+		return err.Error(), nil
+	}
+	redirect(ctx, &url.URL{Path: "/" + idstr + "/"})
+	return "", nil
+}
+
 func handlePostNew(ctx *web.Context) (string, error) {
 	s := ctx.User.(liblush.Session)
 	argv := []string{}
@@ -135,6 +153,7 @@ func init() {
 		s.Get(`/(\d+)/`, handleGetCmd)
 		s.Post(`/(\d+)/start`, handlePostStart)
 		s.Post(`/(\d+)/send`, handlePostSend)
+		s.Post(`/(\d+)/close`, handlePostClose)
 		s.Post(`/new`, handlePostNew)
 	})
 }
