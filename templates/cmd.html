@@ -44,6 +44,14 @@
 
 <h1>I/O</h1>
 
+<h2>stdin</h2>
+<form action="send" method="post">
+<input type="hidden" name="stream" value="stdin">
+<textarea name="data" cols="80" rows="10" wrap="soft"></textarea>
+<br>
+<button>send</button>
+</form>
+
 <h2>stdout</h2>
 <pre>{{.Stdout}}</pre>
 
