@@ -31,6 +31,8 @@ type CmdStatus interface {
 	Started() bool
 	Exited() bool
 	Success() bool
+	// nil iff Success() == true
+	Err() error
 }
 
 // A shell command state similar to os/exec.Cmd
