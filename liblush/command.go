@@ -21,6 +21,8 @@
 package liblush
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -74,6 +76,7 @@ type cmd struct {
 	// last n bytes of stdout and stderr
 	fifoout *ringbuf
 	fifoerr *ringbuf
+	inpipe  io.WriteCloser
 }
 
 func (c *cmd) Id() CmdId {
@@ -93,6 +96,13 @@ func (c *cmd) Run() error {
 		c.status.phase = done
 		c.done.Done()
 	}()
+	if c.execCmd.Stdin == nil {
+		var err error
+		c.inpipe, err = c.execCmd.StdinPipe()
+		if err != nil {
+			return err
+		}
+	}
 	if c.execCmd.Stdout == nil {
 		c.execCmd.Stdout = c.fifoout
 	} else {
@@ -157,6 +167,24 @@ func resize(r *ringbuf, i int) *ringbuf {
 func (c *cmd) SetFifoSize(bytes int) {
 	c.fifoout = resize(c.fifoout, bytes)
 	c.fifoerr = resize(c.fifoerr, bytes)
+}
+
+func (c *cmd) SendToStdin(data []byte) (n int64, err error) {
+	return c.ReadFrom(bytes.NewReader(data))
+}
+
+func (c *cmd) ReadFrom(r io.Reader) (n int64, err error) {
+	if c.inpipe == nil {
+		return 0, errors.New("cannot send stdin data: stdin reader already set")
+	}
+	return io.Copy(c.inpipe, r)
+}
+
+func (c *cmd) CloseStdin() error {
+	if c.inpipe == nil {
+		return errors.New("cannot close stdin after SetStdin")
+	}
+	return c.inpipe.Close()
 }
 
 func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {

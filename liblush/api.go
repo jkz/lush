@@ -47,8 +47,8 @@ type Cmd interface {
 	// Block until command is complete return exit status
 	Wait() error
 	// Connect the stdin to this reader. Do not call this method after starting
-	// the command. If this method is not called the command is started with an
-	// empty stream bound to stdin.
+	// the command. If this method is not called the stdin can be controlled
+	// explicitly using the other stdin related methods.
 	SetStdin(r io.Reader)
 	// Connect the stdout to this writer.
 	SetStdout(w io.Writer)
@@ -62,6 +62,14 @@ type Cmd interface {
 	// Control the number of most recent stdout bytes to remember (also used
 	// for stderr)
 	SetFifoSize(bytes int)
+	// Send bytes to stdin. Does NOT send EOF to stdin to allow multiple calls.
+	// Dont call if a stdin reader was set using SetStdin.
+	SendToStdin(data []byte) (n int64, err error)
+	// Same as SendToStdin but reads from reader to satisfy io.ReaderFrom
+	ReadFrom(r io.Reader) (n int64, err error)
+	// Send EOF to stdin. Dont call if a stdin reader was set using SetStdin.
+	// After calling this do not send any data to stdin (and dont close again).
+	CloseStdin() error
 }
 
 type Session interface {
