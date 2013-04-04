@@ -44,6 +44,8 @@
 
 <h1>I/O</h1>
 
+{{if .Cmd.Status.Started}}
+{{if not .Cmd.Status.Exited}}
 <h2>stdin</h2>
 <form action="send" method="post">
 <input type="hidden" name="stream" value="stdin">
@@ -51,6 +53,8 @@
 <br>
 <button>send</button>
 </form>
+{{end}}
+{{end}}
 
 <h2>stdout</h2>
 <pre>{{.Stdout}}</pre>
