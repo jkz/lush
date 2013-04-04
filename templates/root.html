@@ -16,8 +16,10 @@
 
 {{range .}}
 <div class="cmd" id="cmd{{.Id}}">
+<a href="/{{.Id}}/">
 {{.Id}}:
 <tt>{{range .Argv}}{{.}} {{end}}</tt>
+</a>
 {{if .Status.Exited}}
     {{if .Status.Success}}
         ✓
