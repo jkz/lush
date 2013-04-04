@@ -60,8 +60,8 @@ func handleGetRoot(ctx *web.Context) (string, error) {
 func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	type cmdctx struct {
 		Cmd    liblush.Cmd
-		Stdout []byte
-		Stderr []byte
+		Stdout string
+		Stderr string
 	}
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(liblush.Session)
@@ -75,7 +75,7 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	stdout = stdout[:n]
 	n = c.LastStderr(stderr)
 	stderr = stderr[:n]
-	tmplCtx := cmdctx{c, stdout, stderr}
+	tmplCtx := cmdctx{c, string(stdout), string(stderr)}
 	err := tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)
 	return "", err
 }
