@@ -57,6 +57,25 @@ func handleGetRoot(ctx *web.Context) (string, error) {
 	return "", nil
 }
 
+func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
+	type cmdctx struct {
+		Cmd    liblush.Cmd
+		Stdout []byte
+	}
+	id, _ := liblush.ParseCmdId(idstr)
+	s := ctx.User.(liblush.Session)
+	c := s.GetCommand(id)
+	if c == nil {
+		return "", web.WebError{404, "no such command: " + idstr}
+	}
+	stdout := make([]byte, 1000)
+	n := c.LastStdout(stdout)
+	stdout = stdout[:n]
+	tmplCtx := cmdctx{c, stdout}
+	err := tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)
+	return "", err
+}
+
 func handlePostStart(ctx *web.Context, idstr string) (string, error) {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(liblush.Session)
@@ -91,6 +110,7 @@ func handlePostNew(ctx *web.Context) (string, error) {
 func init() {
 	serverinitializers = append(serverinitializers, func(s *web.Server) {
 		s.Get(`/`, handleGetRoot)
+		s.Get(`/(\d+)/`, handleGetCmd)
 		s.Post(`/(\d+)/start`, handlePostStart)
 		s.Post(`/new`, handlePostNew)
 	})
