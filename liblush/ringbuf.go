@@ -20,12 +20,19 @@
 
 package liblush
 
-import ()
+import (
+	"sync"
+)
 
 // Circular fifo buffer.
-// if somebody can point me to an existing implementation I will
-// remove this one. i couldnt find one.
-type ringbuf struct {
+type ringbuf interface {
+	Size() int
+	// Fill this buffer with the most recently written bytes
+	Last(p []byte) int
+	Write(data []byte) (int, error)
+}
+
+type ringbuf_unsafe struct {
 	buf []byte
 	// Oldest byte in the buffer (write starts here)
 	head int
@@ -44,19 +51,13 @@ func imin(i int, rest ...int) int {
 	return imin(i, rest[1:]...)
 }
 
-func newRingbuf(size int) *ringbuf {
-	return &ringbuf{
-		buf: make([]byte, size),
-	}
-}
-
-func (r *ringbuf) Size() int {
+func (r *ringbuf_unsafe) Size() int {
 	return len(r.buf)
 }
 
 // Fill p with most recently written bytes. Returns number of bytes written to
 // p.
-func (r *ringbuf) Last(p []byte) (n int) {
+func (r *ringbuf_unsafe) Last(p []byte) (n int) {
 	// dont ask for more than what i got
 	want := imin(len(p), len(r.buf), r.seen)
 	// actual copying
@@ -78,7 +79,7 @@ func (r *ringbuf) Last(p []byte) (n int) {
 // Never fails, always returns the number of bytes read from input. If that is
 // more than the size of the buffer only the last n bytes are actually kept in
 // memory.
-func (r *ringbuf) Write(p []byte) (n int, err error) {
+func (r *ringbuf_unsafe) Write(p []byte) (n int, err error) {
 	n = len(p)
 	defer func() {
 		if err == nil {
@@ -101,4 +102,33 @@ func (r *ringbuf) Write(p []byte) (n int, err error) {
 	copy(r.buf[r.head:], p[:part1])
 	r.head = copy(r.buf[:r.head], p[part1:])
 	return
+}
+
+type ringbuf_safe struct {
+	ringbuf_unsafe
+	l sync.Mutex
+}
+
+func (rs *ringbuf_safe) Size() int {
+	rs.l.Lock()
+	defer rs.l.Unlock()
+	return rs.ringbuf_unsafe.Size()
+}
+
+func (rs *ringbuf_safe) Last(p []byte) int {
+	rs.l.Lock()
+	defer rs.l.Unlock()
+	return rs.ringbuf_unsafe.Last(p)
+}
+
+func (rs *ringbuf_safe) Write(data []byte) (int, error) {
+	rs.l.Lock()
+	defer rs.l.Unlock()
+	return rs.ringbuf_unsafe.Write(data)
+}
+
+func newRingbuf(size int) ringbuf {
+	var rs ringbuf_safe
+	rs.ringbuf_unsafe.buf = make([]byte, size)
+	return &rs
 }

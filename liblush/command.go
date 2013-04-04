@@ -74,8 +74,8 @@ type cmd struct {
 	// Released when command finishes
 	done sync.WaitGroup
 	// last n bytes of stdout and stderr
-	fifoout *ringbuf
-	fifoerr *ringbuf
+	fifoout ringbuf
+	fifoerr ringbuf
 	inpipe  io.WriteCloser
 }
 
@@ -154,7 +154,7 @@ func (c *cmd) LastStderr(p []byte) int {
 
 // Create new ringbuffer and copy the old data over. Not a pretty nor an
 // efficient implementation but it gets the job done.
-func resize(r *ringbuf, i int) *ringbuf {
+func resize(r ringbuf, i int) ringbuf {
 	r2 := newRingbuf(i)
 	buf := make([]byte, r.Size())
 	// Useful bytes

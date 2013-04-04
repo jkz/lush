@@ -61,7 +61,8 @@ func TestRingbuf(t *testing.T) {
 	if !bytes.Equal(buf4, []byte{8, 9, 10, 11, 12}) {
 		t.Error("Unexpected last bytes: ", buf4)
 	}
-	if r.seen != 13 {
-		t.Error("Saw 13 bytes, recorded ", r.seen)
+	seen := r.(*ringbuf_safe).ringbuf_unsafe.seen
+	if seen != 13 {
+		t.Error("Saw 13 bytes, recorded ", seen)
 	}
 }
