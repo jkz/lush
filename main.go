@@ -29,7 +29,6 @@ var serverinitializers []func(*web.Server)
 
 func main() {
 	s := liblush.NewSession()
-	s.NewCommand("/bin/echo", "test", "foobar")
 	server := web.NewServer()
 	server.User = s
 	for _, f := range serverinitializers {
