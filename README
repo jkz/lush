@@ -8,11 +8,15 @@ The goal of lush is to reinvent interaction with an operating system. Currently
 there are two major players: the command line and graphical shells. Lush is a
 third option that leverages the webbrowser as the UI.
 
-Download and run as follows:
+Download and run:
 
 $ go get github.com/hraban/lush
-$ cd ${GOPATH%%:*}/src/github.com/hraban/lush
-$ go run *.go
+$ go install github.com/hraban/lush
+$ lush
+
+if your $GOPATH/bin directory is not part of $PATH do this instead:
+
+$ ${GOPATH%%:*}/bin/lush
 
 The code is available on github at https://github.com/hraban/lush
 
