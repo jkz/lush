@@ -35,6 +35,13 @@
 {{end}}
 </div>
 
+{{if .Cmd.Status.Exited}}
+{{with .Cmd.Status.Err}}
+<h1>exit status</h1>
+<p>{{.Error}}</p>
+{{end}}
+{{end}}
+
 <h1>I/O</h1>
 
 <h2>stdout</h2>
