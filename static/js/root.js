@@ -1,7 +1,7 @@
 var stat2html = function(id, stat) {
     switch(stat) {
     case 0:
-        return '<form method=post action="/' + id + '/start" class="start-btn"> <button>start</button> </form>';
+        return '<form method=post action="/' + id + '/start" class="start-cmd"> <button>start</button> </form>';
     case 1:
         return '⌚';
     case 2:
@@ -20,4 +20,14 @@ $(document).ready(function() {
             stat2html(e.id, e.status) + '</p>'));
     });
     $('.cmd').draggable();
+    $('form.start-cmd').submit(function(e) {
+        $.post(e.target.action + "?noredirect", $(this).serialize())
+         .success(function() {
+             $(e.target).html('⌚');
+         })
+         .fail(function() {
+             $(e.target).html('✗');
+         });
+         return false;
+    });
 });

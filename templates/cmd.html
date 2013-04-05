@@ -24,7 +24,7 @@
     {{if .Cmd.Status.Started}}
         ⌚
     {{else}}
-        <form method=post action="/{{.Cmd.Id}}/start" class="start-btn">
+        <form method=post action="/{{.Cmd.Id}}/start" class="start-cmd">
             <button>start</button>
         </form>
     {{end}}
