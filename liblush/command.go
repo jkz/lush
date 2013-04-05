@@ -93,11 +93,6 @@ func (c *cmd) Argv() []string {
 }
 
 func (c *cmd) Run() error {
-	defer func() {
-		now := time.Now()
-		c.status.exited = &now
-		c.done.Done()
-	}()
 	if c.execCmd.Stdin == nil {
 		var err error
 		c.inpipe, err = c.execCmd.StdinPipe()
@@ -105,11 +100,14 @@ func (c *cmd) Run() error {
 			return err
 		}
 	}
-	now := time.Now()
-	c.status.started = &now
+	startt := time.Now()
+	c.status.started = &startt
 	c.status.err = c.execCmd.Run()
 	c.stdout.Close()
 	c.stderr.Close()
+	exitt := time.Now()
+	c.status.exited = &exitt
+	c.done.Done()
 	return c.status.err
 }
 
