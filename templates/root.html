@@ -16,29 +16,7 @@
 
 <p><b><a href="/">lush</a></b></p>
 
-{{range .}}
-<div class="cmd" id="cmd{{.Id}}">
-<a href="/{{.Id}}/">
-{{.Id}}:
-<tt>{{range .Argv}}{{.}} {{end}}</tt>
-</a>
-{{if .Status.Exited}}
-    {{if .Status.Success}}
-        ✓
-    {{else}}
-        ✗
-    {{end}}
-{{else}}
-    {{if .Status.Started}}
-        ⌚
-    {{else}}
-        <form method=post action="/{{.Id}}/start" class="start-btn">
-            <button>start</button>
-        </form>
-    {{end}}
-{{end}}
-</div>
-{{end}}
+<div id="cmds"></div>
 
 <h1>New command</h1>
 <p><form method=post action=/new>
@@ -50,6 +28,29 @@
  <button>prepare</button>
  </form>
 
+<script>
+var cmds = [
+{{range .}}
+{
+    "id": {{.Id}},
+    // 0: not started
+    // 1: running
+    // 2: done (success)
+    // 3: done (failure)
+    "name": {{.Name}},
+    "argv": {{.Argv}},
+    "status":
+        {{if .Status.Exited}}
+            {{if .Status.Success}} 2 {{else}} 3 {{end}}
+        {{else}}
+            {{if .Status.Started}} 1 {{else}} 0 {{end}}
+        {{end}},
+},
+{{end}}
+];
+</script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="/js/root.js"></script>
 </body>
 </html>
 {{end}}
