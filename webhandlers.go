@@ -23,6 +23,7 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"io"
 	"net/url"
 
 	"github.com/hraban/lush/liblush"
@@ -45,6 +46,15 @@ func cmdloc(c liblush.Cmd) *url.URL {
 	return &url.URL{Path: fmt.Sprintf("/%d/", c.Id())}
 }
 
+func getCmd(s liblush.Session, idstr string) (liblush.Cmd, error) {
+	id, _ := liblush.ParseCmdId(idstr)
+	c := s.GetCommand(id)
+	if c == nil {
+		return nil, web.WebError{404, "no such command: " + idstr}
+	}
+	return c, nil
+}
+
 func handleGetRoot(ctx *web.Context) (string, error) {
 	s := ctx.User.(liblush.Session)
 	c := make(chan liblush.Cmd)
@@ -63,9 +73,10 @@ func handleGetRoot(ctx *web.Context) (string, error) {
 
 func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	type cmdctx struct {
-		Cmd    liblush.Cmd
-		Stdout string
-		Stderr string
+		Cmd          liblush.Cmd
+		Stdout       string
+		Stderr       string
+		Connectables chan liblush.Cmd
 	}
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(liblush.Session)
@@ -79,7 +90,22 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	stdout = stdout[:n]
 	n = c.Stderr().Last(stderr)
 	stderr = stderr[:n]
-	tmplCtx := cmdctx{c, string(stdout), string(stderr)}
+	ch := make(chan liblush.Cmd)
+	go func() {
+		for _, id := range s.GetCommandIds() {
+			other := s.GetCommand(id)
+			if c.Id() != other.Id() && other.Status().Started() == nil {
+				ch <- other
+			}
+		}
+		close(ch)
+	}()
+	tmplCtx := cmdctx{
+		Cmd:          c,
+		Stdout:       string(stdout),
+		Stderr:       string(stderr),
+		Connectables: ch,
+	}
 	err := tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)
 	return "", err
 }
@@ -113,6 +139,26 @@ func handlePostSend(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return err.Error(), nil
 	}
+	redirect(ctx, cmdloc(c))
+	return "", nil
+}
+
+func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
+	s := ctx.User.(liblush.Session)
+	c, err := getCmd(s, idstr)
+	if err != nil {
+		return "", err
+	}
+	if ctx.Params["stream"] != "stdout" {
+		return "", web.WebError{400, "can only connect stdout"}
+	}
+	other, err := getCmd(s, ctx.Params["to"])
+	if err != nil {
+		return "", err
+	}
+	pr, pw := io.Pipe()
+	c.Stdout().PipeTo(pw)
+	other.SetStdin(pr)
 	redirect(ctx, cmdloc(c))
 	return "", nil
 }
@@ -157,6 +203,7 @@ func init() {
 		s.Get(`/(\d+)/`, handleGetCmd)
 		s.Post(`/(\d+)/start`, handlePostStart)
 		s.Post(`/(\d+)/send`, handlePostSend)
+		s.Post(`/(\d+)/connect`, handlePostConnect)
 		s.Post(`/(\d+)/close`, handlePostClose)
 		s.Post(`/new`, handlePostNew)
 	})

@@ -68,7 +68,21 @@
 {{end}}
 
 <h2>stdout</h2>
+{{if .Cmd.Status.Started}}
 <pre>{{.Stdout}}</pre>
+{{else}}
+<form action="connect" method="post">
+<input type="hidden" name="stream" value="stdout">
+connect to:
+<select name="to">
+    {{range .Connectables}}
+    <option value="{{.Id}}">{{.Id}}: {{.Name}}</option>
+    {{end}}
+</select>
+<br>
+<button>go</button>
+</form>
+{{end}}
 
 <h2>stderr</h2>
 <pre>{{.Stderr}}</pre>
