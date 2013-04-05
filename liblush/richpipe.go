@@ -29,7 +29,7 @@ type richpipe struct {
 	// Most recently written bytes
 	fifo ringbuf
 	// Pipe all incoming writes to this writer
-	fwd io.Writer
+	fwd io.WriteCloser
 }
 
 func (p *richpipe) Write(data []byte) (int, error) {
@@ -43,11 +43,15 @@ func (p *richpipe) Write(data []byte) (int, error) {
 	return n, err
 }
 
+func (p *richpipe) Close() error {
+	return p.fwd.Close()
+}
+
 func (p *richpipe) Last(buf []byte) int {
 	return p.fifo.Last(buf)
 }
 
-func (p *richpipe) PipeTo(w io.Writer) {
+func (p *richpipe) PipeTo(w io.WriteCloser) {
 	p.fwd = w
 }
 

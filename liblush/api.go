@@ -42,7 +42,7 @@ type CmdStatus interface {
 type OutStream interface {
 	// Send all output to this writer. Output is blocked until this method is
 	// called.
-	PipeTo(w io.Writer)
+	PipeTo(w io.WriteCloser)
 	Last(p []byte) int
 }
 

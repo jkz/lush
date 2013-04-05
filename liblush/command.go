@@ -173,6 +173,10 @@ func (d devnull) Write(data []byte) (int, error) {
 	return len(data), nil
 }
 
+func (d devnull) Close() error {
+	return nil
+}
+
 // stdout and stderr data is discarded by default, call Stdout/err().PipeTo()
 // to save
 func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
