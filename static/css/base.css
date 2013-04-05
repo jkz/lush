@@ -3,3 +3,11 @@
 .start-btn {
     display: inline;
 }
+
+div.cmd {
+    width: 15em;
+    border: solid black thin;
+    margin: 2em;
+    min-height: 5em;
+    padding: 0.5em;
+}

@@ -19,4 +19,5 @@ $(document).ready(function() {
             '<tt>' + e.argv.join(" ") + '</tt></a> ' +
             stat2html(e.id, e.status) + '</p>'));
     });
+    $('.cmd').draggable();
 });
