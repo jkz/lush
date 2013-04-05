@@ -112,6 +112,9 @@ func (c *cmd) Run() error {
 }
 
 func (c *cmd) Start() error {
+	if c.status.started != nil {
+		return errors.New("command already started")
+	}
 	go c.Run()
 	return nil
 }
