@@ -22,12 +22,12 @@ $(document).ready(function() {
     $('.cmd').draggable();
     $('form.start-cmd').submit(function(e) {
         $.post(e.target.action + "?noredirect", $(this).serialize())
-         .success(function() {
+         .done(function() {
              $(e.target).html('⌚');
          })
          .fail(function() {
              $(e.target).html('✗');
          });
-         return false;
+        return false;
     });
 });
