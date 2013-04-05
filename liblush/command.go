@@ -108,6 +108,8 @@ func (c *cmd) Run() error {
 	now := time.Now()
 	c.status.started = &now
 	c.status.err = c.execCmd.Run()
+	c.stdout.Close()
+	c.stderr.Close()
 	return c.status.err
 }
 
