@@ -181,7 +181,7 @@ func (d devnull) Close() error {
 	return nil
 }
 
-// stdout and stderr data is discarded by default, call Stdout/err().PipeTo()
+// stdout and stderr data is discarded by default, call Stdout/err().SetPipe()
 // to save
 func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
 	c := &cmd{
@@ -190,8 +190,8 @@ func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
 		stdout:  newRichPipe(1000),
 		stderr:  newRichPipe(1000),
 	}
-	c.stdout.PipeTo(devnull{})
-	c.stderr.PipeTo(devnull{})
+	c.stdout.SetPipe(devnull{})
+	c.stderr.SetPipe(devnull{})
 	c.execCmd.Stdout = c.stdout
 	c.execCmd.Stderr = c.stderr
 	return c

@@ -155,7 +155,7 @@ func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	c.Stdout().PipeTo(other)
+	c.Stdout().SetPipe(other)
 	redirect(ctx, cmdloc(c))
 	return "", nil
 }

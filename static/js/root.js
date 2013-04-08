@@ -63,6 +63,17 @@ $(document).ready(function() {
             isSource: true,
         });
     });
+    // Second iteration to ensure that connections are only made after all
+    // nodes have configured endpoints
+    $.map(cmds, function(cmd, i) {
+        if (cmd.hasOwnProperty('to')) {
+            jsPlumb.connect({
+                source: 'cmd' + cmd.id,
+                target: 'cmd' + cmd.to,
+                anchors: ["BottomCenter", "TopCenter"],
+            });
+        }
+    });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
     jsPlumb.bind("jsPlumbConnection", function(info) {
         connect(info.connection.sourceId, info.connection.targetId);

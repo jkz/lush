@@ -51,8 +51,12 @@ func (p *richpipe) Last(buf []byte) int {
 	return p.fifo.Last(buf)
 }
 
-func (p *richpipe) PipeTo(w io.WriteCloser) {
+func (p *richpipe) SetPipe(w io.WriteCloser) {
 	p.fwd = w
+}
+
+func (p *richpipe) Pipe() io.WriteCloser {
+	return p.fwd
 }
 
 func newRichPipe(fifosize int) *richpipe {

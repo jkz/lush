@@ -40,7 +40,19 @@ func main() {
 		log.Fatalf("Couldn't find lush resource files")
 	}
 	root := p.Dir
-	tmplts = template.Must(template.ParseGlob(root + "/templates/*.html"))
+	// TODO: not a good place for this
+	tmplts = template.New("").Funcs(map[string]interface{}{
+		"tocmd": func(c liblush.Cmd) liblush.Cmd {
+			to := c.Stdout().Pipe()
+			if to != nil {
+				if tocmd, ok := to.(liblush.Cmd); ok {
+					return tocmd
+				}
+			}
+			return nil
+		},
+	})
+	tmplts = template.Must(tmplts.ParseGlob(root + "/templates/*.html"))
 	server := web.NewServer()
 	server.Config.StaticDir = root + "/static"
 	server.User = s
