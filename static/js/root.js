@@ -32,12 +32,22 @@ var restoreposition = function(id) {
     }
 };
 
+var connectVisually = function(srcId, trgtId) {
+    jsPlumb.connect({
+        source: srcId,
+        target: trgtId,
+        anchors: ["BottomCenter", "TopCenter"],
+    });
+};
+
 var connect = function(srcId, trgtId) {
     srcNId = +srcId.substring(3);
     trgtNId = +trgtId.substring(3);
     $.post('/' + srcNId + '/connect?noredirect', {
         stream: 'stdout',
         to: trgtNId,
+    }).done(function() {
+        connectVisually(srcId, trgtId);
     });
 };
 
@@ -67,16 +77,13 @@ $(document).ready(function() {
     // nodes have configured endpoints
     $.map(cmds, function(cmd, i) {
         if (cmd.hasOwnProperty('to')) {
-            jsPlumb.connect({
-                source: 'cmd' + cmd.id,
-                target: 'cmd' + cmd.to,
-                anchors: ["BottomCenter", "TopCenter"],
-            });
+            connectVisually('cmd' + cmd.id, 'cmd' + cmd.to);
         }
     });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
-    jsPlumb.bind("jsPlumbConnection", function(info) {
+    jsPlumb.bind("beforeDrop", function(info) {
         connect(info.connection.sourceId, info.connection.targetId);
+        return false;
     });
     $('form.start-cmd').submit(function(e) {
         $.post(e.target.action + "?noredirect", $(this).serialize())
