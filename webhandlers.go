@@ -29,7 +29,12 @@ import (
 	"github.com/hraban/web"
 )
 
-var tmplts *template.Template
+type server struct {
+	session liblush.Session
+	root    string
+	tmplts  *template.Template
+	web     *web.Server
+}
 
 func redirect(ctx *web.Context, loc *url.URL) {
 	if _, ok := ctx.Params["noredirect"]; ok {
@@ -55,15 +60,15 @@ func getCmd(s liblush.Session, idstr string) (liblush.Cmd, error) {
 }
 
 func handleGetRoot(ctx *web.Context) (string, error) {
-	s := ctx.User.(liblush.Session)
+	s := ctx.User.(*server)
 	c := make(chan liblush.Cmd)
 	go func() {
-		for _, id := range s.GetCommandIds() {
-			c <- s.GetCommand(id)
+		for _, id := range s.session.GetCommandIds() {
+			c <- s.session.GetCommand(id)
 		}
 		close(c)
 	}()
-	err := tmplts.ExecuteTemplate(ctx, "/", c)
+	err := s.tmplts.ExecuteTemplate(ctx, "/", c)
 	if err != nil {
 		return "", err
 	}
@@ -78,8 +83,8 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 		Connectables chan liblush.Cmd
 	}
 	id, _ := liblush.ParseCmdId(idstr)
-	s := ctx.User.(liblush.Session)
-	c := s.GetCommand(id)
+	s := ctx.User.(*server)
+	c := s.session.GetCommand(id)
 	if c == nil {
 		return "", web.WebError{404, "no such command: " + idstr}
 	}
@@ -91,8 +96,8 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	stderr = stderr[:n]
 	ch := make(chan liblush.Cmd)
 	go func() {
-		for _, id := range s.GetCommandIds() {
-			other := s.GetCommand(id)
+		for _, id := range s.session.GetCommandIds() {
+			other := s.session.GetCommand(id)
 			if c.Id() != other.Id() && other.Status().Started() == nil {
 				ch <- other
 			}
@@ -105,14 +110,14 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 		Stderr:       string(stderr),
 		Connectables: ch,
 	}
-	err := tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)
+	err := s.tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)
 	return "", err
 }
 
 func handlePostStart(ctx *web.Context, idstr string) (string, error) {
 	id, _ := liblush.ParseCmdId(idstr)
-	s := ctx.User.(liblush.Session)
-	c := s.GetCommand(id)
+	s := ctx.User.(*server)
+	c := s.session.GetCommand(id)
 	if c == nil {
 		return "", web.WebError{404, "no such command: " + idstr}
 	}
@@ -126,8 +131,8 @@ func handlePostStart(ctx *web.Context, idstr string) (string, error) {
 
 func handlePostSend(ctx *web.Context, idstr string) (string, error) {
 	id, _ := liblush.ParseCmdId(idstr)
-	s := ctx.User.(liblush.Session)
-	c := s.GetCommand(id)
+	s := ctx.User.(*server)
+	c := s.session.GetCommand(id)
 	if c == nil {
 		return "", web.WebError{404, "no such command: " + idstr}
 	}
@@ -143,15 +148,15 @@ func handlePostSend(ctx *web.Context, idstr string) (string, error) {
 }
 
 func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
-	s := ctx.User.(liblush.Session)
-	c, err := getCmd(s, idstr)
+	s := ctx.User.(*server)
+	c, err := getCmd(s.session, idstr)
 	if err != nil {
 		return "", err
 	}
 	if ctx.Params["stream"] != "stdout" {
 		return "", web.WebError{400, "can only connect stdout"}
 	}
-	other, err := getCmd(s, ctx.Params["to"])
+	other, err := getCmd(s.session, ctx.Params["to"])
 	if err != nil {
 		return "", err
 	}
@@ -162,8 +167,8 @@ func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
 
 func handlePostClose(ctx *web.Context, idstr string) (string, error) {
 	id, _ := liblush.ParseCmdId(idstr)
-	s := ctx.User.(liblush.Session)
-	c := s.GetCommand(id)
+	s := ctx.User.(*server)
+	c := s.session.GetCommand(id)
 	if c == nil {
 		return "", web.WebError{404, "no such command: " + idstr}
 	}
@@ -179,7 +184,7 @@ func handlePostClose(ctx *web.Context, idstr string) (string, error) {
 }
 
 func handlePostNew(ctx *web.Context) (string, error) {
-	s := ctx.User.(liblush.Session)
+	s := ctx.User.(*server)
 	argv := []string{}
 	for i := 1; ; i++ {
 		key := fmt.Sprintf("arg%d", i)
@@ -189,19 +194,19 @@ func handlePostNew(ctx *web.Context) (string, error) {
 		}
 		argv = append(argv, val)
 	}
-	s.NewCommand(ctx.Params["name"], argv...)
+	s.session.NewCommand(ctx.Params["name"], argv...)
 	redirect(ctx, &url.URL{Path: "/"})
 	return "", nil
 }
 
 func init() {
-	serverinitializers = append(serverinitializers, func(s *web.Server) {
-		s.Get(`/`, handleGetRoot)
-		s.Get(`/(\d+)/`, handleGetCmd)
-		s.Post(`/(\d+)/start`, handlePostStart)
-		s.Post(`/(\d+)/send`, handlePostSend)
-		s.Post(`/(\d+)/connect`, handlePostConnect)
-		s.Post(`/(\d+)/close`, handlePostClose)
-		s.Post(`/new`, handlePostNew)
+	serverinitializers = append(serverinitializers, func(s *server) {
+		s.web.Get(`/`, handleGetRoot)
+		s.web.Get(`/(\d+)/`, handleGetCmd)
+		s.web.Post(`/(\d+)/start`, handlePostStart)
+		s.web.Post(`/(\d+)/send`, handlePostSend)
+		s.web.Post(`/(\d+)/connect`, handlePostConnect)
+		s.web.Post(`/(\d+)/close`, handlePostClose)
+		s.web.Post(`/new`, handlePostNew)
 	})
 }

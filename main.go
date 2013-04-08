@@ -31,17 +31,16 @@ import (
 
 const basePkg = "github.com/hraban/lush/"
 
-var serverinitializers []func(*web.Server)
+var serverinitializers []func(*server)
 
 func main() {
-	s := liblush.NewSession()
 	p, err := build.Default.Import(basePkg, "", build.FindOnly)
 	if err != nil {
 		log.Fatalf("Couldn't find lush resource files")
 	}
 	root := p.Dir
 	// TODO: not a good place for this
-	tmplts = template.New("").Funcs(map[string]interface{}{
+	tmplts := template.New("").Funcs(map[string]interface{}{
 		"tocmd": func(c liblush.Cmd) liblush.Cmd {
 			to := c.Stdout().Pipe()
 			if to != nil {
@@ -53,12 +52,17 @@ func main() {
 		},
 	})
 	tmplts = template.Must(tmplts.ParseGlob(root + "/templates/*.html"))
-	server := web.NewServer()
-	server.Config.StaticDir = root + "/static"
-	server.User = s
-	for _, f := range serverinitializers {
-		f(server)
+	s := &server{
+		session: liblush.NewSession(),
+		root:    root,
+		web:     web.NewServer(),
+		tmplts:  tmplts,
 	}
-	server.Run("localhost:8081")
+	s.web.Config.StaticDir = root + "/static"
+	s.web.User = s
+	for _, f := range serverinitializers {
+		f(s)
+	}
+	s.web.Run("localhost:8081")
 	return
 }
