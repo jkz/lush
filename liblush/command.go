@@ -21,7 +21,6 @@
 package liblush
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -77,7 +76,8 @@ type cmd struct {
 	done   sync.WaitGroup
 	stdout *richpipe
 	stderr *richpipe
-	inpipe io.WriteCloser
+	stdin  InStream
+	inpipe *io.PipeReader
 }
 
 func (c *cmd) Id() CmdId {
@@ -93,13 +93,6 @@ func (c *cmd) Argv() []string {
 }
 
 func (c *cmd) Run() error {
-	if c.execCmd.Stdin == nil {
-		var err error
-		c.inpipe, err = c.execCmd.StdinPipe()
-		if err != nil {
-			return err
-		}
-	}
 	startt := time.Now()
 	c.status.started = &startt
 	c.status.err = c.execCmd.Run()
@@ -124,8 +117,13 @@ func (c *cmd) Wait() error {
 	return c.status.err
 }
 
-func (c *cmd) SetStdin(r io.Reader) {
-	c.execCmd.Stdin = r
+func (c *cmd) Stdin() InStream {
+	if c.stdin == nil {
+		pr, pw := io.Pipe()
+		c.stdin = newLightPipe(c, pw)
+		c.execCmd.Stdin = pr
+	}
+	return c.stdin
 }
 
 func (c *cmd) Stdout() OutStream {
@@ -150,25 +148,6 @@ func resize(r ringbuf, i int) ringbuf {
 	buf = buf[:n]
 	r2.Write(buf)
 	return r2
-}
-
-func (c *cmd) Write(data []byte) (n int, err error) {
-	n64, err := c.ReadFrom(bytes.NewReader(data))
-	return int(n64), err
-}
-
-func (c *cmd) ReadFrom(r io.Reader) (n int64, err error) {
-	if c.inpipe == nil {
-		return 0, errors.New("cannot send stdin data: stdin reader already set")
-	}
-	return io.Copy(c.inpipe, r)
-}
-
-func (c *cmd) Close() error {
-	if c.inpipe == nil {
-		return errors.New("cannot close stdin after SetStdin")
-	}
-	return c.inpipe.Close()
 }
 
 type devnull struct{}

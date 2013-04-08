@@ -18,51 +18,33 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-package main
+package liblush
 
 import (
-	"go/build"
-	"html/template"
-	"log"
-
-	"github.com/hraban/lush/liblush"
-	"github.com/hraban/web"
+	"io"
 )
 
-const basePkg = "github.com/hraban/lush/"
+// io.Pipe clone with reference to Cmd
+type lightpipe struct {
+	w   io.WriteCloser
+	cmd Cmd
+}
 
-var serverinitializers []func(*server)
+func (p *lightpipe) Write(data []byte) (int, error) {
+	return p.w.Write(data)
+}
 
-func main() {
-	p, err := build.Default.Import(basePkg, "", build.FindOnly)
-	if err != nil {
-		log.Fatalf("Couldn't find lush resource files")
+func (p *lightpipe) Close() error {
+	return p.w.Close()
+}
+
+func (p *lightpipe) Cmd() Cmd {
+	return p.cmd
+}
+
+func newLightPipe(c Cmd, w io.WriteCloser) *lightpipe {
+	return &lightpipe{
+		cmd: c,
+		w:   w,
 	}
-	root := p.Dir
-	// TODO: not a good place for this
-	tmplts := template.New("").Funcs(map[string]interface{}{
-		"tocmd": func(c liblush.Cmd) liblush.Cmd {
-			to := c.Stdout().Pipe()
-			if to != nil {
-				if stream, ok := to.(liblush.InStream); ok {
-					return stream.Cmd()
-				}
-			}
-			return nil
-		},
-	})
-	tmplts = template.Must(tmplts.ParseGlob(root + "/templates/*.html"))
-	s := &server{
-		session: liblush.NewSession(),
-		root:    root,
-		web:     web.NewServer(),
-		tmplts:  tmplts,
-	}
-	s.web.Config.StaticDir = root + "/static"
-	s.web.User = s
-	for _, f := range serverinitializers {
-		f(s)
-	}
-	s.web.Run("localhost:8081")
-	return
 }

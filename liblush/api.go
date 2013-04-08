@@ -48,6 +48,14 @@ type OutStream interface {
 	Last(p []byte) int
 }
 
+// Input stream of a command.  Writes to this stream block until the command is
+// started and fail if it has exited
+type InStream interface {
+	io.WriteCloser
+	// Command this stream belongs to (never nil)
+	Cmd() Cmd
+}
+
 // A shell command state similar to os/exec.Cmd
 type Cmd interface {
 	Id() CmdId
@@ -59,17 +67,10 @@ type Cmd interface {
 	Start() error
 	// Block until command is complete return exit status
 	Wait() error
-	// Connect the stdin to this reader. Do not call this method after starting
-	// the command. If this method is not called the stdin can be controlled
-	// explicitly using the other stdin related methods.
-	SetStdin(r io.Reader)
+	Stdin() InStream
 	Stdout() OutStream
 	Stderr() OutStream
 	Status() CmdStatus
-	// Act as a io.Writer for stdin.
-	// Dont call if a stdin reader was set using SetStdin.
-	io.WriteCloser
-	io.ReaderFrom
 }
 
 type Session interface {

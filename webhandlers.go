@@ -139,7 +139,7 @@ func handlePostSend(ctx *web.Context, idstr string) (string, error) {
 	if ctx.Params["stream"] != "stdin" {
 		return "", web.WebError{400, "must send to stdin"}
 	}
-	_, err := c.Write([]byte(ctx.Params["data"]))
+	_, err := c.Stdin().Write([]byte(ctx.Params["data"]))
 	if err != nil {
 		return err.Error(), nil
 	}
@@ -160,7 +160,7 @@ func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	c.Stdout().SetPipe(other)
+	c.Stdout().SetPipe(other.Stdin())
 	redirect(ctx, cmdloc(c))
 	return "", nil
 }
@@ -175,7 +175,7 @@ func handlePostClose(ctx *web.Context, idstr string) (string, error) {
 	if ctx.Params["stream"] != "stdin" {
 		return "", web.WebError{400, "must send to stdin"}
 	}
-	err := c.Close()
+	err := c.Stdin().Close()
 	if err != nil {
 		return err.Error(), nil
 	}
