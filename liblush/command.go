@@ -152,8 +152,9 @@ func resize(r ringbuf, i int) ringbuf {
 	return r2
 }
 
-func (c *cmd) SendToStdin(data []byte) (n int64, err error) {
-	return c.ReadFrom(bytes.NewReader(data))
+func (c *cmd) Write(data []byte) (n int, err error) {
+	n64, err := c.ReadFrom(bytes.NewReader(data))
+	return int(n64), err
 }
 
 func (c *cmd) ReadFrom(r io.Reader) (n int64, err error) {
@@ -163,7 +164,7 @@ func (c *cmd) ReadFrom(r io.Reader) (n int64, err error) {
 	return io.Copy(c.inpipe, r)
 }
 
-func (c *cmd) CloseStdin() error {
+func (c *cmd) Close() error {
 	if c.inpipe == nil {
 		return errors.New("cannot close stdin after SetStdin")
 	}

@@ -64,14 +64,10 @@ type Cmd interface {
 	Stdout() OutStream
 	Stderr() OutStream
 	Status() CmdStatus
-	// Send bytes to stdin. Does NOT send EOF to stdin to allow multiple calls.
+	// Act as a io.Writer for stdin.
 	// Dont call if a stdin reader was set using SetStdin.
-	SendToStdin(data []byte) (n int64, err error)
-	// Same as SendToStdin but reads from reader to satisfy io.ReaderFrom
-	ReadFrom(r io.Reader) (n int64, err error)
-	// Send EOF to stdin. Dont call if a stdin reader was set using SetStdin.
-	// After calling this do not send any data to stdin (and dont close again).
-	CloseStdin() error
+	io.WriteCloser
+	io.ReaderFrom
 }
 
 type Session interface {
