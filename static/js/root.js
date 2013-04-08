@@ -11,15 +11,40 @@ var stat2html = function(id, stat) {
     }
 };
 
+var storeposition = function(id, pos) {
+    localStorage.setItem(id + '.left', '' + pos.left);
+    localStorage.setItem(id + '.top', '' + pos.top);
+};
+
+var getposition = function(id) {
+    var left = localStorage.getItem(id + '.left');
+    var top = localStorage.getItem(id + '.top');
+    if (left === null || top === null) {
+        return null;
+    }
+    return {left: +left, top: +top};
+};
+
+var restoreposition = function(id) {
+    var pos = getposition(id);
+    if (pos !== null) {
+        $('#' + id).offset(pos);
+    }
+};
+
 $(document).ready(function() {
-    $.map(cmds, function(e, i) {
+    $.map(cmds, function(cmd, i) {
         $('#cmds').append($(
-            '<div class="cmd" id="cmd' + e.id + '">' +
-            '<a href="/' + e.id + '/">' + e.id + ': ' +
-            '<tt>' + e.argv.join(" ") + '</tt></a> ' +
-            stat2html(e.id, e.status) + '</p>'));
+            '<div class="cmd" id="cmd' + cmd.id + '">' +
+            '<a href="/' + cmd.id + '/">' + cmd.id + ': ' +
+            '<tt>' + cmd.argv.join(" ") + '</tt></a> ' +
+            stat2html(cmd.id, cmd.status) + '</p>'));
+        restoreposition('cmd' + cmd.id);
     });
-    $('.cmd').draggable();
+    $('.cmd').draggable({
+        stop: function(e, ui) {
+            storeposition(this.id, ui.offset);
+        }});
     $('form.start-cmd').submit(function(e) {
         $.post(e.target.action + "?noredirect", $(this).serialize())
          .done(function() {

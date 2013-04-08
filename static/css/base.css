@@ -5,6 +5,8 @@
 }
 
 div.cmd {
+    position: absolute;
+    background-color: white;
     width: 15em;
     border: solid black thin;
     margin: 2em;
