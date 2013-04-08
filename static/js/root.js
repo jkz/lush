@@ -34,17 +34,18 @@ var restoreposition = function(id) {
 
 $(document).ready(function() {
     $.map(cmds, function(cmd, i) {
-        $('#cmds').append($(
+        var node = $(
             '<div class="cmd" id="cmd' + cmd.id + '">' +
             '<a href="/' + cmd.id + '/">' + cmd.id + ': ' +
             '<tt>' + cmd.argv.join(" ") + '</tt></a> ' +
-            stat2html(cmd.id, cmd.status) + '</p>'));
+            stat2html(cmd.id, cmd.status) + '</p>');
+        $('#cmds').append(node);
         restoreposition('cmd' + cmd.id);
+        jsPlumb.draggable(node, {
+            stop: function(e, ui) {
+                storeposition(this.id, ui.offset);
+            }});
     });
-    $('.cmd').draggable({
-        stop: function(e, ui) {
-            storeposition(this.id, ui.offset);
-        }});
     $('form.start-cmd').submit(function(e) {
         $.post(e.target.action + "?noredirect", $(this).serialize())
          .done(function() {
