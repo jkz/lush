@@ -63,17 +63,17 @@ $(document).ready(function() {
             isSource: true,
         });
     });
+    jsPlumb.importDefaults({ConnectionsDetachable: false});
     jsPlumb.bind("jsPlumbConnection", function(info) {
         connect(info.connection.sourceId, info.connection.targetId);
     });
     $('form.start-cmd').submit(function(e) {
         $.post(e.target.action + "?noredirect", $(this).serialize())
-         .done(function() {
-             $(e.target).html('⌚');
-         })
-         .fail(function() {
-             $(e.target).html('✗');
-         });
+        .done(function() {
+            $(e.target).html('⌚');
+        }).fail(function() {
+            $(e.target).html('✗');
+        });
         return false;
     });
 });

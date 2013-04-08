@@ -11,7 +11,7 @@
 <p><b><a href="/">lush</a></b></p>
 
 <h1>info</h1>
-<div class="cmd" id="cmd{{.Cmd.Id}}">
+<div id="cmd{{.Cmd.Id}}">
 {{.Cmd.Id}}:
 <tt>{{range .Cmd.Argv}}{{.}} {{end}}</tt>
 {{if .Cmd.Status.Exited}}
