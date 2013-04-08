@@ -41,11 +41,11 @@ func main() {
 	root := p.Dir
 	// TODO: not a good place for this
 	tmplts := template.New("").Funcs(map[string]interface{}{
-		"tocmd": func(c liblush.Cmd) liblush.Cmd {
-			to := c.Stdout().Pipe()
+		"tocmd": func(outs liblush.OutStream) liblush.Cmd {
+			to := outs.Pipe()
 			if to != nil {
-				if stream, ok := to.(liblush.InStream); ok {
-					return stream.Cmd()
+				if ins, ok := to.(liblush.InStream); ok {
+					return ins.Cmd()
 				}
 			}
 			return nil

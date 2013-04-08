@@ -4,6 +4,7 @@
     <title>lush - Luyat shell</title>
 
 <link type="text/css" rel="stylesheet" href="/css/base.css">
+<link rel=stylesheet href=http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css>
 
 </head>
 <body>
@@ -39,8 +40,11 @@ var cmds = [
         {{else}}
             {{if .Status.Started}} 1 {{else}} 0 {{end}}
         {{end}},
-    {{with tocmd .}}
-        "to": {{.Id}},
+    {{with tocmd .Stdout}}
+        "stdoutto": {{.Id}},
+    {{end}}
+    {{with tocmd .Stderr}}
+        "stderrto": {{.Id}},
     {{end}}
 },
 {{end}}

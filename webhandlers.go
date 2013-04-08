@@ -21,9 +21,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/url"
+	"os"
+	"strings"
 
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
@@ -153,14 +157,20 @@ func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if ctx.Params["stream"] != "stdout" {
-		return "", web.WebError{400, "can only connect stdout"}
+	var stream liblush.OutStream
+	switch ctx.Params["stream"] {
+	case "stdout":
+		stream = c.Stdout()
+	case "stderr":
+		stream = c.Stderr()
+	default:
+		return "", web.WebError{400, "unknown stream"}
 	}
 	other, err := getCmd(s.session, ctx.Params["to"])
 	if err != nil {
 		return "", err
 	}
-	c.Stdout().SetPipe(other.Stdin())
+	stream.SetPipe(other.Stdin())
 	redirect(ctx, cmdloc(c))
 	return "", nil
 }
@@ -199,6 +209,26 @@ func handlePostNew(ctx *web.Context) (string, error) {
 	return "", nil
 }
 
+func handleGetNewNames(ctx *web.Context) (string, error) {
+	var bins []string
+	term := ctx.Params["term"]
+	for _, d := range strings.Split(os.Getenv("PATH"), string(os.PathListSeparator)) {
+		fis, err := ioutil.ReadDir(d)
+		if err != nil {
+			return "", err
+		}
+		for _, fi := range fis {
+			name := fi.Name()
+			if strings.HasPrefix(name, term) {
+				bins = append(bins, fi.Name())
+			}
+		}
+	}
+	enc := json.NewEncoder(ctx)
+	err := enc.Encode(bins)
+	return "", err
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.web.Get(`/`, handleGetRoot)
@@ -208,5 +238,6 @@ func init() {
 		s.web.Post(`/(\d+)/connect`, handlePostConnect)
 		s.web.Post(`/(\d+)/close`, handlePostClose)
 		s.web.Post(`/new`, handlePostNew)
+		s.web.Get(`/new/names.json`, handleGetNewNames)
 	})
 }

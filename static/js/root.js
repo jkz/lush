@@ -32,22 +32,30 @@ var restoreposition = function(id) {
     }
 };
 
-var connectVisually = function(srcId, trgtId) {
+var stream2anchor = function(stream) {
+    return {stderr: "RightMiddle", stdout: "BottomCenter"}[stream]
+};
+
+var anchor2stream = function(anchor) {
+    return {RightMiddle: "stderr", BottomCenter: "stdout"}[anchor];
+};
+
+var connectVisually = function(srcId, trgtId, stream) {
     jsPlumb.connect({
         source: srcId,
         target: trgtId,
-        anchors: ["BottomCenter", "TopCenter"],
+        anchors: [stream2anchor(stream), "TopCenter"],
     });
 };
 
-var connect = function(srcId, trgtId) {
+var connect = function(srcId, trgtId, stream) {
     srcNId = +srcId.substring(3);
     trgtNId = +trgtId.substring(3);
     $.post('/' + srcNId + '/connect?noredirect', {
-        stream: 'stdout',
+        stream: stream,
         to: trgtNId,
     }).done(function() {
-        connectVisually(srcId, trgtId);
+        connectVisually(srcId, trgtId, stream);
     });
 };
 
@@ -72,19 +80,30 @@ $(document).ready(function() {
             anchor: 'BottomCenter',
             isSource: true,
         });
+        jsPlumb.addEndpoint('cmd' + cmd.id, {
+            anchor: 'RightMiddle',
+            isSource: true,
+        });
     });
     // Second iteration to ensure that connections are only made after all
     // nodes have configured endpoints
     $.map(cmds, function(cmd, i) {
-        if (cmd.hasOwnProperty('to')) {
-            connectVisually('cmd' + cmd.id, 'cmd' + cmd.to);
+        if (cmd.hasOwnProperty('stdoutto')) {
+            connectVisually('cmd' + cmd.id, 'cmd' + cmd.stdoutto, 'stdout');
+        }
+        if (cmd.hasOwnProperty('stderrto')) {
+            connectVisually('cmd' + cmd.id, 'cmd' + cmd.stderrto, 'stderr');
         }
     });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
     jsPlumb.bind("beforeDrop", function(info) {
-        connect(info.connection.sourceId, info.connection.targetId);
+        connect(
+            info.connection.sourceId,
+            info.connection.targetId,
+            anchor2stream(info.connection.endpoints[0].anchor.type));
         return false;
     });
+    // ajaxify start command button
     $('form.start-cmd').submit(function(e) {
         $.post(e.target.action + "?noredirect", $(this).serialize())
         .done(function() {
@@ -94,4 +113,6 @@ $(document).ready(function() {
         });
         return false;
     });
+    // Auto complete
+    $('form[action="/new"] input[name="name"]').autocomplete({source: "/new/names.json"});
 });
