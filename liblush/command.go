@@ -77,7 +77,6 @@ type cmd struct {
 	stdout *richpipe
 	stderr *richpipe
 	stdin  InStream
-	inpipe *io.PipeReader
 }
 
 func (c *cmd) Id() CmdId {
@@ -95,6 +94,15 @@ func (c *cmd) Argv() []string {
 func (c *cmd) Run() error {
 	startt := time.Now()
 	c.status.started = &startt
+	// If not set explicitly bind stdin to a system pipe. This allows the
+	// spawned process to close it without reading if it is not needed.
+	if c.stdin == nil {
+		pw, err := c.execCmd.StdinPipe()
+		if err != nil {
+			return err
+		}
+		c.stdin = newLightPipe(c, pw)
+	}
 	c.status.err = c.execCmd.Run()
 	c.stdout.Close()
 	c.stderr.Close()
