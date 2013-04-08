@@ -32,6 +32,15 @@ var restoreposition = function(id) {
     }
 };
 
+var connect = function(srcId, trgtId) {
+    srcNId = +srcId.substring(3);
+    trgtNId = +trgtId.substring(3);
+    $.post('/' + srcNId + '/connect?noredirect', {
+        stream: 'stdout',
+        to: trgtNId,
+    });
+};
+
 $(document).ready(function() {
     $.map(cmds, function(cmd, i) {
         var node = $(
@@ -53,6 +62,9 @@ $(document).ready(function() {
             anchor: 'BottomCenter',
             isSource: true,
         });
+    });
+    jsPlumb.bind("jsPlumbConnection", function(info) {
+        connect(info.connection.sourceId, info.connection.targetId);
     });
     $('form.start-cmd').submit(function(e) {
         $.post(e.target.action + "?noredirect", $(this).serialize())
