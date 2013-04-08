@@ -45,6 +45,14 @@ $(document).ready(function() {
             stop: function(e, ui) {
                 storeposition(this.id, ui.offset);
             }});
+        jsPlumb.addEndpoint('cmd' + cmd.id, {
+            anchor: 'TopCenter',
+            isTarget: true,
+        });
+        jsPlumb.addEndpoint('cmd' + cmd.id, {
+            anchor: 'BottomCenter',
+            isSource: true,
+        });
     });
     $('form.start-cmd').submit(function(e) {
         $.post(e.target.action + "?noredirect", $(this).serialize())
