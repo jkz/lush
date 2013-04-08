@@ -23,7 +23,6 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"io"
 	"net/url"
 
 	"github.com/hraban/lush/liblush"
@@ -156,9 +155,7 @@ func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	pr, pw := io.Pipe()
-	c.Stdout().PipeTo(pw)
-	other.SetStdin(pr)
+	c.Stdout().PipeTo(other)
 	redirect(ctx, cmdloc(c))
 	return "", nil
 }
