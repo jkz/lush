@@ -68,6 +68,10 @@ $(document).ready(function() {
             stat2html(cmd.nid, cmd.status) + '</p>');
         $('#cmds').append($node);
         restoreposition(cmd.htmlid);
+        $node.resizable({
+            resize: function(e, ui) {
+                jsPlumb.repaint(ui.helper);
+            }});
         jsPlumb.draggable($node, {
             stop: function(e, ui) {
                 storeposition(this.id, ui.offset);
