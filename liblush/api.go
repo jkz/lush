@@ -46,6 +46,7 @@ type OutStream interface {
 	// sink set with SetPipe, if any
 	Pipe() io.WriteCloser
 	Last(p []byte) int
+	ResizeScrollbackBuffer(n int)
 }
 
 // Input stream of a command.  Writes to this stream block until the command is

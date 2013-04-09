@@ -146,18 +146,6 @@ func (c *cmd) Status() CmdStatus {
 	return c.status
 }
 
-// Create new ringbuffer and copy the old data over. Not a pretty nor an
-// efficient implementation but it gets the job done.
-func resize(r ringbuf, i int) ringbuf {
-	r2 := newRingbuf(i)
-	buf := make([]byte, r.Size())
-	// Useful bytes
-	n := r2.Last(buf)
-	buf = buf[:n]
-	r2.Write(buf)
-	return r2
-}
-
 type devnull struct{}
 
 func (d devnull) Write(data []byte) (int, error) {

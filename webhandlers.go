@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/hraban/lush/liblush"
@@ -204,7 +205,12 @@ func handlePostNew(ctx *web.Context) (string, error) {
 		}
 		argv = append(argv, val)
 	}
-	s.session.NewCommand(ctx.Params["name"], argv...)
+	c := s.session.NewCommand(ctx.Params["name"], argv...)
+	// live dangerously die young thats the navajo spirit my friends
+	i, _ := strconv.Atoi(ctx.Params["stdoutScrollback"])
+	c.Stdout().ResizeScrollbackBuffer(i)
+	i, _ = strconv.Atoi(ctx.Params["stderrScrollback"])
+	c.Stderr().ResizeScrollbackBuffer(i)
 	redirect(ctx, &url.URL{Path: "/"})
 	return "", nil
 }

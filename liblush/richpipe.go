@@ -23,8 +23,11 @@ package liblush
 import (
 	"errors"
 	"io"
+	"log"
 )
 
+// this girl just couples a scrollback buffer to a WriteCloser thats nice cos
+// you can keep track of the latest bytes that were sent through
 type richpipe struct {
 	// Most recently written bytes
 	fifo ringbuf
@@ -57,6 +60,26 @@ func (p *richpipe) SetPipe(w io.WriteCloser) {
 
 func (p *richpipe) Pipe() io.WriteCloser {
 	return p.fwd
+}
+
+func (p *richpipe) ResizeScrollbackBuffer(n int) {
+	p.fifo = resizeringbuf(p.fifo, n)
+}
+
+// Create new ringbuffer and copy the old data over. Not a pretty nor an
+// efficient implementation but it gets the job done.
+func resizeringbuf(r ringbuf, i int) ringbuf {
+	r2 := newRingbuf(i)
+	buf := make([]byte, r.Size())
+	// Useful bytes
+	n := r2.Last(buf)
+	buf = buf[:n]
+	_, err := r2.Write(buf)
+	if err != nil {
+		log.Print("Write error to ringbuffer: ", err)
+		// still, who cares? just fail the resize and continue operation
+	}
+	return r2
 }
 
 func newRichPipe(fifosize int) *richpipe {
