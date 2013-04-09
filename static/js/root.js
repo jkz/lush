@@ -1,7 +1,7 @@
-var stat2html = function(id, stat) {
+var stat2html = function(nid, stat) {
     switch(stat) {
     case 0:
-        return '<form method=post action="/' + id + '/start" class="start-cmd"> <button>start</button> </form>';
+        return '<form method=post action="/' + nid + '/start" class="start-cmd"> <button>start</button> </form>';
     case 1:
         return '⌚';
     case 2:
@@ -61,26 +61,26 @@ var connect = function(srcId, trgtId, stream) {
 
 $(document).ready(function() {
     $.map(cmds, function(cmd, i) {
-        var node = $(
-            '<div class="cmd" id="cmd' + cmd.id + '">' +
-            '<a href="/' + cmd.id + '/">' + cmd.id + ': ' +
+        var $node = $(
+            '<div class="cmd" id="' + cmd.htmlid + '">' +
+            '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
             '<tt>' + cmd.argv.join(" ") + '</tt></a> ' +
-            stat2html(cmd.id, cmd.status) + '</p>');
-        $('#cmds').append(node);
-        restoreposition('cmd' + cmd.id);
-        jsPlumb.draggable(node, {
+            stat2html(cmd.nid, cmd.status) + '</p>');
+        $('#cmds').append($node);
+        restoreposition(cmd.htmlid);
+        jsPlumb.draggable($node, {
             stop: function(e, ui) {
                 storeposition(this.id, ui.offset);
             }});
-        jsPlumb.addEndpoint('cmd' + cmd.id, {
+        jsPlumb.addEndpoint(cmd.htmlid, {
             anchor: 'TopCenter',
             isTarget: true,
         });
-        jsPlumb.addEndpoint('cmd' + cmd.id, {
+        jsPlumb.addEndpoint(cmd.htmlid, {
             anchor: 'BottomCenter',
             isSource: true,
         });
-        jsPlumb.addEndpoint('cmd' + cmd.id, {
+        jsPlumb.addEndpoint(cmd.htmlid, {
             anchor: 'RightMiddle',
             isSource: true,
         });
@@ -89,10 +89,10 @@ $(document).ready(function() {
     // nodes have configured endpoints
     $.map(cmds, function(cmd, i) {
         if (cmd.hasOwnProperty('stdoutto')) {
-            connectVisually('cmd' + cmd.id, 'cmd' + cmd.stdoutto, 'stdout');
+            connectVisually(cmd.htmlid, 'cmd' + cmd.stdoutto, 'stdout');
         }
         if (cmd.hasOwnProperty('stderrto')) {
-            connectVisually('cmd' + cmd.id, 'cmd' + cmd.stderrto, 'stderr');
+            connectVisually(cmd.htmlid, 'cmd' + cmd.stderrto, 'stderr');
         }
     });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
