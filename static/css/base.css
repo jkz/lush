@@ -12,3 +12,19 @@ div.cmd {
     min-height: 5em;
     padding: 0.5em;
 }
+
+div.streampeeker {
+    position: absolute;
+    background-color: white;
+    border: solid red thin;
+}
+
+.streampeeker.collapsed {
+    width: 3em;
+    height: 3em;
+}
+
+.streampeeker.open {
+    width: 15em;
+    min-height: 5em;
+}
