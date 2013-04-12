@@ -64,17 +64,38 @@ var restoreposition = function(id) {
     });
 };
 
-var streampeekerId = 0;
+// deferred object fetching most recent stdout data for streampeeker
+var getRecentStream = function(sysId, stream) {
+    return $.get('/' + sysId + '/stream/' + stream + '.bin?numbytes=100');
+};
 
 // Stream peeker is like a small dumb terminal window showing a stream's most
 // recent output
-var addstreampeeker = function() {
-    var id = 'streampeeker' + (streampeekerId++);
-    var $sp = $('<div class=streampeeker id=' + id + '>')
-        .resizable()
-        .appendTo('body');
+var addstreampeeker = function(cmdSysId, stream) {
+    var id = 'streampeeker-' + cmdSysId + '-' + stream;
     // open / collapse button
     var $ocbutton = $('<button>');
+    // preview box
+    var $preview = $('<pre>');
+    var $sp = $('<div class=streampeeker id=' + id + '><pre>')
+        .resizable()
+        .append($ocbutton)
+        .append($preview)
+        .appendTo('body');
+    // Closure that fills the stream peeker with stdout data every second until
+    // it is closed
+    var refresher;
+    var dontrefresh = function() {};
+    var dorefresh = function() {
+        getRecentStream(cmdSysId, stream).done(function(data) {
+            if ($sp.hasClass('open')) {
+                $preview.text(data);
+                jsPlumb.repaint($sp);
+                // continue refreshing
+                window.setTimeout(refresher, 1000);
+            }
+        });
+    };
     // functions that open / collapse the streampeeker
     var openf, collapsef;
     openf = function() {
@@ -88,19 +109,22 @@ var addstreampeeker = function() {
                 jsPlumb.repaint(ui.helper);
             }})
         jsPlumb.repaint($sp);
+        refresher = dorefresh;
+        refresher();
     };
     collapsef = function() {
         $sp.removeClass('open');
         $sp.addClass('collapsed');
+        $preview.empty();
         $ocbutton.text('◳');
         $ocbutton.unbind('click', collapsef);
         $ocbutton.bind('click', openf);
         $sp.resizable('destroy');
         jsPlumb.repaint($sp);
+        refresher = dontrefresh;
     };
     collapsef();
     jsPlumb.draggable($sp);
-    $sp.append($ocbutton);
     var left = jsPlumb.addEndpoint(id, {
         anchor: 'TopCenter',
         isTarget: true,
@@ -122,10 +146,12 @@ var anchor2stream = function(anchor) {
     return {RightMiddle: "stderr", BottomCenter: "stdout"}[anchor];
 };
 
-var connectVisually = function($src, $trgt, stream, withstreampeeker) {
+var connectVisually = function(srcSysId, trgtSysId, stream, withstreampeeker) {
     var anchor = stream2anchor(stream);
+    var $src = $('#cmd' + srcSysId);
+    var $trgt = $('#cmd' + trgtSysId);
     if (withstreampeeker) {
-        var $sp = addstreampeeker();
+        var $sp = addstreampeeker(srcSysId, stream);
         jsPlumb.connect({
             source: $src,
             target: $sp,
@@ -146,7 +172,7 @@ var connect = function(srcSysId, trgtSysId, stream) {
         stream: stream,
         to: trgtSysId,
     }).done(function() {
-        connectVisually('cmd' + srcSysId, 'cmd' + trgtSysId, stream, true);
+        connectVisually(srcSysId, trgtSysId, stream, true);
     });
 };
 
@@ -200,10 +226,10 @@ $(document).ready(function() {
     // nodes have configured endpoints
     $.map(cmds, function(cmd, i) {
         if (cmd.hasOwnProperty('stdoutto')) {
-            connectVisually(cmd.htmlid, 'cmd' + cmd.stdoutto, 'stdout', false);
+            connectVisually(cmd.nid, cmd.stdoutto, 'stdout', false);
         }
         if (cmd.hasOwnProperty('stderrto')) {
-            connectVisually(cmd.htmlid, 'cmd' + cmd.stderrto, 'stderr', false);
+            connectVisually(cmd.nid, cmd.stderrto, 'stderr', false);
         }
     });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
