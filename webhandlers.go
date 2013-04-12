@@ -235,6 +235,21 @@ func handleGetNewNames(ctx *web.Context) (string, error) {
 	return "", err
 }
 
+func handleGetStdout(ctx *web.Context, idstr string) (string, error) {
+	id, _ := liblush.ParseCmdId(idstr)
+	s := ctx.User.(*server)
+	c := s.session.GetCommand(id)
+	if c == nil {
+		return "", web.WebError{404, "no such command: " + idstr}
+	}
+	n, _ := strconv.Atoi(ctx.Params["numbytes"])
+	buf := make([]byte, n)
+	n = c.Stdout().Last(buf)
+	buf = buf[:n]
+	_, err := ctx.Write(buf)
+	return "", err
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.web.Get(`/`, handleGetRoot)
@@ -245,5 +260,6 @@ func init() {
 		s.web.Post(`/(\d+)/close`, handlePostClose)
 		s.web.Post(`/new`, handlePostNew)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
+		s.web.Get(`/(\d+)/stream/stdout.bin`, handleGetStdout)
 	})
 }
