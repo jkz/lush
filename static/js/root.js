@@ -11,25 +11,57 @@ var stat2html = function(nid, stat) {
     }
 };
 
-var storeposition = function(id, pos) {
-    localStorage.setItem(id + '.left', '' + pos.left);
-    localStorage.setItem(id + '.top', '' + pos.top);
+// tries to parse JSON returns {} on any failure
+var safeJSONparse = function(text) {
+    // how wrong is a wild-card catch in JS?
+    try {
+        return JSON.parse(text);
+    } catch(e) {
+        return {};
+    }
 };
 
-var getposition = function(id) {
-    var left = localStorage.getItem(id + '.left');
-    var top = localStorage.getItem(id + '.top');
-    if (left === null || top === null) {
-        return null;
-    }
-    return {left: +left, top: +top};
+// fetch state as json, pass decoded object to callback arg
+// returns jquery jqxhr handle
+var getState = function(success) {
+    // this is me not caring about wrapping the deferred
+    return $.get('/clientdata').done(function(json) {
+        success(safeJSONparse(json));
+    });
+};
+
+// state object is passed to JSON.stringify
+var setState = function(state) {
+    return $.post('/clientdata', {data: JSON.stringify(state)});
+};
+
+var updateState = function(key, value) {
+    return getState(function(state) {
+        state[key] = value;
+        // would prefer to return this deferred.. $.when.done? dont care enough
+        setState(state);
+    });
+};
+
+var storeposition = function(id, pos) {
+    updateState(id + '.pos', pos)
+        .fail(function(_, msg) {
+            console.log("failed to update position: " + msg);
+        });
+};
+
+var getposition = function(id, callback) {
+    return getState(function(state) {
+        callback(state[id + '.pos']);
+    });
 };
 
 var restoreposition = function(id) {
-    var pos = getposition(id);
-    if (pos !== null) {
-        $('#' + id).offset(pos);
-    }
+    getposition(id, function(pos) {
+        if (pos !== undefined) {
+            jsPlumb.repaint($('#' + id).offset(pos));
+        }
+    });
 };
 
 var streampeekerId = 0;
