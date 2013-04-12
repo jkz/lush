@@ -39,6 +39,9 @@ type server struct {
 	root    string
 	tmplts  *template.Template
 	web     *web.Server
+	// Raw data store where client can save session data
+	// gets me a long way because i trust the client
+	clientdata []byte
 }
 
 func redirect(ctx *web.Context, loc *url.URL) {
@@ -250,6 +253,18 @@ func handleGetStdout(ctx *web.Context, idstr string) (string, error) {
 	return "", err
 }
 
+func handleGetClientdata(ctx *web.Context) (string, error) {
+	s := ctx.User.(*server)
+	_, err := ctx.Write(s.clientdata)
+	return "", err
+}
+
+func handlePostClientdata(ctx *web.Context) (string, error) {
+	s := ctx.User.(*server)
+	s.clientdata = []byte(ctx.Params["data"])
+	return "", nil
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.web.Get(`/`, handleGetRoot)
@@ -261,5 +276,7 @@ func init() {
 		s.web.Post(`/new`, handlePostNew)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
 		s.web.Get(`/(\d+)/stream/stdout.bin`, handleGetStdout)
+		s.web.Get(`/clientdata`, handleGetClientdata)
+		s.web.Post(`/clientdata`, handlePostClientdata)
 	})
 }
