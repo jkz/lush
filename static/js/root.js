@@ -71,7 +71,9 @@ var getRecentStream = function(sysId, stream) {
 
 // Stream peeker is like a small dumb terminal window showing a stream's most
 // recent output
-var addstreampeeker = function(cmdSysId, stream) {
+var addstreampeeker = function(srcep) {
+    var cmdSysId = srcep.getParameter("sysid")();
+    var stream = srcep.getParameter("stream")();
     var id = 'streampeeker-' + cmdSysId + '-' + stream;
     // open / collapse button
     var $ocbutton = $('<button>');
@@ -128,13 +130,19 @@ var addstreampeeker = function(cmdSysId, stream) {
         stop: function(e, ui) {
             storeposition(this.id, ui.offset);
         }});
-    jsPlumb.addEndpoint(id, {
+    var myep = jsPlumb.addEndpoint(id, {
         anchor: 'TopCenter',
         isTarget: true,
         endpoint: 'Rectangle',
     });
     // if there is already a configured position restore that
     restoreposition(id);
+    // connect to the source endpoint (create a new endpoint on the source dynamically)
+    jsPlumb.connect({
+        source: srcep.getElement(),
+        target: myep,
+        anchors: [stream2anchor(stream), myep],
+    });
     return $sp;
 };
 
@@ -146,31 +154,25 @@ var anchor2stream = function(anchor) {
     return {RightMiddle: "stderr", BottomCenter: "stdout"}[anchor];
 };
 
-var connectVisually = function(srcSysId, trgtSysId, stream, withstreampeeker) {
-    var anchor = stream2anchor(stream);
-    var $src = $('#cmd' + srcSysId);
-    var $trgt = $('#cmd' + trgtSysId);
+// the two first arguments are the source and target endpoints to connect
+var connectVisually = function(srcep, trgtep, stream, withstreampeeker) {
     jsPlumb.connect({
-        source: $src,
-        target: $trgt,
-        anchors: [anchor, "TopCenter"],
+        source: srcep,
+        target: trgtep,
     });
     if (withstreampeeker) {
-        var $sp = addstreampeeker(srcSysId, stream);
-        jsPlumb.connect({
-            source: $src,
-            target: $sp,
-            anchors: [anchor, "TopCenter"],
-        });
+        addstreampeeker(srcep);
     }
 };
 
-var connect = function(srcSysId, trgtSysId, stream) {
+var connect = function(srcep, trgtep, stream) {
+    var srcSysId = srcep.getParameter("sysid")();
+    var trgtSysId = trgtep.getParameter("sysid")();
     $.post('/' + srcSysId + '/connect?noredirect', {
         stream: stream,
         to: trgtSysId,
     }).done(function() {
-        connectVisually(srcSysId, trgtSysId, stream, true);
+        connectVisually(srcep, trgtep, stream, true);
     });
 };
 
@@ -182,6 +184,12 @@ var constantly = function(val) {
 // create widget with command info and add it to the DOM
 // the argument is a cmd object implementation defined by the cmds array in
 // root.html
+//
+// jsPlumb endpoints:
+// widgets have three endpoints: stdin, stdout and stderr. these endoints are
+// jsPlumb.Endpoint objects and their reference is needed to connect them to
+// eachother. this function creates the endpoints and stores their reference in
+// the cmd argument object as .stdinep, .stdoutep and .stderrep.
 var createCmdWidget = function(cmd) {
     var $widget = $(
         '<div class="cmd" id="' + cmd.htmlid + '">' +
@@ -198,14 +206,14 @@ var createCmdWidget = function(cmd) {
         stop: function(e, ui) {
             storeposition(this.id, ui.offset);
         }});
-    jsPlumb.addEndpoint(cmd.htmlid, {
+    cmd.stdinep = jsPlumb.addEndpoint($widget, {
         anchor: 'TopCenter',
         isTarget: true,
         parameters: {
             sysid: constantly(cmd.nid),
         },
     });
-    jsPlumb.addEndpoint(cmd.htmlid, {
+    cmd.stdoutep = jsPlumb.addEndpoint($widget, {
         anchor: 'BottomCenter',
         isSource: true,
         parameters: {
@@ -213,7 +221,7 @@ var createCmdWidget = function(cmd) {
             sysid: constantly(cmd.nid),
         },
     });
-    jsPlumb.addEndpoint(cmd.htmlid, {
+    cmd.stderrep = jsPlumb.addEndpoint($widget, {
         anchor: 'RightMiddle',
         isSource: true,
         parameters: {
@@ -230,18 +238,19 @@ $(document).ready(function() {
     // nodes have configured endpoints
     $.map(cmds, function(cmd, i) {
         if (cmd.hasOwnProperty('stdoutto')) {
-            connectVisually(cmd.nid, cmd.stdoutto, 'stdout', true);
+            // connect my stdout to cmd.stdoutto's stdin
+            connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout', true);
         }
         if (cmd.hasOwnProperty('stderrto')) {
-            connectVisually(cmd.nid, cmd.stderrto, 'stderr', true);
+            connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr', true);
         }
     });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
     jsPlumb.bind("beforeDrop", function(info) {
         // Connected to another command
         connect(
-            info.connection.endpoints[0].getParameter("sysid")(),
-            info.dropEndpoint.getParameter("sysid")(),
+            info.connection.endpoints[0],
+            info.dropEndpoint,
             info.connection.getParameter("stream")());
         return false;
     });
