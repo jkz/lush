@@ -248,6 +248,51 @@ var createCmdWidget = function(cmd) {
     return $widget;
 };
 
+// Recursively apply fun to all cmds that are sources of this cmd and then
+// apply fun this cmd itself
+var mapSourceCmds = function (sysid, f) {
+    var cmd = cmds[sysid];
+    // for every connected stdout and stderr stream:
+    $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
+        if (conn.getParameter("sysid") === undefined) {
+            return;
+        }
+        // stdin endpoint that this stream is connected to
+        var trgtep = conn.endpoints[1];
+        // recurse into those before continuing
+        mapSourceCmds(trgtep.getParameter("sysid")(), f);
+    });
+    f(cmd);
+};
+
+var archiveCmd = function (sysid) {
+    mapSourceCmds(sysid, function (cmd) {
+        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
+            conn.setVisible(false);
+            conn.target.css('display', 'none');
+            conn.endpoints[1].setVisible(false);
+        });
+        $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
+            ep.setVisible(false);
+        });
+        $('#' + cmd.htmlid).css('display', 'none');
+    });
+};
+
+var unarchiveCmd = function (sysid) {
+    mapSourceCmds(sysid, function (cmd) {
+        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
+            conn.setVisible(true);
+            conn.target.css('display', 'block');
+            conn.endpoints[1].setVisible(true);
+        });
+        $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
+            ep.setVisible(true);
+        });
+        $('#' + cmd.htmlid).css('display', 'block');
+    });
+};
+
 // transform an array of objects into a mapping from key to array of objects
 // with that key.
 // compare to SQL's GROUP BY, with a custom function to evaluate which group an
@@ -260,7 +305,7 @@ var groupby = function(objs, keyfun) {
         groups[key] = (groups[key] || []).concat(obj);
     });
     return groups;
-}
+};
 
 // map(sysid => cmdobj) to map(groupid => [cmdobj])
 var makeGroups = function(cmds) {
@@ -269,15 +314,27 @@ var makeGroups = function(cmds) {
 
 // refresh the <ul id=groups>
 var rebuildGroupsList = function() {
-    var lis = [];
-    $.map(makeGroups(cmds), function(cmds, gid) {
+    var lis = $.map(makeGroups(cmds), function(cmds, gid) {
         var cmdids = $.map(cmds, function(cmd) { return cmd.nid; }).join(", ");
-        var $li = $('<li>' + gid + ': ' + cmdids + '</li>');
-        lis.push($li);
+        var archivef, unarchivef;
+        var archivef = function () {
+            $(this).text('◳')
+                   .unbind('click', archivef)
+                   .bind('click', unarchivef);
+            archiveCmd(gid);
+        };
+        var unarchivef = function () {
+            $(this).text('▬')
+                   .unbind('click', unarchivef)
+                   .bind('click', archivef);
+            unarchiveCmd(gid);
+        };
+        var $btn = $('<button>▬</button>').click(archivef);
+        var $li = $('<li>' + gid + ': ' + cmdids + '</li>').append($btn);
+        return $li;
     });
-    var $list = $('#groups');
-    return $list.empty().append(lis);
-}
+    return $('#groups').empty().append(lis);
+};
 
 $(document).ready(function() {
     $.map(cmds, createCmdWidget);
