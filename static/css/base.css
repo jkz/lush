@@ -28,3 +28,30 @@ div.streampeeker {
     width: 15em;
     min-height: 5em;
 }
+
+/* input prompt */
+
+div#prompt {
+    position: absolute;
+    font-family: monospace;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: .5em 1em;
+    background-color: black;
+    color: white;
+    font-size: 2em;
+}
+
+div#prompt input {
+    border: 0;
+    background-color: black;
+    color: white;
+    position: absolute;
+    left: 2em;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    font-family: monospace;
+    font-size: 1em;
+}

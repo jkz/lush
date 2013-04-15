@@ -241,14 +241,28 @@ $(document).ready(function() {
     });
     // ajaxify start command button
     $('form.start-cmd').submit(function(e) {
-        $.post(e.target.action + "?noredirect", $(this).serialize())
-        .done(function() {
-            $(e.target).html('⌚');
-        }).fail(function() {
-            $(e.target).html('✗');
-        });
+        $.post(this.action + "?noredirect", $(this).serialize())
+            .done(function() {
+                $(this).html('⌚');
+            }).fail(function() {
+                $(this).html('✗');
+            });
         return false;
     });
     // Auto complete
     $('form[action="/new"] input[name="name"]').autocomplete({source: "/new/names.json"});
+    // parse prompt
+    $('div#prompt form').submit(function(e) {
+        var argv = $('input', this).val().split(/\s+/);
+        var data = {
+            name: argv[0],
+            stdoutScrollback: 1000,
+            stderrScrollback: 1000,
+        };
+        for (var i = 1; i < argv.length; i++) {
+            data['arg' + i] = argv[i];
+        }
+        $.post('/new', data).always(function() { window.location.reload(true); });
+        return false;
+    });
 });
