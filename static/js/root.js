@@ -273,9 +273,9 @@ $(document).ready(function() {
     $('form.start-cmd').submit(function(e) {
         $.post(this.action + "?noredirect", $(this).serialize())
             .done(function() {
-                $(this).html('⌚');
+                $(e.target).html('⌚');
             }).fail(function() {
-                $(this).html('✗');
+                $(e.target).html('✗');
             });
         return false;
     });
