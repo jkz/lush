@@ -213,12 +213,26 @@ var createCmdWidget = function(cmd) {
             sysid: constantly(cmd.nid),
         },
     });
+    // function that returns:
+    //
+    // - the group id of the "source command" (cmd that this div's source
+    //   endpoint is connected to), if any
+    //
+    // - the system id of this command otherwise
+    var getGroupId = function() {
+        if (cmd.stdinep.connections.length > 0) {
+            var conn = cmd.stdinep.connections[0];
+            return conn.getParameter("groupid")();
+        }
+        return cmd.nid;
+    };
     cmd.stdoutep = jsPlumb.addEndpoint($widget, {
         anchor: 'BottomCenter',
         isSource: true,
         parameters: {
             stream: constantly("stdout"),
             sysid: constantly(cmd.nid),
+            groupid: getGroupId,
         },
     });
     cmd.stderrep = jsPlumb.addEndpoint($widget, {
@@ -227,6 +241,7 @@ var createCmdWidget = function(cmd) {
         parameters: {
             stream: constantly("stderr"),
             sysid: constantly(cmd.nid),
+            groupid: getGroupId,
         },
     });
     return $widget;
