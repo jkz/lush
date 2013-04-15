@@ -124,12 +124,17 @@ var addstreampeeker = function(cmdSysId, stream) {
         refresher = dontrefresh;
     };
     collapsef();
-    jsPlumb.draggable($sp);
-    var left = jsPlumb.addEndpoint(id, {
+    jsPlumb.draggable($sp, {
+        stop: function(e, ui) {
+            storeposition(this.id, ui.offset);
+        }});
+    jsPlumb.addEndpoint(id, {
         anchor: 'TopCenter',
         isTarget: true,
         endpoint: 'Rectangle',
     });
+    // if there is already a configured position restore that
+    restoreposition(id);
     return $sp;
 };
 
@@ -219,10 +224,10 @@ $(document).ready(function() {
     // nodes have configured endpoints
     $.map(cmds, function(cmd, i) {
         if (cmd.hasOwnProperty('stdoutto')) {
-            connectVisually(cmd.nid, cmd.stdoutto, 'stdout', false);
+            connectVisually(cmd.nid, cmd.stdoutto, 'stdout', true);
         }
         if (cmd.hasOwnProperty('stderrto')) {
-            connectVisually(cmd.nid, cmd.stderrto, 'stderr', false);
+            connectVisually(cmd.nid, cmd.stderrto, 'stderr', true);
         }
     });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
