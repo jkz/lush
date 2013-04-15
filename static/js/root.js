@@ -173,6 +173,7 @@ var connect = function(srcep, trgtep, stream) {
         to: trgtSysId,
     }).done(function() {
         connectVisually(srcep, trgtep, stream, true);
+        rebuildGroupsList();
     });
 };
 
@@ -219,7 +220,7 @@ var createCmdWidget = function(cmd) {
     //   endpoint is connected to), if any
     //
     // - the system id of this command otherwise
-    var getGroupId = function() {
+    cmd.getGroupId = function() {
         if (cmd.stdinep.connections.length > 0) {
             var conn = cmd.stdinep.connections[0];
             return conn.getParameter("groupid")();
@@ -232,7 +233,7 @@ var createCmdWidget = function(cmd) {
         parameters: {
             stream: constantly("stdout"),
             sysid: constantly(cmd.nid),
-            groupid: getGroupId,
+            groupid: cmd.getGroupId,
         },
     });
     cmd.stderrep = jsPlumb.addEndpoint($widget, {
@@ -241,17 +242,48 @@ var createCmdWidget = function(cmd) {
         parameters: {
             stream: constantly("stderr"),
             sysid: constantly(cmd.nid),
-            groupid: getGroupId,
+            groupid: cmd.getGroupId,
         },
     });
     return $widget;
 };
 
+// transform an array of objects into a mapping from key to array of objects
+// with that key.
+// compare to SQL's GROUP BY, with a custom function to evaluate which group an
+// object belongs to.
+var groupby = function(objs, keyfun) {
+    var groups = {};
+    $.map(objs, function(obj) {
+        key = keyfun(obj);
+        // [] if no such group yet
+        groups[key] = (groups[key] || []).concat(obj);
+    });
+    return groups;
+}
+
+// map(sysid => cmdobj) to map(groupid => [cmdobj])
+var makeGroups = function(cmds) {
+    return groupby(cmds, function (cmd) { return cmd.getGroupId(); });
+};
+
+// refresh the <ul id=groups>
+var rebuildGroupsList = function() {
+    var lis = [];
+    $.map(makeGroups(cmds), function(cmds, gid) {
+        var cmdids = $.map(cmds, function(cmd) { return cmd.nid; }).join(", ");
+        var $li = $('<li>' + gid + ': ' + cmdids + '</li>');
+        lis.push($li);
+    });
+    var $list = $('#groups');
+    return $list.empty().append(lis);
+}
+
 $(document).ready(function() {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
     // nodes have configured endpoints
-    $.map(cmds, function(cmd, i) {
+    $.map(cmds, function(cmd) {
         if (cmd.hasOwnProperty('stdoutto')) {
             // connect my stdout to cmd.stdoutto's stdin
             connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout', true);
@@ -260,6 +292,7 @@ $(document).ready(function() {
             connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr', true);
         }
     });
+    rebuildGroupsList();
     jsPlumb.importDefaults({ConnectionsDetachable: false});
     jsPlumb.bind("beforeDrop", function(info) {
         // Connected to another command
