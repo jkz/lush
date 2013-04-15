@@ -130,11 +130,6 @@ var addstreampeeker = function(cmdSysId, stream) {
         isTarget: true,
         endpoint: 'Rectangle',
     });
-    jsPlumb.addEndpoint(id, {
-        anchor: 'BottomCenter',
-        isSource: true,
-        endpoint: 'Rectangle',
-    });
     return $sp;
 };
 
@@ -150,6 +145,11 @@ var connectVisually = function(srcSysId, trgtSysId, stream, withstreampeeker) {
     var anchor = stream2anchor(stream);
     var $src = $('#cmd' + srcSysId);
     var $trgt = $('#cmd' + trgtSysId);
+    jsPlumb.connect({
+        source: $src,
+        target: $trgt,
+        anchors: [anchor, "TopCenter"],
+    });
     if (withstreampeeker) {
         var $sp = addstreampeeker(srcSysId, stream);
         jsPlumb.connect({
@@ -157,14 +157,7 @@ var connectVisually = function(srcSysId, trgtSysId, stream, withstreampeeker) {
             target: $sp,
             anchors: [anchor, "TopCenter"],
         });
-        $src = $sp;
-        anchor = "BottomCenter";
     }
-    jsPlumb.connect({
-        source: $src,
-        target: $trgt,
-        anchors: [anchor, "TopCenter"],
-    });
 };
 
 var connect = function(srcSysId, trgtSysId, stream) {
