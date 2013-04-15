@@ -179,47 +179,53 @@ var constantly = function(val) {
     return function() { return val; }
 };
 
-$(document).ready(function() {
-    $.map(cmds, function(cmd, i) {
-        var $node = $(
-            '<div class="cmd" id="' + cmd.htmlid + '">' +
-            '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
-            '<tt>' + cmd.argv.join(" ") + '</tt></a> ' +
-            stat2html(cmd.nid, cmd.status) + '</p>');
-        $('#cmds').append($node);
-        restoreposition(cmd.htmlid);
-        $node.resizable({
-            resize: function(e, ui) {
-                jsPlumb.repaint(ui.helper);
-            }});
-        jsPlumb.draggable($node, {
-            stop: function(e, ui) {
-                storeposition(this.id, ui.offset);
-            }});
-        jsPlumb.addEndpoint(cmd.htmlid, {
-            anchor: 'TopCenter',
-            isTarget: true,
-            parameters: {
-                sysid: constantly(cmd.nid),
-            },
-        });
-        jsPlumb.addEndpoint(cmd.htmlid, {
-            anchor: 'BottomCenter',
-            isSource: true,
-            parameters: {
-                stream: constantly("stdout"),
-                sysid: constantly(cmd.nid),
-            },
-        });
-        jsPlumb.addEndpoint(cmd.htmlid, {
-            anchor: 'RightMiddle',
-            isSource: true,
-            parameters: {
-                stream: constantly("stderr"),
-                sysid: constantly(cmd.nid),
-            },
-        });
+// create widget with command info and add it to the DOM
+// the argument is a cmd object implementation defined by the cmds array in
+// root.html
+var createCmdWidget = function(cmd) {
+    var $widget = $(
+        '<div class="cmd" id="' + cmd.htmlid + '">' +
+        '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
+        '<tt>' + cmd.argv.join(" ") + '</tt></a> ' +
+        stat2html(cmd.nid, cmd.status) + '</p>');
+    $('#cmds').append($widget);
+    restoreposition(cmd.htmlid);
+    $widget.resizable({
+        resize: function(e, ui) {
+            jsPlumb.repaint(ui.helper);
+        }});
+    jsPlumb.draggable($widget, {
+        stop: function(e, ui) {
+            storeposition(this.id, ui.offset);
+        }});
+    jsPlumb.addEndpoint(cmd.htmlid, {
+        anchor: 'TopCenter',
+        isTarget: true,
+        parameters: {
+            sysid: constantly(cmd.nid),
+        },
     });
+    jsPlumb.addEndpoint(cmd.htmlid, {
+        anchor: 'BottomCenter',
+        isSource: true,
+        parameters: {
+            stream: constantly("stdout"),
+            sysid: constantly(cmd.nid),
+        },
+    });
+    jsPlumb.addEndpoint(cmd.htmlid, {
+        anchor: 'RightMiddle',
+        isSource: true,
+        parameters: {
+            stream: constantly("stderr"),
+            sysid: constantly(cmd.nid),
+        },
+    });
+    return $widget;
+};
+
+$(document).ready(function() {
+    $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
     // nodes have configured endpoints
     $.map(cmds, function(cmd, i) {
