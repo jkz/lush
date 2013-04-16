@@ -262,16 +262,25 @@ func handleGetNewNames(ctx *web.Context) (string, error) {
 	return "", err
 }
 
-func handleGetStdout(ctx *web.Context, idstr string) (string, error) {
+func handleGetStream(ctx *web.Context, idstr, streamname string) (string, error) {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
 	if c == nil {
 		return "", web.WebError{404, "no such command: " + idstr}
 	}
+	var stream liblush.OutStream
+	switch streamname {
+	case "stdout":
+		stream = c.Stdout()
+	case "stderr":
+		stream = c.Stderr()
+	default:
+		return "", web.WebError{400, "No such stream: " + streamname}
+	}
 	n, _ := strconv.Atoi(ctx.Params["numbytes"])
 	buf := make([]byte, n)
-	n = c.Stdout().Last(buf)
+	n = stream.Last(buf)
 	buf = buf[:n]
 	_, err := ctx.Write(buf)
 	return "", err
@@ -300,7 +309,7 @@ func init() {
 		s.web.Post(`/(\d+)/close`, handlePostClose)
 		s.web.Post(`/new`, handlePostNew)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
-		s.web.Get(`/(\d+)/stream/stdout.bin`, handleGetStdout)
+		s.web.Get(`/(\d+)/stream/(\w+).bin`, handleGetStream)
 		s.web.Get(`/clientdata`, handleGetClientdata)
 		s.web.Post(`/clientdata`, handlePostClientdata)
 	})
