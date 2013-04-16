@@ -1,33 +1,39 @@
+// build jquery node containing [start] button that starts cmd in background
+var makeStartButton = function(sysId) {
+    return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
+        .submit(function(e) {
+            $.post(this.action + "?noredirect", $(this).serialize())
+                .done(function() {
+                    // substitute the entire form by a glyph indicating status
+                    $(e.target).html('⌚');
+                    repeatExec(function() {
+                        var info;
+                        $.ajax({
+                            url: '/' + sysId + '/info.json',
+                            async: false,
+                            dataType: "json",
+                            success: function (infoobj) {
+                                info = infoobj;
+                            }});
+                        if (info.Exited == null) {
+                            return true;
+                        }
+                        $(e.target).html(info.Error ? '✗' : '✓');
+                        return false;
+                    }, 1000);
+                }).fail(function() {
+                    $(e.target).html('✗');
+                });
+            return false;
+        });
+};
+
 // set the status info for this command in the given jquery node's content
 var setStatNode = function(sysId, stat, $node) {
     var content;
     switch(stat) {
     case 0:
-        content = $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
-            .submit(function(e) {
-                $.post(this.action + "?noredirect", $(this).serialize())
-                    .done(function() {
-                        $(e.target).html('⌚');
-                        repeatExec(function() {
-                            var info;
-                            $.ajax({
-                                url: '/' + sysId + '/info.json',
-                                async: false,
-                                dataType: "json",
-                                success: function (infoobj) {
-                                    info = infoobj;
-                                }});
-                            if (info.Exited == null) {
-                                return true;
-                            }
-                            $(e.target).html(info.Error ? '✗' : '✓');
-                            return false;
-                        }, 1000);
-                    }).fail(function() {
-                        $(e.target).html('✗');
-                    });
-                return false;
-            });
+        content = makeStartButton(sysId);
         break;
     case 1:
         content = '⌚';
