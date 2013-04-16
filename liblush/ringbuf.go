@@ -21,6 +21,7 @@
 package liblush
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -71,7 +72,7 @@ func (r *ringbuf_unsafe) Last(p []byte) (n int) {
 	// append the rest
 	n += copy(p[n:], r.buf[:r.head])
 	if n != want {
-		panic("unexpected copy length")
+		panic(errors.New("unexpected copy length"))
 	}
 	return
 }
