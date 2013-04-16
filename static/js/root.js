@@ -486,7 +486,7 @@ $(document).ready(function () {
         return false;
     });
     // Auto complete
-    $('form[action="/new"] input[name="name"]').autocomplete({source: "/new/names.json"});
+    $('form[action="/new"] input[name="cmd"]').autocomplete({source: "/new/names.json"});
     // set command name to argv
     $('form[action="/new"]')
         .append($('<input type=hidden name=name>'))
