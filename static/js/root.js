@@ -182,8 +182,6 @@ var addstreampeeker = function (srcep) {
         $sp.removeClass('collapsed');
         $sp.addClass('open');
         $ocbutton.text('▬');
-        $ocbutton.unbind('click', openf);
-        $ocbutton.bind('click', collapsef);
         $sp.resizable({
             resize: function (e, ui) {
                 jsPlumb.repaint(ui.helper);
@@ -191,17 +189,17 @@ var addstreampeeker = function (srcep) {
         jsPlumb.repaint($sp);
         refresher = dorefresh;
         refresher();
+        $ocbutton.one('click', collapsef);
     };
     collapsef = function () {
         $sp.removeClass('open');
         $sp.addClass('collapsed');
         $preview.empty();
         $ocbutton.text('◳');
-        $ocbutton.unbind('click', collapsef);
-        $ocbutton.bind('click', openf);
         $sp.resizable('destroy');
         jsPlumb.repaint($sp);
         refresher = dontrefresh;
+        $ocbutton.one('click', openf);
     };
     collapsef();
     jsPlumb.draggable($sp, {
@@ -419,18 +417,16 @@ var rebuildGroupsList = function (groups) {
         var cmdids = $.map(cmds, function (cmd) { return cmd.nid; }).join(", ");
         var archivef, unarchivef;
         var archivef = function () {
-            $(this).text('◳')
-                   .unbind('click', archivef)
-                   .bind('click', unarchivef);
             archiveCmdTree(gid);
+            $(this).text('◳')
+                   .one('click', unarchivef);
         };
         var unarchivef = function () {
-            $(this).text('▬')
-                   .unbind('click', unarchivef)
-                   .bind('click', archivef);
             unarchiveCmdTree(gid);
+            $(this).text('▬')
+                   .one('click', archivef);
         };
-        var $btn = $('<button>▬</button>').click(archivef);
+        var $btn = $('<button>▬</button>').one('click', archivef);
         var $li = $('<li>' + gid + ': ' + cmdids + '</li>').append($btn);
         return $li;
     });
