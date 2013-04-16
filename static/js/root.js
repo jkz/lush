@@ -249,9 +249,9 @@ var createCmdWidget = function(cmd) {
     return $widget;
 };
 
-// Recursively apply fun to all cmds that are sources of this cmd and then
-// apply fun this cmd itself
-var mapSourceCmds = function (sysid, f) {
+// Recursively apply fun to all cmds that this cmd is a source of and then
+// apply fun to this cmd itself
+var mapCmdTree = function (sysid, f) {
     var cmd = cmds[sysid];
     // for every connected stdout and stderr stream:
     $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
@@ -261,37 +261,48 @@ var mapSourceCmds = function (sysid, f) {
         // stdin endpoint that this stream is connected to
         var trgtep = conn.endpoints[1];
         // recurse into those before continuing
-        mapSourceCmds(trgtep.getParameter("sysid")(), f);
+        mapCmdTree(trgtep.getParameter("sysid")(), f);
     });
     f(cmd);
 };
 
-var archiveCmd = function (sysid) {
-    mapSourceCmds(sysid, function (cmd) {
-        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
-            conn.setVisible(false);
-            conn.target.css('display', 'none');
-            conn.endpoints[1].setVisible(false);
-        });
-        $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
-            ep.setVisible(false);
-        });
-        $('#' + cmd.htmlid).css('display', 'none');
+// hide command widget, including meta widgets (streampeek)
+var hideCmd = function (cmd) {
+    $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
+        conn.setVisible(false);
+        conn.endpoints[1].setVisible(false);
+        if (conn.getParameter('isStreampeek')) {
+            jsPlumb.repaint(conn.target.css('display', 'none'));
+        }
     });
+    $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
+        ep.setVisible(false);
+    });
+    jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'none'));
+};
+
+var showCmd = function (cmd) {
+    $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
+        conn.setVisible(true);
+        conn.endpoints[1].setVisible(true);
+        if (conn.getParameter('isStreampeek')) {
+            jsPlumb.repaint(conn.target.css('display', 'block'));
+        }
+    });
+    $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
+        ep.setVisible(true);
+    });
+    jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'block'));
+};
+
+var archiveCmd = function (sysid) {
+    mapCmdTree(sysid, hideCmd);
+    updateState('group' + sysid + '.' + 'archived', true);
 };
 
 var unarchiveCmd = function (sysid) {
-    mapSourceCmds(sysid, function (cmd) {
-        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
-            conn.setVisible(true);
-            conn.target.css('display', 'block');
-            conn.endpoints[1].setVisible(true);
-        });
-        $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
-            ep.setVisible(true);
-        });
-        $('#' + cmd.htmlid).css('display', 'block');
-    });
+    mapCmdTree(sysid, showCmd);
+    updateState('group' + sysid + '.' + 'archived', false);
 };
 
 // transform an array of objects into a mapping from key to array of objects
@@ -314,8 +325,11 @@ var makeGroups = function(cmds) {
 };
 
 // refresh the <ul id=groups>
-var rebuildGroupsList = function() {
-    var lis = $.map(makeGroups(cmds), function(cmds, gid) {
+var rebuildGroupsList = function(groups) {
+    if (groups === undefined) {
+        groups = makeGroups(cmds);
+    }
+    var lis = $.map(groups, function(cmds, gid) {
         var cmdids = $.map(cmds, function(cmd) { return cmd.nid; }).join(", ");
         var archivef, unarchivef;
         var archivef = function () {
@@ -350,7 +364,16 @@ $(document).ready(function() {
             connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr', true);
         }
     });
-    rebuildGroupsList();
+    var groups = makeGroups(cmds);
+    rebuildGroupsList(groups);
+    // process configuration of archived groups on init
+    getState(function (state) {
+        $.map(groups, function (_, gid) {
+            if (state['group' + gid + '.' + 'archived']) {
+                archiveCmd(gid);
+            }
+        });
+    });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
     jsPlumb.bind("beforeDrop", function(info) {
         // Connected to another command
