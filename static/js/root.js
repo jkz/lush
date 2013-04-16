@@ -512,4 +512,11 @@ $(document).ready(function () {
         $(cmdform).submit();
         return false;
     });
+    // persistent "start immediately" checkbox configuration
+    var $startflag = $('input[name=start]', cmdform).change(function () {
+        updateState('autostart', $(this).is(':checked'));
+    });
+    getState(function (state) {
+        $startflag.prop('checked', state.autostart);
+    });
 });
