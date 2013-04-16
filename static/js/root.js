@@ -1,12 +1,12 @@
 // build jquery node containing [start] button that starts cmd in background
-var makeStartButton = function(sysId) {
+var makeStartButton = function (sysId) {
     return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
-        .submit(function(e) {
+        .submit(function (e) {
             $.post(this.action + "?noredirect", $(this).serialize())
-                .done(function() {
+                .done(function () {
                     // substitute the entire form by a glyph indicating status
                     $(e.target).html('⌚');
-                    repeatExec(function() {
+                    repeatExec(function () {
                         var info;
                         $.ajax({
                             url: '/' + sysId + '/info.json',
@@ -21,7 +21,7 @@ var makeStartButton = function(sysId) {
                         $(e.target).html(info.Error ? '✗' : '✓');
                         return false;
                     }, 1000);
-                }).fail(function() {
+                }).fail(function () {
                     $(e.target).html('✗');
                 });
             return false;
@@ -29,7 +29,7 @@ var makeStartButton = function(sysId) {
 };
 
 // set the status info for this command in the given jquery node's content
-var setStatNode = function(sysId, stat, $node) {
+var setStatNode = function (sysId, stat, $node) {
     var content;
     switch(stat) {
     case 0:
@@ -49,7 +49,7 @@ var setStatNode = function(sysId, stat, $node) {
 };
 
 // tries to parse JSON returns {} on any failure
-var safeJSONparse = function(text) {
+var safeJSONparse = function (text) {
     // how wrong is a wild-card catch in JS?
     try {
         return JSON.parse(text);
@@ -67,41 +67,41 @@ var repeatExec = function (f, ms) {
 
 // fetch state as json, pass decoded object to callback arg
 // returns jquery jqxhr handle
-var getState = function(success) {
+var getState = function (success) {
     // this is me not caring about wrapping the deferred
-    return $.get('/clientdata').done(function(json) {
+    return $.get('/clientdata').done(function (json) {
         success(safeJSONparse(json));
     });
 };
 
 // state object is passed to JSON.stringify
-var setState = function(state) {
+var setState = function (state) {
     return $.post('/clientdata', {data: JSON.stringify(state)});
 };
 
-var updateState = function(key, value) {
-    return getState(function(state) {
+var updateState = function (key, value) {
+    return getState(function (state) {
         state[key] = value;
         // would prefer to return this deferred.. $.when.done? dont care enough
         setState(state);
     });
 };
 
-var storeposition = function(id, pos) {
+var storeposition = function (id, pos) {
     updateState(id + '.pos', pos)
-        .fail(function(_, msg) {
+        .fail(function (_, msg) {
             console.log("failed to update position: " + msg);
         });
 };
 
-var getposition = function(id, callback) {
-    return getState(function(state) {
+var getposition = function (id, callback) {
+    return getState(function (state) {
         callback(state[id + '.pos']);
     });
 };
 
-var restoreposition = function(id) {
-    getposition(id, function(pos) {
+var restoreposition = function (id) {
+    getposition(id, function (pos) {
         if (pos !== undefined) {
             jsPlumb.repaint($('#' + id).offset(pos));
         }
@@ -109,13 +109,13 @@ var restoreposition = function(id) {
 };
 
 // deferred object fetching most recent stdout data for streampeeker
-var getRecentStream = function(sysId, stream) {
+var getRecentStream = function (sysId, stream) {
     return $.get('/' + sysId + '/stream/' + stream + '.bin?numbytes=100');
 };
 
 // Stream peeker is like a small dumb terminal window showing a stream's most
 // recent output
-var addstreampeeker = function(srcep) {
+var addstreampeeker = function (srcep) {
     var cmdSysId = srcep.getParameter("sysid")();
     var stream = srcep.getParameter("stream")();
     var id = 'streampeeker-' + cmdSysId + '-' + stream;
@@ -131,9 +131,9 @@ var addstreampeeker = function(srcep) {
     // Closure that fills the stream peeker with stdout data every second until
     // it is closed
     var refresher;
-    var dontrefresh = function() {};
-    var dorefresh = function() {
-        getRecentStream(cmdSysId, stream).done(function(data) {
+    var dontrefresh = function () {};
+    var dorefresh = function () {
+        getRecentStream(cmdSysId, stream).done(function (data) {
             repeatExec
             if ($sp.hasClass('open')) {
                 $preview.text(data);
@@ -145,21 +145,21 @@ var addstreampeeker = function(srcep) {
     };
     // functions that open / collapse the streampeeker
     var openf, collapsef;
-    openf = function() {
+    openf = function () {
         $sp.removeClass('collapsed');
         $sp.addClass('open');
         $ocbutton.text('▬');
         $ocbutton.unbind('click', openf);
         $ocbutton.bind('click', collapsef);
         $sp.resizable({
-            resize: function(e, ui) {
+            resize: function (e, ui) {
                 jsPlumb.repaint(ui.helper);
             }})
         jsPlumb.repaint($sp);
         refresher = dorefresh;
         refresher();
     };
-    collapsef = function() {
+    collapsef = function () {
         $sp.removeClass('open');
         $sp.addClass('collapsed');
         $preview.empty();
@@ -172,7 +172,7 @@ var addstreampeeker = function(srcep) {
     };
     collapsef();
     jsPlumb.draggable($sp, {
-        stop: function(e, ui) {
+        stop: function (e, ui) {
             storeposition(this.id, ui.offset);
         }});
     var myep = jsPlumb.addEndpoint(id, {
@@ -192,16 +192,16 @@ var addstreampeeker = function(srcep) {
     return $sp;
 };
 
-var stream2anchor = function(stream) {
+var stream2anchor = function (stream) {
     return {stderr: "RightMiddle", stdout: "BottomCenter"}[stream]
 };
 
-var anchor2stream = function(anchor) {
+var anchor2stream = function (anchor) {
     return {RightMiddle: "stderr", BottomCenter: "stdout"}[anchor];
 };
 
 // the two first arguments are the source and target endpoints to connect
-var connectVisually = function(srcep, trgtep, stream, withstreampeeker) {
+var connectVisually = function (srcep, trgtep, stream, withstreampeeker) {
     jsPlumb.connect({
         source: srcep,
         target: trgtep,
@@ -211,21 +211,21 @@ var connectVisually = function(srcep, trgtep, stream, withstreampeeker) {
     }
 };
 
-var connect = function(srcep, trgtep, stream) {
+var connect = function (srcep, trgtep, stream) {
     var srcSysId = srcep.getParameter("sysid")();
     var trgtSysId = trgtep.getParameter("sysid")();
     $.post('/' + srcSysId + '/connect?noredirect', {
         stream: stream,
         to: trgtSysId,
-    }).done(function() {
+    }).done(function () {
         connectVisually(srcep, trgtep, stream, true);
         rebuildGroupsList();
     });
 };
 
 // analogous to CL's function by the same name
-var constantly = function(val) {
-    return function() { return val; }
+var constantly = function (val) {
+    return function () { return val; }
 };
 
 // create widget with command info and add it to the DOM
@@ -237,7 +237,7 @@ var constantly = function(val) {
 // jsPlumb.Endpoint objects and their reference is needed to connect them to
 // eachother. this function creates the endpoints and stores their reference in
 // the cmd argument object as .stdinep, .stdoutep and .stderrep.
-var createCmdWidget = function(cmd) {
+var createCmdWidget = function (cmd) {
     var $widget = $(
         '<div class="cmd" id="' + cmd.htmlid + '">' +
         '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
@@ -246,11 +246,11 @@ var createCmdWidget = function(cmd) {
     $('#cmds').append($widget);
     restoreposition(cmd.htmlid);
     $widget.resizable({
-        resize: function(e, ui) {
+        resize: function (e, ui) {
             jsPlumb.repaint(ui.helper);
         }});
     jsPlumb.draggable($widget, {
-        stop: function(e, ui) {
+        stop: function (e, ui) {
             storeposition(this.id, ui.offset);
         }});
     cmd.stdinep = jsPlumb.addEndpoint($widget, {
@@ -266,7 +266,7 @@ var createCmdWidget = function(cmd) {
     //   endpoint is connected to), if any
     //
     // - the system id of this command otherwise
-    cmd.getGroupId = function() {
+    cmd.getGroupId = function () {
         if (cmd.stdinep.connections.length > 0) {
             var conn = cmd.stdinep.connections[0];
             return conn.getParameter("groupid")();
@@ -362,9 +362,9 @@ var unarchiveCmdTree = function (sysid) {
 // with that key.
 // compare to SQL's GROUP BY, with a custom function to evaluate which group an
 // object belongs to.
-var groupby = function(objs, keyfun) {
+var groupby = function (objs, keyfun) {
     var groups = {};
-    $.map(objs, function(obj) {
+    $.map(objs, function (obj) {
         key = keyfun(obj);
         // [] if no such group yet
         groups[key] = (groups[key] || []).concat(obj);
@@ -373,17 +373,17 @@ var groupby = function(objs, keyfun) {
 };
 
 // map(sysid => cmdobj) to map(groupid => [cmdobj])
-var makeGroups = function(cmds) {
+var makeGroups = function (cmds) {
     return groupby(cmds, function (cmd) { return cmd.getGroupId(); });
 };
 
 // refresh the <ul id=groups>
-var rebuildGroupsList = function(groups) {
+var rebuildGroupsList = function (groups) {
     if (groups === undefined) {
         groups = makeGroups(cmds);
     }
-    var lis = $.map(groups, function(cmds, gid) {
-        var cmdids = $.map(cmds, function(cmd) { return cmd.nid; }).join(", ");
+    var lis = $.map(groups, function (cmds, gid) {
+        var cmdids = $.map(cmds, function (cmd) { return cmd.nid; }).join(", ");
         var archivef, unarchivef;
         var archivef = function () {
             $(this).text('◳')
@@ -404,11 +404,11 @@ var rebuildGroupsList = function(groups) {
     return $('#groups').empty().append(lis);
 };
 
-$(document).ready(function() {
+$(document).ready(function () {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
     // nodes have configured endpoints
-    $.map(cmds, function(cmd) {
+    $.map(cmds, function (cmd) {
         if (cmd.hasOwnProperty('stdoutto')) {
             // connect my stdout to cmd.stdoutto's stdin
             connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout', true);
@@ -428,7 +428,7 @@ $(document).ready(function() {
         });
     });
     jsPlumb.importDefaults({ConnectionsDetachable: false});
-    jsPlumb.bind("beforeDrop", function(info) {
+    jsPlumb.bind("beforeDrop", function (info) {
         // Connected to another command
         connect(
             info.connection.endpoints[0],
@@ -439,7 +439,7 @@ $(document).ready(function() {
     // Auto complete
     $('form[action="/new"] input[name="name"]').autocomplete({source: "/new/names.json"});
     // parse prompt
-    $('div#prompt form').submit(function(e) {
+    $('div#prompt form').submit(function (e) {
         var argv = $('input', this).val().split(/\s+/);
         var data = {
             name: argv[0],
@@ -449,7 +449,7 @@ $(document).ready(function() {
         for (var i = 1; i < argv.length; i++) {
             data['arg' + i] = argv[i];
         }
-        $.post('/new', data).always(function() { window.location.reload(true); });
+        $.post('/new', data).always(function () { window.location.reload(true); });
         return false;
     });
 });
