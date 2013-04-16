@@ -85,7 +85,18 @@ var makeStartButton = function (sysId) {
                             // not done yet continue polling
                             return true;
                         }
-                        $(e.target).html(info.Error ? '✗' : '✓');
+                        // done!
+                        if (info.Error) {
+                            $(e.target).html('✗');
+                        } else {
+                            $(e.target).html('✓');
+                            if ($('#autoarchive').is(':checked')) {
+                                // only archive group leaders
+                                if (cmds[sysId].getGroupId() == sysId) {
+                                    archiveCmdTree(sysId);
+                                }
+                            }
+                        }
                         return false;
                     }, 1000);
                 }).fail(function () {

@@ -131,7 +131,7 @@ func handleGetCmdInfo(ctx *web.Context, idstr string) (string, error) {
 	enc := json.NewEncoder(ctx)
 	var info = struct {
 		Started, Exited *time.Time
-		Error           string
+		Error           string `json:",omitempty"`
 	}{
 		Started: c.Status().Started(),
 		Exited:  c.Status().Exited(),
