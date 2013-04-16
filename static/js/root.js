@@ -18,6 +18,36 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+
+// UTILITIES
+
+
+// tries to parse JSON returns {} on any failure
+var safeJSONparse = function (text) {
+    // how wrong is a wild-card catch in JS?
+    try {
+        return JSON.parse(text);
+    } catch(e) {
+        return {};
+    }
+};
+
+// repeat f every ms milliseconds as long as it returns true.
+var repeatExec = function (f, ms) {
+    if (f()) {
+        window.setTimeout(repeatExec, ms, f, ms);
+    }
+};
+
+// analogous to CL's function by the same name
+var constantly = function (val) {
+    return function () { return val; }
+};
+
+
+// SPECIAL PURPOSE
+
+
 // build jquery node containing [start] button that starts cmd in background
 var makeStartButton = function (sysId) {
     return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
@@ -66,23 +96,6 @@ var setStatNode = function (sysId, stat, $node) {
         break;
     }
     return $node.empty().append(content);
-};
-
-// tries to parse JSON returns {} on any failure
-var safeJSONparse = function (text) {
-    // how wrong is a wild-card catch in JS?
-    try {
-        return JSON.parse(text);
-    } catch(e) {
-        return {};
-    }
-};
-
-// repeat f every ms milliseconds as long as it returns true.
-var repeatExec = function (f, ms) {
-    if (f()) {
-        window.setTimeout(repeatExec, ms, f, ms);
-    }
 };
 
 // fetch state as json, pass decoded object to callback arg
@@ -221,14 +234,11 @@ var anchor2stream = function (anchor) {
 };
 
 // the two first arguments are the source and target endpoints to connect
-var connectVisually = function (srcep, trgtep, stream, withstreampeeker) {
+var connectVisually = function (srcep, trgtep, stream) {
     jsPlumb.connect({
         source: srcep,
         target: trgtep,
     });
-    if (withstreampeeker) {
-        addstreampeeker(srcep);
-    }
 };
 
 var connect = function (srcep, trgtep, stream) {
@@ -238,14 +248,9 @@ var connect = function (srcep, trgtep, stream) {
         stream: stream,
         to: trgtSysId,
     }).done(function () {
-        connectVisually(srcep, trgtep, stream, true);
+        connectVisually(srcep, trgtep, stream);
         rebuildGroupsList();
     });
-};
-
-// analogous to CL's function by the same name
-var constantly = function (val) {
-    return function () { return val; }
 };
 
 // create widget with command info and add it to the DOM
@@ -310,6 +315,14 @@ var createCmdWidget = function (cmd) {
             sysid: constantly(cmd.nid),
             groupid: cmd.getGroupId,
         },
+    });
+    // Doubleclicking a source endpoint creates a streampeeker
+    $.map([cmd.stdoutep, cmd.stderrep], function (ep) {
+        $(ep.canvas)
+            .css('z-index', 4) // put endpoint above the connector (is at 3)
+            .one('dblclick', function() {
+                addstreampeeker(ep);
+            });
     });
     return $widget;
 };
@@ -431,10 +444,10 @@ $(document).ready(function () {
     $.map(cmds, function (cmd) {
         if (cmd.hasOwnProperty('stdoutto')) {
             // connect my stdout to cmd.stdoutto's stdin
-            connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout', true);
+            connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout');
         }
         if (cmd.hasOwnProperty('stderrto')) {
-            connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr', true);
+            connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr');
         }
     });
     var groups = makeGroups(cmds);
@@ -447,7 +460,11 @@ $(document).ready(function () {
             }
         });
     });
-    jsPlumb.importDefaults({ConnectionsDetachable: false});
+    jsPlumb.importDefaults({
+        ConnectionsDetachable: false,
+        // Put all connectors at z-index 3 and endpoints at 4
+        ConnectorZIndex: 3,
+    });
     jsPlumb.bind("beforeDrop", function (info) {
         // Connected to another command
         connect(
