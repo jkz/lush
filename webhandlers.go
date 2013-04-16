@@ -29,6 +29,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
@@ -120,6 +121,28 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	}
 	err := s.tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)
 	return "", err
+}
+
+func handleGetCmdInfo(ctx *web.Context, idstr string) (string, error) {
+	id, _ := liblush.ParseCmdId(idstr)
+	s := ctx.User.(*server)
+	c := s.session.GetCommand(id)
+	if c == nil {
+		return "", web.WebError{404, "no such command: " + idstr}
+	}
+	ctx.Header().Set("content-type", "application/json")
+	enc := json.NewEncoder(ctx)
+	var info = struct {
+		Started, Exited *time.Time
+		Error           string
+	}{
+		Started: c.Status().Started(),
+		Exited:  c.Status().Exited(),
+	}
+	if cerr := c.Status().Err(); cerr != nil {
+		info.Error = cerr.Error()
+	}
+	return "", enc.Encode(info)
 }
 
 func handlePostStart(ctx *web.Context, idstr string) (string, error) {
@@ -269,6 +292,7 @@ func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.web.Get(`/`, handleGetRoot)
 		s.web.Get(`/(\d+)/`, handleGetCmd)
+		s.web.Get(`/(\d+)/info.json`, handleGetCmdInfo)
 		s.web.Post(`/(\d+)/start`, handlePostStart)
 		s.web.Post(`/(\d+)/send`, handlePostSend)
 		s.web.Post(`/(\d+)/connect`, handlePostConnect)

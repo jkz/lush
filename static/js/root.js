@@ -1,14 +1,45 @@
-var stat2html = function(nid, stat) {
+// set the status info for this command in the given jquery node's content
+var setStatNode = function(sysId, stat, $node) {
+    var content;
     switch(stat) {
     case 0:
-        return '<form method=post action="/' + nid + '/start" class="start-cmd"> <button>start</button> </form>';
+        content = $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
+            .submit(function(e) {
+                $.post(this.action + "?noredirect", $(this).serialize())
+                    .done(function() {
+                        $(e.target).html('⌚');
+                        repeatExec(function() {
+                            var info;
+                            $.ajax({
+                                url: '/' + sysId + '/info.json',
+                                async: false,
+                                dataType: "json",
+                                success: function (infoobj) {
+                                    info = infoobj;
+                                }});
+                            if (info.Exited == null) {
+                                return true;
+                            }
+                            $(e.target).html(info.Error ? '✗' : '✓');
+                            return false;
+                        }, 1000);
+                    }).fail(function() {
+                        $(e.target).html('✗');
+                    });
+                return false;
+            });
+        break;
     case 1:
-        return '⌚';
+        content = '⌚';
+        break;
     case 2:
-        return '✓';
+        content = '✓';
+        break;
     case 3:
-        return '✗';
+        content = '✗';
+        break;
     }
+    return $node.empty().append(content);
 };
 
 // tries to parse JSON returns {} on any failure
@@ -18,6 +49,13 @@ var safeJSONparse = function(text) {
         return JSON.parse(text);
     } catch(e) {
         return {};
+    }
+};
+
+// repeat f every ms milliseconds as long as it returns true.
+var repeatExec = function (f, ms) {
+    if (f()) {
+        window.setTimeout(repeatExec, ms, f, ms);
     }
 };
 
@@ -90,6 +128,7 @@ var addstreampeeker = function(srcep) {
     var dontrefresh = function() {};
     var dorefresh = function() {
         getRecentStream(cmdSysId, stream).done(function(data) {
+            repeatExec
             if ($sp.hasClass('open')) {
                 $preview.text(data);
                 jsPlumb.repaint($sp);
@@ -196,8 +235,8 @@ var createCmdWidget = function(cmd) {
     var $widget = $(
         '<div class="cmd" id="' + cmd.htmlid + '">' +
         '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
-        '<tt>' + cmd.argv.join(" ") + '</tt></a> ' +
-        stat2html(cmd.nid, cmd.status) + '</p>');
+        '<tt>' + cmd.argv.join(" ") + ' </tt> </a>')
+        .append(setStatNode(cmd.nid, cmd.status, $('<span>')));
     $('#cmds').append($widget);
     restoreposition(cmd.htmlid);
     $widget.resizable({
@@ -381,16 +420,6 @@ $(document).ready(function() {
             info.connection.endpoints[0],
             info.dropEndpoint,
             info.connection.getParameter("stream")());
-        return false;
-    });
-    // ajaxify start command button
-    $('form.start-cmd').submit(function(e) {
-        $.post(this.action + "?noredirect", $(this).serialize())
-            .done(function() {
-                $(e.target).html('⌚');
-            }).fail(function() {
-                $(e.target).html('✗');
-            });
         return false;
     });
     // Auto complete
