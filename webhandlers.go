@@ -70,18 +70,15 @@ func getCmd(s liblush.Session, idstr string) (liblush.Cmd, error) {
 
 func handleGetRoot(ctx *web.Context) (string, error) {
 	s := ctx.User.(*server)
-	c := make(chan liblush.Cmd)
+	ch := make(chan metacmd)
 	go func() {
 		for _, id := range s.session.GetCommandIds() {
-			c <- s.session.GetCommand(id)
+			ch <- metacmd{s.session.GetCommand(id)}
 		}
-		close(c)
+		close(ch)
 	}()
-	err := s.tmplts.ExecuteTemplate(ctx, "/", c)
-	if err != nil {
-		return "", err
-	}
-	return "", nil
+	err := s.tmplts.ExecuteTemplate(ctx, "/", ch)
+	return "", err
 }
 
 func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
@@ -238,14 +235,10 @@ func handlePostNew(ctx *web.Context) (string, error) {
 	i, _ = strconv.Atoi(ctx.Params["stderrScrollback"])
 	c.Stderr().ResizeScrollbackBuffer(i)
 	c.SetName(ctx.Params["name"])
-	if ctx.Params["start"] != "" {
-		err := c.Start()
-		if err != nil {
-			return "", err
-		}
-	}
 	redirect(ctx, &url.URL{Path: "/"})
-	return "", nil
+	ctx.Header().Set("content-type", "application/json")
+	err := json.NewEncoder(ctx).Encode(metacmd{c}.Metadata())
+	return "", err
 }
 
 func handleGetNewNames(ctx *web.Context) (string, error) {

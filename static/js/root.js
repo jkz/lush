@@ -82,6 +82,7 @@ var makeStartButton = function (sysId) {
                                 info = infoobj;
                             }});
                         if (info.Exited == null) {
+                            // not done yet continue polling
                             return true;
                         }
                         $(e.target).html(info.Error ? '✗' : '✓');
@@ -490,14 +491,31 @@ $(document).ready(function () {
     // set command name to argv
     $('form[action="/new"]')
         .append($('<input type=hidden name=name>'))
+        // ajaxify creation of new command
         .submit(function () {
             var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
             $('input[name=name]', this).val(removeFalse(argv).join(' '));
-            return true;
+            $.post(this.action + '?noredirect', $(this).serialize())
+                .done(function (cmd) {
+                    cmds[cmd.nid] = cmd;
+                    createCmdWidget(cmd);
+                    rebuildGroupsList();
+                    // clear prompt when command is succesfully created
+                    $('#prompt input').val('');
+                    // auto start by simulating keypress on [start]
+                    if ($('#autostart').is(':checked')) {
+                        $('#' + cmd.htmlid + ' form.start-cmd').submit();
+                    }
+                })
+                .fail(function (_, status, error) {
+                    alert(status + ": " + error);
+                });
+            return false;
         });
     // parse prompt processed by copying data to "new command" form
     cmdform = $('form[action="/new"]')[0];
     $('div#prompt form').submit(function (e) {
+        $('input[name=cmd], input[name^=arg]', cmdform).val('');
         var argv = $('input', this).val().split(/\s+/);
         cmdform.cmd.value = argv[0];
         cmdform.name.value = argv.join(' ');
@@ -512,11 +530,13 @@ $(document).ready(function () {
         $(cmdform).submit();
         return false;
     });
-    // persistent "start immediately" checkbox configuration
-    var $startflag = $('input[name=start]', cmdform).change(function () {
-        updateState('autostart', $(this).is(':checked'));
+    // persistent checkbox configurations
+    var $flags = $('input[type=checkbox]').change(function () {
+        updateState('flag.' + this.id, $(this).is(':checked'));
     });
     getState(function (state) {
-        $startflag.prop('checked', state.autostart);
+        $flags.each(function () {
+            $(this).prop('checked', state['flag.' + this.id]);
+        });
     });
 });

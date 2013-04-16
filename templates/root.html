@@ -46,9 +46,9 @@
 
 <h2>Configuration</h2>
 <p>stdout scrollback: <input size=4 name=stdoutScrollback value=1000> bytes<br>
-stderr scrollback: <input size=4 name=stderrScrollback value=1000> bytes<br>
-<label for=start>start immediately: </label><input type=checkbox id=start name=start>
+stderr scrollback: <input size=4 name=stderrScrollback value=1000> bytes
  </form>
+<label for=autostart>start immediately: </label><input type=checkbox id=autostart><br>
 
 <h1>Groups</h1>
 <ul id=groups></ul>
@@ -64,28 +64,7 @@ stderr scrollback: <input size=4 name=stderrScrollback value=1000> bytes<br>
 // object
 var cmds = {
 {{range .}}
-{{.Id}}: {
-    nid: {{.Id}},
-    htmlid: 'cmd{{.Id}}',
-    // 0: not started
-    // 1: running
-    // 2: done (success)
-    // 3: done (failure)
-    "name": {{.Name}},
-    "argv": {{.Argv}},
-    "status":
-        {{if .Status.Exited}}
-            {{if .Status.Success}} 2 {{else}} 3 {{end}}
-        {{else}}
-            {{if .Status.Started}} 1 {{else}} 0 {{end}}
-        {{end}},
-    {{with tocmd .Stdout}}
-        "stdoutto": {{.Id}},
-    {{end}}
-    {{with tocmd .Stderr}}
-        "stderrto": {{.Id}},
-    {{end}}
-},
+{{.Id}}: {{.Metadata}},
 {{end}}
 };
 </script>
