@@ -334,13 +334,21 @@ var showCmd = function (cmd) {
     jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'block'));
 };
 
-var archiveCmd = function (sysid) {
+var hideCmdTree = function (sysid) {
     mapCmdTree(sysid, hideCmd);
+};
+
+var showCmdTree = function (sysid) {
+    mapCmdTree(sysid, showCmd);
+};
+
+var archiveCmdTree = function (sysid) {
+    hideCmdTree(sysid);
     updateState('group' + sysid + '.' + 'archived', true);
 };
 
-var unarchiveCmd = function (sysid) {
-    mapCmdTree(sysid, showCmd);
+var unarchiveCmdTree = function (sysid) {
+    showCmdTree(sysid);
     updateState('group' + sysid + '.' + 'archived', false);
 };
 
@@ -375,13 +383,13 @@ var rebuildGroupsList = function(groups) {
             $(this).text('◳')
                    .unbind('click', archivef)
                    .bind('click', unarchivef);
-            archiveCmd(gid);
+            archiveCmdTree(gid);
         };
         var unarchivef = function () {
             $(this).text('▬')
                    .unbind('click', unarchivef)
                    .bind('click', archivef);
-            unarchiveCmd(gid);
+            unarchiveCmdTree(gid);
         };
         var $btn = $('<button>▬</button>').click(archivef);
         var $li = $('<li>' + gid + ': ' + cmdids + '</li>').append($btn);
@@ -409,7 +417,7 @@ $(document).ready(function() {
     getState(function (state) {
         $.map(groups, function (_, gid) {
             if (state['group' + gid + '.' + 'archived']) {
-                archiveCmd(gid);
+                hideCmdTree(gid);
             }
         });
     });
