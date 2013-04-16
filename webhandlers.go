@@ -254,7 +254,8 @@ func handleGetNewNames(ctx *web.Context) (string, error) {
 	for _, d := range strings.Split(os.Getenv("PATH"), string(os.PathListSeparator)) {
 		fis, err := ioutil.ReadDir(d)
 		if err != nil {
-			return "", err
+			// ignore unreadable dirs
+			continue
 		}
 		for _, fi := range fis {
 			name := fi.Name()
