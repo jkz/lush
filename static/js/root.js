@@ -55,7 +55,7 @@ var identity = function (x) {
     return x;
 };
 
-// copy ar but remove all values that evaluate to false (0, [], false, ...)
+// copy ar but remove all values that evaluate to false (0, "", false, ...)
 var removeFalse = function (ar) {
     return $.grep(ar, identity);
 };
@@ -491,23 +491,25 @@ $(document).ready(function () {
     $('form[action="/new"]')
         .append($('<input type=hidden name=name>'))
         .submit(function () {
-            var argv = $.map([this.cmd, this.arg1, this.arg2, this.arg3], attrgetter('value'));
+            var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
             $('input[name=name]', this).val(removeFalse(argv).join(' '));
             return true;
         });
-    // parse prompt
+    // parse prompt processed by copying data to "new command" form
+    cmdform = $('form[action="/new"]')[0];
     $('div#prompt form').submit(function (e) {
         var argv = $('input', this).val().split(/\s+/);
-        var data = {
-            cmd: argv[0],
-            name: argv.join(' '),
-            stdoutScrollback: 1000,
-            stderrScrollback: 1000,
-        };
+        cmdform.cmd.value = argv[0];
+        cmdform.name.value = argv.join(' ');
         for (var i = 1; i < argv.length; i++) {
-            data['arg' + i] = argv[i];
+            $input = $('input[name=arg'+i+']', cmdform);
+            if ($input.length == 0) {
+                $input = $('<input name=arg'+i+'>');
+                $(cmdform).append($input);
+            }
+            $input.val(argv[i])
         }
-        $.post('/new', data).always(function () { window.location.reload(true); });
+        $(cmdform).submit();
         return false;
     });
 });
