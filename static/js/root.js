@@ -44,6 +44,13 @@ var constantly = function (val) {
     return function () { return val; }
 };
 
+// analogous to Python's operator.attrgetter
+var attrgetter = function (attr) {
+    return function (obj) {
+        return obj[attr];
+    };
+};
+
 
 // SPECIAL PURPOSE
 
@@ -414,7 +421,7 @@ var rebuildGroupsList = function (groups) {
         groups = makeGroups(cmds);
     }
     var lis = $.map(groups, function (cmds, gid) {
-        var cmdids = $.map(cmds, function (cmd) { return cmd.nid; }).join(", ");
+        var names = $.map(cmds, attrgetter("name")).join(", ");
         var archivef, unarchivef;
         var archivef = function () {
             archiveCmdTree(gid);
@@ -427,7 +434,7 @@ var rebuildGroupsList = function (groups) {
                    .one('click', archivef);
         };
         var $btn = $('<button>▬</button>').one('click', archivef);
-        var $li = $('<li>' + gid + ': ' + cmdids + '</li>').append($btn);
+        var $li = $('<li>' + gid + ': ' + names + '</li>').append($btn);
         return $li;
     });
     return $('#groups').empty().append(lis);
