@@ -238,6 +238,12 @@ func handlePostNew(ctx *web.Context) (string, error) {
 	i, _ = strconv.Atoi(ctx.Params["stderrScrollback"])
 	c.Stderr().ResizeScrollbackBuffer(i)
 	c.SetName(ctx.Params["name"])
+	if ctx.Params["start"] != "" {
+		err := c.Start()
+		if err != nil {
+			return "", err
+		}
+	}
 	redirect(ctx, &url.URL{Path: "/"})
 	return "", nil
 }
