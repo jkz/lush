@@ -60,7 +60,9 @@ type InStream interface {
 // A shell command state similar to os/exec.Cmd
 type Cmd interface {
 	Id() CmdId
+	// if SetName has been called return that otherwise best effort
 	Name() string
+	SetName(string)
 	Argv() []string
 	// Run command and wait for it to exit
 	Run() error

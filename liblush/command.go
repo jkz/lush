@@ -77,6 +77,7 @@ type cmd struct {
 	stdout *richpipe
 	stderr *richpipe
 	stdin  InStream
+	name   string
 }
 
 func (c *cmd) Id() CmdId {
@@ -84,7 +85,11 @@ func (c *cmd) Id() CmdId {
 }
 
 func (c *cmd) Name() string {
-	return c.execCmd.Path
+	return c.name
+}
+
+func (c *cmd) SetName(name string) {
+	c.name = name
 }
 
 func (c *cmd) Argv() []string {
@@ -169,5 +174,6 @@ func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
 	c.stderr.SetPipe(devnull{})
 	c.execCmd.Stdout = c.stdout
 	c.execCmd.Stderr = c.stderr
+	c.name = c.execCmd.Path
 	return c
 }

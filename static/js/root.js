@@ -51,6 +51,15 @@ var attrgetter = function (attr) {
     };
 };
 
+var identity = function (x) {
+    return x;
+};
+
+// copy ar but remove all values that evaluate to false (0, [], false, ...)
+var removeFalse = function (ar) {
+    return $.grep(ar, identity);
+};
+
 
 // SPECIAL PURPOSE
 
@@ -478,11 +487,20 @@ $(document).ready(function () {
     });
     // Auto complete
     $('form[action="/new"] input[name="name"]').autocomplete({source: "/new/names.json"});
+    // set command name to argv
+    $('form[action="/new"]')
+        .append($('<input type=hidden name=name>'))
+        .submit(function () {
+            var argv = $.map([this.cmd, this.arg1, this.arg2, this.arg3], attrgetter('value'));
+            $('input[name=name]', this).val(removeFalse(argv).join(' '));
+            return true;
+        });
     // parse prompt
     $('div#prompt form').submit(function (e) {
         var argv = $('input', this).val().split(/\s+/);
         var data = {
-            name: argv[0],
+            cmd: argv[0],
+            name: argv.join(' '),
             stdoutScrollback: 1000,
             stderrScrollback: 1000,
         };

@@ -231,12 +231,13 @@ func handlePostNew(ctx *web.Context) (string, error) {
 		}
 		argv = append(argv, val)
 	}
-	c := s.session.NewCommand(ctx.Params["name"], argv...)
+	c := s.session.NewCommand(ctx.Params["cmd"], argv...)
 	// live dangerously die young thats the navajo spirit my friends
 	i, _ := strconv.Atoi(ctx.Params["stdoutScrollback"])
 	c.Stdout().ResizeScrollbackBuffer(i)
 	i, _ = strconv.Atoi(ctx.Params["stderrScrollback"])
 	c.Stderr().ResizeScrollbackBuffer(i)
+	c.SetName(ctx.Params["name"])
 	redirect(ctx, &url.URL{Path: "/"})
 	return "", nil
 }
