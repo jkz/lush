@@ -39,11 +39,28 @@ type cmdmetadata struct {
 	StderrtoId liblush.CmdId `json:"stderrto,omitempty"`
 }
 
+// return command that this stream pipes to, if any
+func tocmd(outs liblush.OutStream) liblush.Cmd {
+	to := outs.Pipe()
+	if to != nil {
+		if ins, ok := to.(liblush.InStream); ok {
+			return ins.Cmd()
+		}
+	}
+	return nil
+}
+
 func (mc metacmd) Metadata() (data cmdmetadata) {
 	data.Id = mc.Id()
 	data.HtmlId = fmt.Sprint("cmd", mc.Id())
 	data.Name = mc.Name()
 	data.Argv = mc.Argv()
+	if cmd := tocmd(mc.Stdout()); cmd != nil {
+		data.StdouttoId = cmd.Id()
+	}
+	if cmd := tocmd(mc.Stderr()); cmd != nil {
+		data.StderrtoId = cmd.Id()
+	}
 	if mc.Status().Exited() == nil {
 		if mc.Status().Started() == nil {
 			data.Status = 0
