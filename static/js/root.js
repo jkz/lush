@@ -142,6 +142,7 @@ var addstreampeeker = function(srcep) {
         source: srcep.getElement(),
         target: myep,
         anchors: [stream2anchor(stream), myep],
+        parameters: { isStreampeek: true },
     });
     return $sp;
 };
@@ -254,7 +255,7 @@ var mapSourceCmds = function (sysid, f) {
     var cmd = cmds[sysid];
     // for every connected stdout and stderr stream:
     $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
-        if (conn.getParameter("sysid") === undefined) {
+        if (conn.getParameter("isStreampeek")) {
             return;
         }
         // stdin endpoint that this stream is connected to
