@@ -47,7 +47,7 @@ func main() {
 		web:     web.NewServer(),
 		tmplts:  tmplts,
 	}
-	s.web.Config.StaticDir = root + "/static"
+	s.web.Config.StaticDirs = []string{root + "/static"}
 	s.web.User = s
 	for _, f := range serverinitializers {
 		f(s)

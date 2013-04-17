@@ -68,7 +68,7 @@ func getCmd(s liblush.Session, idstr string) (liblush.Cmd, error) {
 	return c, nil
 }
 
-func handleGetRoot(ctx *web.Context) (string, error) {
+func handleGetRoot(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	ch := make(chan metacmd)
 	go func() {
@@ -78,10 +78,10 @@ func handleGetRoot(ctx *web.Context) (string, error) {
 		close(ch)
 	}()
 	err := s.tmplts.ExecuteTemplate(ctx, "/", ch)
-	return "", err
+	return err
 }
 
-func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
+func handleGetCmd(ctx *web.Context, idstr string) error {
 	type cmdctx struct {
 		Cmd          liblush.Cmd
 		Stdout       string
@@ -92,7 +92,7 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
 	if c == nil {
-		return "", web.WebError{404, "no such command: " + idstr}
+		return web.WebError{404, "no such command: " + idstr}
 	}
 	stdout := make([]byte, 1000)
 	stderr := make([]byte, 1000)
@@ -117,15 +117,15 @@ func handleGetCmd(ctx *web.Context, idstr string) (string, error) {
 		Connectables: ch,
 	}
 	err := s.tmplts.ExecuteTemplate(ctx, "cmd", tmplCtx)
-	return "", err
+	return err
 }
 
-func handleGetCmdInfo(ctx *web.Context, idstr string) (string, error) {
+func handleGetCmdInfo(ctx *web.Context, idstr string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
 	if c == nil {
-		return "", web.WebError{404, "no such command: " + idstr}
+		return web.WebError{404, "no such command: " + idstr}
 	}
 	ctx.Header().Set("content-type", "application/json")
 	enc := json.NewEncoder(ctx)
@@ -139,47 +139,47 @@ func handleGetCmdInfo(ctx *web.Context, idstr string) (string, error) {
 	if cerr := c.Status().Err(); cerr != nil {
 		info.Error = cerr.Error()
 	}
-	return "", enc.Encode(info)
+	return enc.Encode(info)
 }
 
-func handlePostStart(ctx *web.Context, idstr string) (string, error) {
+func handlePostStart(ctx *web.Context, idstr string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
 	if c == nil {
-		return "", web.WebError{404, "no such command: " + idstr}
+		return web.WebError{404, "no such command: " + idstr}
 	}
 	err := c.Start()
 	if err != nil {
-		return err.Error(), nil
+		return err
 	}
 	redirect(ctx, cmdloc(c))
-	return "", nil
+	return nil
 }
 
-func handlePostSend(ctx *web.Context, idstr string) (string, error) {
+func handlePostSend(ctx *web.Context, idstr string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
 	if c == nil {
-		return "", web.WebError{404, "no such command: " + idstr}
+		return web.WebError{404, "no such command: " + idstr}
 	}
 	if ctx.Params["stream"] != "stdin" {
-		return "", web.WebError{400, "must send to stdin"}
+		return web.WebError{400, "must send to stdin"}
 	}
 	_, err := c.Stdin().Write([]byte(ctx.Params["data"]))
 	if err != nil {
-		return err.Error(), nil
+		return err
 	}
 	redirect(ctx, cmdloc(c))
-	return "", nil
+	return nil
 }
 
-func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
+func handlePostConnect(ctx *web.Context, idstr string) error {
 	s := ctx.User.(*server)
 	c, err := getCmd(s.session, idstr)
 	if err != nil {
-		return "", err
+		return err
 	}
 	var stream liblush.OutStream
 	switch ctx.Params["stream"] {
@@ -188,36 +188,36 @@ func handlePostConnect(ctx *web.Context, idstr string) (string, error) {
 	case "stderr":
 		stream = c.Stderr()
 	default:
-		return "", web.WebError{400, "unknown stream"}
+		return web.WebError{400, "unknown stream"}
 	}
 	other, err := getCmd(s.session, ctx.Params["to"])
 	if err != nil {
-		return "", err
+		return err
 	}
 	stream.SetPipe(other.Stdin())
 	redirect(ctx, cmdloc(c))
-	return "", nil
+	return nil
 }
 
-func handlePostClose(ctx *web.Context, idstr string) (string, error) {
+func handlePostClose(ctx *web.Context, idstr string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
 	if c == nil {
-		return "", web.WebError{404, "no such command: " + idstr}
+		return web.WebError{404, "no such command: " + idstr}
 	}
 	if ctx.Params["stream"] != "stdin" {
-		return "", web.WebError{400, "must send to stdin"}
+		return web.WebError{400, "must send to stdin"}
 	}
 	err := c.Stdin().Close()
 	if err != nil {
-		return err.Error(), nil
+		return err
 	}
 	redirect(ctx, cmdloc(c))
-	return "", nil
+	return nil
 }
 
-func handlePostNew(ctx *web.Context) (string, error) {
+func handlePostNew(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	argv := []string{}
 	for i := 1; ; i++ {
@@ -238,10 +238,10 @@ func handlePostNew(ctx *web.Context) (string, error) {
 	redirect(ctx, &url.URL{Path: "/"})
 	ctx.Header().Set("content-type", "application/json")
 	err := json.NewEncoder(ctx).Encode(metacmd{c}.Metadata())
-	return "", err
+	return err
 }
 
-func handleGetNewNames(ctx *web.Context) (string, error) {
+func handleGetNewNames(ctx *web.Context) error {
 	var bins []string
 	term := ctx.Params["term"]
 	for _, d := range strings.Split(os.Getenv("PATH"), string(os.PathListSeparator)) {
@@ -259,15 +259,15 @@ func handleGetNewNames(ctx *web.Context) (string, error) {
 	}
 	enc := json.NewEncoder(ctx)
 	err := enc.Encode(bins)
-	return "", err
+	return err
 }
 
-func handleGetStream(ctx *web.Context, idstr, streamname string) (string, error) {
+func handleGetStream(ctx *web.Context, idstr, streamname string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
 	if c == nil {
-		return "", web.WebError{404, "no such command: " + idstr}
+		return web.WebError{404, "no such command: " + idstr}
 	}
 	var stream liblush.OutStream
 	switch streamname {
@@ -276,26 +276,26 @@ func handleGetStream(ctx *web.Context, idstr, streamname string) (string, error)
 	case "stderr":
 		stream = c.Stderr()
 	default:
-		return "", web.WebError{400, "No such stream: " + streamname}
+		return web.WebError{400, "No such stream: " + streamname}
 	}
 	n, _ := strconv.Atoi(ctx.Params["numbytes"])
 	buf := make([]byte, n)
 	n = stream.Last(buf)
 	buf = buf[:n]
 	_, err := ctx.Write(buf)
-	return "", err
+	return err
 }
 
-func handleGetClientdata(ctx *web.Context) (string, error) {
+func handleGetClientdata(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	_, err := ctx.Write(s.clientdata)
-	return "", err
+	return err
 }
 
-func handlePostClientdata(ctx *web.Context) (string, error) {
+func handlePostClientdata(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	s.clientdata = []byte(ctx.Params["data"])
-	return "", nil
+	return nil
 }
 
 func init() {
