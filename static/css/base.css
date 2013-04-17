@@ -52,7 +52,7 @@ div.streampeeker {
 /* input prompt */
 
 div#prompt {
-    position: absolute;
+    position: fixed;
     font-family: monospace;
     left: 0;
     right: 0;
