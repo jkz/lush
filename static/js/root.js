@@ -542,7 +542,7 @@ $(document).ready(function () {
     cmdform = $('form[action="/new"]')[0];
     $('div#prompt form').submit(function (e) {
         $('input[name=cmd], input[name^=arg]', cmdform).val('');
-        var argv = $('input', this).val().split(/\s+/);
+        var argv = $('input', this).val().trim().split(/\s+/);
         cmdform.cmd.value = argv[0];
         cmdform.name.value = argv.join(' ');
         for (var i = 1; i < argv.length; i++) {
