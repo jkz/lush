@@ -24,45 +24,90 @@ import (
 	"errors"
 	"io"
 	"log"
+	"sync"
 )
 
-// this girl just couples a scrollback buffer to a WriteCloser thats nice cos
-// you can keep track of the latest bytes that were sent through
+// this girl just couples a scrollback buffer to a flexible multiwriter thats
+// nice cos you can keep track of the latest bytes that were sent through.
+// safe for concurrent use
 type richpipe struct {
 	// Most recently written bytes
 	fifo ringbuf
 	// Pipe all incoming writes to this writer
-	fwd io.WriteCloser
+	fwd []io.WriteCloser
+	l   sync.Mutex
 }
 
+// always great success responsibility for failure is here not with caller
 func (p *richpipe) Write(data []byte) (int, error) {
-	if p.fwd == nil {
+	p.l.Lock()
+	defer p.l.Unlock()
+	if len(p.fwd) == 0 {
+		// this is not called blocking mate
 		return 0, errors.New("rich pipe: set forward pipe before writing")
 	}
-	n, err := p.fwd.Write(data)
-	if n > 0 {
-		p.fifo.Write(data[:n])
+	var bugged []int
+	for i, w := range p.fwd {
+		_, err := w.Write(data)
+		if err != nil {
+			log.Println("Closing pipe: ", err)
+			bugged = append(bugged, i)
+		}
 	}
-	return n, err
+	for _, x := range bugged {
+		p.fwd = append(p.fwd[:x], p.fwd[x+1:]...)
+	}
+	// fifo last poor fifo
+	p.fifo.Write(data) // and errors ignored too aww
+	return len(data), nil
 }
 
-func (p *richpipe) Close() error {
-	return p.fwd.Close()
+// returns the first error raised by a writer on close, if any
+func (p *richpipe) Close() (err error) {
+	p.l.Lock()
+	defer p.l.Unlock()
+	for _, w := range p.fwd {
+		err2 := w.Close()
+		if err2 != nil && err == nil {
+			err = err2
+		}
+	}
+	return err
 }
 
 func (p *richpipe) Last(buf []byte) int {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.fifo.Last(buf)
 }
 
-func (p *richpipe) SetPipe(w io.WriteCloser) {
-	p.fwd = w
+func (p *richpipe) AddPipe(w io.WriteCloser) {
+	p.l.Lock()
+	defer p.l.Unlock()
+	p.fwd = append(p.fwd, w)
 }
 
-func (p *richpipe) Pipe() io.WriteCloser {
+func (p *richpipe) RemovePipe(w io.WriteCloser) bool {
+	p.l.Lock()
+	defer p.l.Unlock()
+	for i, w2 := range p.fwd {
+		if w == w2 {
+			p.fwd = append(p.fwd[:i], p.fwd[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func (p *richpipe) Pipes() []io.WriteCloser {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.fwd
 }
 
 func (p *richpipe) ResizeScrollbackBuffer(n int) {
+	p.l.Lock()
+	defer p.l.Unlock()
 	p.fifo = resizeringbuf(p.fifo, n)
 }
 

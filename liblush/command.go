@@ -151,7 +151,14 @@ func (c *cmd) Status() CmdStatus {
 	return c.status
 }
 
-type devnull struct{}
+type devnull int
+
+// io.ReadWriteCloser that discards all incoming data and never fails
+const Devnull devnull = 0
+
+func (d devnull) Read(p []byte) (int, error) {
+	return 0, io.EOF
+}
 
 func (d devnull) Write(data []byte) (int, error) {
 	return len(data), nil
@@ -170,8 +177,6 @@ func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
 		stdout:  newRichPipe(1000),
 		stderr:  newRichPipe(1000),
 	}
-	c.stdout.SetPipe(devnull{})
-	c.stderr.SetPipe(devnull{})
 	c.execCmd.Stdout = c.stdout
 	c.execCmd.Stderr = c.stderr
 	c.name = c.execCmd.Path

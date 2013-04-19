@@ -194,7 +194,7 @@ func handlePostConnect(ctx *web.Context, idstr string) error {
 	if err != nil {
 		return err
 	}
-	stream.SetPipe(other.Stdin())
+	stream.AddPipe(other.Stdin())
 	redirect(ctx, cmdloc(c))
 	return nil
 }
@@ -229,6 +229,8 @@ func handlePostNew(ctx *web.Context) error {
 		argv = append(argv, val)
 	}
 	c := s.session.NewCommand(ctx.Params["cmd"], argv...)
+	c.Stdout().AddPipe(liblush.Devnull)
+	c.Stderr().AddPipe(liblush.Devnull)
 	// live dangerously die young thats the navajo spirit my friends
 	i, _ := strconv.Atoi(ctx.Params["stdoutScrollback"])
 	c.Stdout().ResizeScrollbackBuffer(i)
@@ -286,6 +288,28 @@ func handleGetStream(ctx *web.Context, idstr, streamname string) error {
 	return err
 }
 
+func handleWsStream(ctx *web.Context, idstr, streamname string) error {
+	id, _ := liblush.ParseCmdId(idstr)
+	s := ctx.User.(*server)
+	c := s.session.GetCommand(id)
+	if c == nil {
+		return web.WebError{404, "no such command: " + idstr}
+	}
+	var stream liblush.OutStream
+	switch streamname {
+	case "stdout":
+		stream = c.Stdout()
+	case "stderr":
+		stream = c.Stderr()
+	default:
+		return web.WebError{400, "No such stream: " + streamname}
+	}
+	stream.AddPipe(ctx.WebsockConn)
+	buf := make([]byte, 1)
+	ctx.WebsockConn.Read(buf)
+	return nil
+}
+
 func handleGetClientdata(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	_, err := ctx.Write(s.clientdata)
@@ -314,6 +338,7 @@ func init() {
 		s.web.Post(`/(\d+)/close`, handlePostClose)
 		s.web.Post(`/new`, handlePostNew)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
+		s.web.Websocket(`/(\d+)/stream/(\w+).bin`, handleWsStream)
 		s.web.Get(`/(\d+)/stream/(\w+).bin`, handleGetStream)
 		s.web.Get(`/clientdata`, handleGetClientdata)
 		s.web.Post(`/clientdata`, handlePostClientdata)

@@ -22,6 +22,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/hraban/lush/liblush"
 )
@@ -39,12 +40,19 @@ type cmdmetadata struct {
 	StderrtoId liblush.CmdId `json:"stderrto,omitempty"`
 }
 
+// if this writer is the instream of a command return that
+func iscmd(w io.WriteCloser) liblush.Cmd {
+	if ins, ok := w.(liblush.InStream); ok {
+		return ins.Cmd()
+	}
+	return nil
+}
+
 // return command that this stream pipes to, if any
-func tocmd(outs liblush.OutStream) liblush.Cmd {
-	to := outs.Pipe()
-	if to != nil {
-		if ins, ok := to.(liblush.InStream); ok {
-			return ins.Cmd()
+func pipedcmd(outs liblush.OutStream) liblush.Cmd {
+	for _, w := range outs.Pipes() {
+		if c := iscmd(w); c != nil {
+			return c
 		}
 	}
 	return nil
@@ -55,10 +63,10 @@ func (mc metacmd) Metadata() (data cmdmetadata) {
 	data.HtmlId = fmt.Sprint("cmd", mc.Id())
 	data.Name = mc.Name()
 	data.Argv = mc.Argv()
-	if cmd := tocmd(mc.Stdout()); cmd != nil {
+	if cmd := pipedcmd(mc.Stdout()); cmd != nil {
 		data.StdouttoId = cmd.Id()
 	}
-	if cmd := tocmd(mc.Stderr()); cmd != nil {
+	if cmd := pipedcmd(mc.Stderr()); cmd != nil {
 		data.StderrtoId = cmd.Id()
 	}
 	if mc.Status().Exited() == nil {

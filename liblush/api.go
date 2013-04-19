@@ -40,11 +40,15 @@ type CmdStatus interface {
 
 // Output stream of a command
 type OutStream interface {
-	// Send all output to this writer. Output is blocked until this method is
-	// called.
-	SetPipe(w io.WriteCloser)
-	// sink set with SetPipe, if any
-	Pipe() io.WriteCloser
+	// Send all output to this writer. Multiple writers can be hooked up and
+	// unloaded at any time. If this writer's Write returns an error it is
+	// removed from the list without affecting anything else.  Output is
+	// blocked if no pipes are configured.
+	AddPipe(w io.WriteCloser)
+	// Remove a pipe previously set with AddPipe. Returns false if not set.
+	RemovePipe(w io.WriteCloser) bool
+	// sinks set with SetPipe
+	Pipes() []io.WriteCloser
 	Last(p []byte) int
 	ResizeScrollbackBuffer(n int)
 }
