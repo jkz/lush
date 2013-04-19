@@ -461,6 +461,17 @@ var rebuildGroupsList = function (groups) {
     return $('#groups').empty().append(lis);
 };
 
+var chdir = function (dir) {
+    // this here is some tricky code dupe
+    $.post("/chdir", {dir: dir})
+        .success(function () {
+            $('#prompt input').val('');
+        })
+        .fail(function (_, status, error) {
+            alert(status + ": " + error);
+        });
+};
+
 $(document).ready(function () {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
@@ -505,6 +516,10 @@ $(document).ready(function () {
         // ajaxify creation of new command
         .submit(function () {
             var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
+            if (argv[0] == "cd") {
+                chdir(argv[1]);
+                return false;
+            }
             $('input[name=name]', this).val(removeFalse(argv).join(' '));
             $.post(this.action + '?noredirect', $(this).serialize())
                 .done(function (cmd) {

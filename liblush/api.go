@@ -77,6 +77,7 @@ type Cmd interface {
 }
 
 type Session interface {
+	Chdir(dir string) error
 	NewCommand(name string, arg ...string) Cmd
 	GetCommand(id CmdId) Cmd
 	GetCommandIds() []CmdId

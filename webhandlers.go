@@ -298,6 +298,11 @@ func handlePostClientdata(ctx *web.Context) error {
 	return nil
 }
 
+func handlePostChdir(ctx *web.Context) error {
+	s := ctx.User.(*server)
+	return s.session.Chdir(ctx.Params["dir"])
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.web.Get(`/`, handleGetRoot)
@@ -312,5 +317,6 @@ func init() {
 		s.web.Get(`/(\d+)/stream/(\w+).bin`, handleGetStream)
 		s.web.Get(`/clientdata`, handleGetClientdata)
 		s.web.Post(`/clientdata`, handlePostClientdata)
+		s.web.Post(`/chdir`, handlePostChdir)
 	})
 }

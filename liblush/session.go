@@ -21,6 +21,7 @@
 package liblush
 
 import (
+	"os"
 	"os/exec"
 	"sync/atomic"
 )
@@ -57,6 +58,11 @@ func (s *session) GetCommandIds() []CmdId {
 		i++
 	}
 	return ids
+}
+
+func (s *session) Chdir(dir string) error {
+	// not session-local at all
+	return os.Chdir(dir)
 }
 
 func NewSession() Session {
