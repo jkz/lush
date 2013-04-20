@@ -237,6 +237,14 @@ var connect = function (srcep, trgtep, stream) {
     });
 };
 
+// create dom node with a button that when clicked will prepare this
+// command for repeating (argv -> prompt, focus prompt)
+var createRepeatButton = function (sysid) {
+    return $('<button>↻</button>').click(function () {
+            $('#promptinput').val(cmds[sysid].argv.join(' ')).focus();
+        });
+};
+
 // create widget with command info and add it to the DOM
 // the argument is a cmd object implementation defined by the cmds array in
 // root.html
@@ -251,7 +259,8 @@ var createCmdWidget = function (cmd) {
         '<div class="cmd" id="' + cmd.htmlid + '">' +
         '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
         '<tt>' + cmd.argv.join(" ") + ' </tt> </a>')
-        .append(setStatNode(cmd.nid, cmd.status, $('<span>')));
+        .append(setStatNode(cmd.nid, cmd.status, $('<span>')))
+        .append(createRepeatButton(cmd.nid));
     $('#cmds').append($widget);
     restoreposition(cmd.htmlid);
     $widget.resizable({
