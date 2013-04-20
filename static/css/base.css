@@ -24,7 +24,7 @@
     display: inline;
 }
 
-div.cmd {
+div.cmdwidget {
     position: absolute;
     background-color: white;
     width: 15em;
@@ -92,4 +92,13 @@ input#promptinput {
     bottom: 2em;
     height: 6em;
     margin: 0;
+}
+
+/* terminal window */
+#terminal {
+    width: 450px;
+    height: 200px;
+    position: absolute;
+    right: 1em;
+    top: 1em;
 }

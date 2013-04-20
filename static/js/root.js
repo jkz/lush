@@ -256,7 +256,7 @@ var createRepeatButton = function (sysid) {
 // the cmd argument object as .stdinep, .stdoutep and .stderrep.
 var createCmdWidget = function (cmd) {
     var $widget = $(
-        '<div class="cmd" id="' + cmd.htmlid + '">' +
+        '<div class=cmdwidget id="' + cmd.htmlid + '">' +
         '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
         '<tt>' + cmd.argv.join(" ") + ' </tt> </a>')
         .append(setStatNode(cmd.nid, cmd.status, $('<span>')))
@@ -425,6 +425,27 @@ var chdir = function (dir) {
         });
 };
 
+// process a line entered at the command prompt
+var handlePrompt = function (text) {
+    var argv = text.trim().split(/\s+/);
+    var cmdform = $('form[action="/new"]')[0];
+    $('input[name=cmd], input[name^=arg]', cmdform).val('');
+    cmdform.cmd.value = argv[0];
+    cmdform.name.value = argv.join(' ');
+    for (var i = 1; i < argv.length; i++) {
+        $input = $('input[name=arg'+i+']', cmdform);
+        if ($input.length == 0) {
+            $input = $('<input name=arg'+i+'>');
+            $(cmdform).append($input);
+        }
+        $input.val(argv[i])
+    }
+    $(cmdform).submit();
+};
+
+// jQuery terminal plugin object
+var term;
+
 $(document).ready(function () {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
@@ -501,23 +522,10 @@ $(document).ready(function () {
             return false;
         });
     // parse prompt processed by copying data to "new command" form
-    cmdform = $('form[action="/new"]')[0];
     $('div#prompt form').submit(function (e) {
-        $('input[name=cmd], input[name^=arg]', cmdform).val('');
         var input = $('#promptinput').val();
         appendtext($('#allout'), '$ ' + input + '\n');
-        var argv = input.trim().split(/\s+/);
-        cmdform.cmd.value = argv[0];
-        cmdform.name.value = argv.join(' ');
-        for (var i = 1; i < argv.length; i++) {
-            $input = $('input[name=arg'+i+']', cmdform);
-            if ($input.length == 0) {
-                $input = $('<input name=arg'+i+'>');
-                $(cmdform).append($input);
-            }
-            $input.val(argv[i])
-        }
-        $(cmdform).submit();
+        handlePrompt(input);
         return false;
     });
     // persistent checkbox configurations
@@ -528,5 +536,11 @@ $(document).ready(function () {
         $flags.each(function () {
             $(this).prop('checked', state['flag.' + this.id]);
         });
+    });
+    // terminal window
+    term = $('#terminal').draggable().resizable().terminal(handlePrompt, {
+        greetings: 'Welcome to lush',
+        name: 'lush',
+        prompt: '$ ',
     });
 });

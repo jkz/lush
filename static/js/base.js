@@ -32,10 +32,21 @@ var safeJSONparse = function (text) {
     }
 };
 
-// repeat f every ms milliseconds as long as it returns true.
-var repeatExec = function (f, ms) {
-    if (f()) {
-        window.setTimeout(repeatExec, ms, f, ms);
+// repeat f every ms milliseconds as long as it returns true. if third argument
+// is passed it is integer limiting how often function is repeated (but still
+// if it returns false -> exit immediately). function is passed one argument
+// the loop index so its really just like a delayed forloop.
+var repeatExec = function (f, ms, n, i) {
+    i = i || 0;
+    if (n !== undefined) {
+        n -= 1;
+        if (n < 0) {
+            return;
+        }
+    }
+    if (f(i)) {
+        i += 1;
+        window.setTimeout(repeatExec, ms, f, ms, n, i);
     }
 };
 
