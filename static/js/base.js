@@ -90,6 +90,7 @@ var curry = function (f) {
 // command has an update It is called with the new data so eg if a
 // stream produces two bytes A and B the following might happen:
 // callback("AB"); or callback("A"); callback("B");
+// returns the websocket object associated with this monitor
 var monitorstream = function (sysid, stream, callback) {
     var uri = 'ws://' + document.location.host + '/'
             + sysid + '/stream/' + stream + '.bin';
@@ -97,9 +98,10 @@ var monitorstream = function (sysid, stream, callback) {
     ws.onmessage = function (e) {
         callback(e.data);
     };
+    return ws;
 };
 
 // append text data to contents of jquery node
 var appendtext = function ($node, text) {
     return $node.text($node.text() + text);
-}
+};

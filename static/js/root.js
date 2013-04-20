@@ -482,11 +482,17 @@ $(document).ready(function () {
                     // clear prompt when command is succesfully created
                     $('#promptinput').val('');
                     // capture all stdout and stderr to terminal
-                    monitorstream(cmd.nid, "stdout", curry(appendtext, $('#allout')));
-                    monitorstream(cmd.nid, "stderr", curry(appendtext, $('#allout')));
+                    var wsout = monitorstream(cmd.nid, "stdout", curry(appendtext, $('#allout')));
+                    var wserr = monitorstream(cmd.nid, "stderr", curry(appendtext, $('#allout')));
                     // auto start by simulating keypress on [start]
                     if ($('#autostart').is(':checked')) {
-                        $('#' + cmd.htmlid + ' form.start-cmd').submit();
+                        // wait until stdout and stderr are being monitored to
+                        // ensure no stream data is lost
+                        wsout.onopen = function () {
+                            wserr.onopen = function () {
+                                $('#' + cmd.htmlid + ' form.start-cmd').submit();
+                            };
+                        };
                     }
                 })
                 .fail(function (_, status, error) {
