@@ -22,16 +22,8 @@
 $(document).ready(function () {
     $('.monitor-stream').each(function () {
         var $p = $(this);
-        var stream = $p.data('stream');
-        var uri = 'ws://'
-                + document.location.host
-                + document.location.pathname
-                + 'stream/'
-                + stream
-                + '.bin';
-        var ws = new WebSocket(uri);
-        ws.onmessage = function (e) {
-            $p.text($p.text() + e.data);
-        };
+        monitorstream($p.data('sysid'), $p.data('stream'), function (data) {
+            $p.text($p.text() + data);
+        });
     });
 });

@@ -85,7 +85,7 @@
 
 <h2>stdout</h2>
 {{if .Cmd.Status.Started}}
-<pre class=monitor-stream data-stream=stdout>{{.Stdout}}</pre>
+<pre class=monitor-stream data-stream=stdout data-id={{.Cmd.Id}}>{{.Stdout}}</pre>
 {{else}}
 <form action="connect" method="post">
 <input type="hidden" name="stream" value="stdout">
@@ -101,9 +101,10 @@ connect to:
 {{end}}
 
 <h2>stderr</h2>
-<pre class=monitor-stream data-stream=stderr>{{.Stderr}}</pre>
+<pre class=monitor-stream data-stream=stderr data-id={{.Cmd.Id}}>{{.Stderr}}</pre>
 
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="/js/base.js"></script>
 <script src="/js/cmd.js"></script>
 </body>
 </html>

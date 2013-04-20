@@ -19,48 +19,6 @@
 // IN THE SOFTWARE.
 
 
-// UTILITIES
-
-
-// tries to parse JSON returns {} on any failure
-var safeJSONparse = function (text) {
-    // how wrong is a wild-card catch in JS?
-    try {
-        return JSON.parse(text);
-    } catch(e) {
-        return {};
-    }
-};
-
-// repeat f every ms milliseconds as long as it returns true.
-var repeatExec = function (f, ms) {
-    if (f()) {
-        window.setTimeout(repeatExec, ms, f, ms);
-    }
-};
-
-// analogous to CL's function by the same name
-var constantly = function (val) {
-    return function () { return val; }
-};
-
-// analogous to Python's operator.attrgetter
-var attrgetter = function (attr) {
-    return function (obj) {
-        return obj[attr];
-    };
-};
-
-var identity = function (x) {
-    return x;
-};
-
-// copy ar but remove all values that evaluate to false (0, "", false, ...)
-var removeFalse = function (ar) {
-    return $.grep(ar, identity);
-};
-
-
 // SPECIAL PURPOSE
 
 
@@ -183,7 +141,7 @@ var addstreampeeker = function (srcep) {
     // open / collapse button
     var $ocbutton = $('<button>');
     // preview box
-    var $preview = $('<pre>');
+    var $preview = $('<pre class=monitor-stream>').data('stream', stream);
     var $sp = $('<div class=streampeeker id=' + id + '><pre>')
         .resizable()
         .append($ocbutton)
