@@ -384,20 +384,6 @@ var unarchiveCmdTree = function (sysid) {
     updateState('group' + sysid + '.' + 'archived', false);
 };
 
-// transform an array of objects into a mapping from key to array of objects
-// with that key.
-// compare to SQL's GROUP BY, with a custom function to evaluate which group an
-// object belongs to.
-var groupby = function (objs, keyfun) {
-    var groups = {};
-    $.map(objs, function (obj) {
-        key = keyfun(obj);
-        // [] if no such group yet
-        groups[key] = (groups[key] || []).concat(obj);
-    });
-    return groups;
-};
-
 // map(sysid => cmdobj) to map(groupid => [cmdobj])
 var makeGroups = function (cmds) {
     return groupby(cmds, function (cmd) { return cmd.getGroupId(); });
@@ -432,7 +418,7 @@ var chdir = function (dir) {
     // this here is some tricky code dupe
     $.post("/chdir", {dir: dir})
         .success(function () {
-            $('#prompt input').val('');
+            $('#promptinput').val('');
         })
         .fail(function (_, status, error) {
             alert(status + ": " + error);
@@ -494,7 +480,10 @@ $(document).ready(function () {
                     createCmdWidget(cmd);
                     rebuildGroupsList();
                     // clear prompt when command is succesfully created
-                    $('#prompt input').val('');
+                    $('#promptinput').val('');
+                    // capture all stdout and stderr to terminal
+                    monitorstream(cmd.nid, "stdout", curry(appendtext, $('#allout')));
+                    monitorstream(cmd.nid, "stderr", curry(appendtext, $('#allout')));
                     // auto start by simulating keypress on [start]
                     if ($('#autostart').is(':checked')) {
                         $('#' + cmd.htmlid + ' form.start-cmd').submit();
@@ -509,7 +498,9 @@ $(document).ready(function () {
     cmdform = $('form[action="/new"]')[0];
     $('div#prompt form').submit(function (e) {
         $('input[name=cmd], input[name^=arg]', cmdform).val('');
-        var argv = $('input', this).val().trim().split(/\s+/);
+        var input = $('#promptinput').val();
+        appendtext($('#allout'), '$ ' + input + '\n');
+        var argv = input.trim().split(/\s+/);
         cmdform.cmd.value = argv[0];
         cmdform.name.value = argv.join(' ');
         for (var i = 1; i < argv.length; i++) {

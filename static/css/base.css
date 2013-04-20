@@ -49,29 +49,47 @@ div.streampeeker {
     min-height: 5em;
 }
 
-/* input prompt */
-
-div#prompt {
+div#term {
     position: fixed;
     font-family: monospace;
     left: 0;
     right: 0;
     bottom: 0;
-    padding: .5em 1em;
+    padding: 0 .1em;
     background-color: black;
     color: white;
-    font-size: 2em;
+    font-size: 1em;
+    height: 8em;
 }
 
-div#prompt input {
+/* input prompt */
+
+#prompt {
+    position: fixed;
+    bottom: .5em;
+}
+
+input#promptinput {
     border: 0;
     background-color: black;
     color: white;
-    position: absolute;
-    left: 2em;
+    position: fixed;
+    left: 1em;
     right: 0;
-    top: 0;
-    bottom: 0;
+    bottom: .5em;
     font-family: monospace;
     font-size: 1em;
+    height: 1em;
+}
+
+/* aggregated stream output */
+
+#allout {
+    overflow-y: scroll;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 2em;
+    height: 6em;
+    margin: 0;
 }

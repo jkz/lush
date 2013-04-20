@@ -60,6 +60,28 @@ var removeFalse = function (ar) {
     return $.grep(ar, identity);
 };
 
+// transform an array of objects into a mapping from key to array of objects
+// with that key.
+// compare to SQL's GROUP BY, with a custom function to evaluate which group an
+// object belongs to.
+var groupby = function (objs, keyfun) {
+    var groups = {};
+    $.map(objs, function (obj) {
+        key = keyfun(obj);
+        // [] if no such group yet
+        groups[key] = (groups[key] || []).concat(obj);
+    });
+    return groups;
+};
+
+var curry = function (f) {
+    var fixargs = Array.prototype.slice.call(arguments, 1);
+    return function () {
+        var restargs = Array.prototype.slice.call(arguments);
+        return f.apply(this, fixargs.concat(restargs));
+    };
+};
+
 
 // PROJECT LOCAL UTILTIES
 
@@ -76,3 +98,8 @@ var monitorstream = function (sysid, stream, callback) {
         callback(e.data);
     };
 };
+
+// append text data to contents of jquery node
+var appendtext = function ($node, text) {
+    return $node.text($node.text() + text);
+}
