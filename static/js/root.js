@@ -428,6 +428,9 @@ var chdir = function (dir) {
 // process a line entered at the command prompt
 var handlePrompt = function (text) {
     var argv = text.trim().split(/\s+/);
+    if (argv[0] == "") {
+        return;
+    }
     var cmdform = $('form[action="/new"]')[0];
     $('input[name=cmd], input[name^=arg]', cmdform).val('');
     cmdform.cmd.value = argv[0];
