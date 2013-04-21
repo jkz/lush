@@ -455,7 +455,10 @@ var termPrintln = function (term, text) {
     if (hassuffix(text, '\n')) {
         text = text.slice(0, -1);
     }
-    return term.echo(escapeHTML(text));
+    text = escapeHTML(text);
+    // jquery.terminal interprets square brackets
+    text = text.replace(/\[/g, '&#91;');
+    return term.echo(text);
 };
 
 $(document).ready(function () {
