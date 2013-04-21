@@ -49,51 +49,6 @@ div.streampeeker {
     min-height: 5em;
 }
 
-div#term {
-    position: fixed;
-    font-family: monospace;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 0 .1em;
-    background-color: black;
-    color: white;
-    font-size: 1em;
-    height: 8em;
-}
-
-/* input prompt */
-
-#prompt {
-    position: fixed;
-    bottom: .5em;
-}
-
-input#promptinput {
-    border: 0;
-    background-color: black;
-    color: white;
-    position: fixed;
-    left: 1em;
-    right: 0;
-    bottom: .5em;
-    font-family: monospace;
-    font-size: 1em;
-    height: 1em;
-}
-
-/* aggregated stream output */
-
-#allout {
-    overflow-y: scroll;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 2em;
-    height: 6em;
-    margin: 0;
-}
-
 /* terminal window */
 #terminal {
     width: 450px;

@@ -417,9 +417,6 @@ var rebuildGroupsList = function (groups) {
 var chdir = function (dir) {
     // this here is some tricky code dupe
     $.post("/chdir", {dir: dir})
-        .success(function () {
-            $('#promptinput').val('');
-        })
         .fail(function (_, status, error) {
             alert(status + ": " + error);
         });
@@ -515,8 +512,6 @@ $(document).ready(function () {
                     cmds[cmd.nid] = cmd;
                     createCmdWidget(cmd);
                     rebuildGroupsList();
-                    // clear prompt when command is succesfully created
-                    $('#promptinput').val('');
                     // capture all stdout and stderr to terminal
                     var wsout = monitorstream(cmd.nid, "stdout", curry(termPrintln, term));
                     var wserr = monitorstream(cmd.nid, "stderr", curry(termPrintln, term));
@@ -536,13 +531,6 @@ $(document).ready(function () {
                 });
             return false;
         });
-    // parse prompt processed by copying data to "new command" form
-    $('div#prompt form').submit(function (e) {
-        var input = $('#promptinput').val();
-        appendtext($('#allout'), '$ ' + input + '\n');
-        handlePrompt(input);
-        return false;
-    });
     // persistent checkbox configurations
     var $flags = $('input[type=checkbox]').change(function () {
         updateState('flag.' + this.id, $(this).is(':checked'));
