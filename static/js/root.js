@@ -449,6 +449,18 @@ var handlePrompt = function (text) {
 // jQuery terminal plugin object
 var term;
 
+// Print text to this terminal. Ensures the text always ends in newline.
+var termPrintln = function (term, text) {
+    // term.echo will always append newline so strip one off if exists
+    if (hassuffix(text, '\r\n')) {
+        text = text.slice(0, -2);
+    }
+    if (hassuffix(text, '\n')) {
+        text = text.slice(0, -1);
+    }
+    return term.echo(escapeHTML(text));
+};
+
 $(document).ready(function () {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
@@ -506,8 +518,8 @@ $(document).ready(function () {
                     // clear prompt when command is succesfully created
                     $('#promptinput').val('');
                     // capture all stdout and stderr to terminal
-                    var wsout = monitorstream(cmd.nid, "stdout", curry(appendtext, $('#allout')));
-                    var wserr = monitorstream(cmd.nid, "stderr", curry(appendtext, $('#allout')));
+                    var wsout = monitorstream(cmd.nid, "stdout", curry(termPrintln, term));
+                    var wserr = monitorstream(cmd.nid, "stderr", curry(termPrintln, term));
                     // auto start by simulating keypress on [start]
                     if ($('#autostart').is(':checked')) {
                         // wait until stdout and stderr are being monitored to

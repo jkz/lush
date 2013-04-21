@@ -93,6 +93,15 @@ var curry = function (f) {
     };
 };
 
+var hassuffix = function (str, suff) {
+    return str.slice(-suff.length) == suff;
+};
+
+var escapeHTML = function (text) {
+    // impressive for a lang that is by definition intended to mix with HTML
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+};
+
 
 // PROJECT LOCAL UTILTIES
 
