@@ -542,7 +542,7 @@ $(document).ready(function () {
     });
     // terminal window
     term = $('#terminal').draggable().resizable().terminal(handlePrompt, {
-        greetings: 'Welcome to lush',
+        greetings: 'Welcome to Luyat shell',
         name: 'lush',
         prompt: '$ ',
     });
