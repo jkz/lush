@@ -479,7 +479,7 @@ $(document).ready(function () {
     // process configuration of archived groups on init
     getState(function (state) {
         $.map(groups, function (_, gid) {
-            if (state['group' + gid + '.' + 'archived']) {
+            if (state['group' + gid + '.archived']) {
                 hideCmdTree(gid);
             }
         });
@@ -544,7 +544,8 @@ $(document).ready(function () {
         });
     });
     // terminal window
-    term = $('#terminal').draggable().resizable().terminal(handlePrompt, {
+    $('#terminalwrap1').draggable({handle: '#termdraghandle'}).resizable();
+    term = $('#terminal').terminal(handlePrompt, {
         greetings: 'Welcome to Luyat shell',
         name: 'lush',
         prompt: '$ ',
