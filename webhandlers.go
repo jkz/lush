@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -327,6 +328,16 @@ func handlePostChdir(ctx *web.Context) error {
 	return s.session.Chdir(ctx.Params["dir"])
 }
 
+// List of files nice for tab completion
+func handleGetFiles(ctx *web.Context) error {
+	paths, err := filepath.Glob(ctx.Params["pattern"])
+	if err != nil {
+		return err
+	}
+	ctx.Header().Set("content-type", "application/json")
+	return json.NewEncoder(ctx).Encode(paths)
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.web.Get(`/`, handleGetRoot)
@@ -343,5 +354,6 @@ func init() {
 		s.web.Get(`/clientdata`, handleGetClientdata)
 		s.web.Post(`/clientdata`, handlePostClientdata)
 		s.web.Post(`/chdir`, handlePostChdir)
+		s.web.Get(`/files.json`, handleGetFiles)
 	})
 }

@@ -422,10 +422,18 @@ var chdir = function (dir) {
         });
 };
 
-// process a line entered at the command prompt
-var handlePrompt = function (text) {
+var parsePrompt = function (text) {
     var argv = text.trim().split(/\s+/);
     if (argv[0] == "") {
+        return [];
+    }
+    return argv;
+}
+
+// process a line entered at the command prompt
+var handlePrompt = function (text) {
+    var argv = parsePrompt(text);
+    if (argv.length == 0) {
         return;
     }
     var cmdform = $('form[action="/new"]')[0];
@@ -451,8 +459,7 @@ var termPrintln = function (term, text) {
     // term.echo will always append newline so strip one off if exists
     if (hassuffix(text, '\r\n')) {
         text = text.slice(0, -2);
-    }
-    if (hassuffix(text, '\n')) {
+    } else if (hassuffix(text, '\n')) {
         text = text.slice(0, -1);
     }
     text = escapeHTML(text);
@@ -549,5 +556,11 @@ $(document).ready(function () {
         greetings: 'Welcome to Luyat shell',
         name: 'lush',
         prompt: '$ ',
+        tabcompletion: true,
+        // completion for files only
+        completion: function (term, text, callback) {
+            var pattern = text + "*";
+            $.get('/files.json', {pattern: pattern}, callback);
+        },
     });
 });
