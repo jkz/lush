@@ -241,7 +241,7 @@ var connect = function (srcep, trgtep, stream) {
 // command for repeating (argv -> prompt, focus prompt)
 var createRepeatButton = function (sysid) {
     return $('<button>↻</button>').click(function () {
-            $('#promptinput').val(cmds[sysid].argv.join(' ')).focus();
+            term.set_command(cmds[sysid].argv.join(' ')).focus();
         });
 };
 
