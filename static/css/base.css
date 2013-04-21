@@ -56,13 +56,11 @@ div.streampeeker {
     position: absolute;
     right: 1em;
     top: 1em;
-    border: solid thin blue;
     width: 450px;
     height: 200px;
 }
 #terminalwrap2 {
     position: relative;
-    border: solid thin green;
     width: 100%;
     height: 100%;
 }
@@ -73,7 +71,6 @@ div.streampeeker {
     z-index: 10;
 }
 #terminal {
-    border: solid thin red;
     width: 100%;
     height: 100%;
 }
