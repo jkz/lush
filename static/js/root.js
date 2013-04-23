@@ -422,14 +422,6 @@ var chdir = function (dir) {
         });
 };
 
-var parsePrompt = function (text) {
-    var argv = text.trim().split(/\s+/);
-    if (argv[0] == "") {
-        return [];
-    }
-    return argv;
-}
-
 $(document).ready(function () {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all

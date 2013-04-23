@@ -102,6 +102,11 @@ var escapeHTML = function (text) {
     return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 };
 
+// http://stackoverflow.com/a/202627
+String.prototype.repeat = function (num) {
+    return new Array(num + 1).join(this);
+}
+
 
 // PROJECT LOCAL UTILTIES
 
