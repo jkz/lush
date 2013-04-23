@@ -334,6 +334,9 @@ func handleGetFiles(ctx *web.Context) error {
 	if err != nil {
 		return err
 	}
+	if paths == nil {
+		paths = []string{}
+	}
 	ctx.Header().Set("content-type", "application/json")
 	return json.NewEncoder(ctx).Encode(paths)
 }
