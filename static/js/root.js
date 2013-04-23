@@ -430,44 +430,6 @@ var parsePrompt = function (text) {
     return argv;
 }
 
-// process a line entered at the command prompt
-var handlePrompt = function (text) {
-    var argv = parsePrompt(text);
-    if (argv.length == 0) {
-        return;
-    }
-    var cmdform = $('form[action="/new"]')[0];
-    $('input[name=cmd], input[name^=arg]', cmdform).val('');
-    cmdform.cmd.value = argv[0];
-    cmdform.name.value = argv.join(' ');
-    for (var i = 1; i < argv.length; i++) {
-        $input = $('input[name=arg'+i+']', cmdform);
-        if ($input.length == 0) {
-            $input = $('<input name=arg'+i+'>');
-            $(cmdform).append($input);
-        }
-        $input.val(argv[i])
-    }
-    $(cmdform).submit();
-};
-
-// jQuery terminal plugin object
-var term;
-
-// Print text to this terminal. Ensures the text always ends in newline.
-var termPrintln = function (term, text) {
-    // term.echo will always append newline so strip one off if exists
-    if (hassuffix(text, '\r\n')) {
-        text = text.slice(0, -2);
-    } else if (hassuffix(text, '\n')) {
-        text = text.slice(0, -1);
-    }
-    text = escapeHTML(text);
-    // jquery.terminal interprets square brackets
-    text = text.replace(/\[/g, '&#91;');
-    return term.echo(text);
-};
-
 $(document).ready(function () {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
@@ -549,18 +511,5 @@ $(document).ready(function () {
         $flags.each(function () {
             $(this).prop('checked', state['flag.' + this.id]);
         });
-    });
-    // terminal window
-    $('#terminalwrap1').draggable({handle: '#termdraghandle'}).resizable();
-    term = $('#terminal').terminal(handlePrompt, {
-        greetings: 'Welcome to Luyat shell',
-        name: 'lush',
-        prompt: '$ ',
-        tabcompletion: true,
-        // completion for files only
-        completion: function (term, text, callback) {
-            var pattern = text + "*";
-            $.get('/files.json', {pattern: pattern}, callback);
-        },
     });
 });
