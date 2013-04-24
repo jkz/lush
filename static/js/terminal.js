@@ -40,9 +40,17 @@ var termPrintln = function (term, text) {
     return term.echo(text);
 };
 
+var parseerror = function (msg, pos) {
+    return {
+        pos: pos,
+        msg: msg,
+    };
+};
+
 // First level of prompt parsing: strip quotes.
 // Returns parsed argument vector as array on success, error object on failure
 var parsePromptLvl1 = function (text) {
+    // array of word objects: {text: string, pos: int}
     var argv = [];
     // Quote flag state in parsing
     var QUOTE_NONE = 0;
@@ -53,9 +61,10 @@ var parsePromptLvl1 = function (text) {
         // Index of opening quote
         start: null,
     }
+    var i = 0;
     // Incrementally increased until boundary then pushed on argv
     // not runtime efficient but can easily be improved later by using indices
-    var word = null; // null = no string, "" = empty string
+    var word = null; // null = no word
     // Push the current word on the argument list
     var pushword = function () {
         if (word !== null) {
@@ -65,25 +74,15 @@ var parsePromptLvl1 = function (text) {
     }
     // Also a word if left empty (e.g. "")
     var ensureword = function () {
-        word = word || "";
+        word = word || {text: "", pos: i};
     }
-    var i = 0;
     var pushchar = function (c) {
         if (c === undefined) {
             c = text[i];
         }
         ensureword();
-        word += c;
+        word.text += c;
     }
-    var makeerror = function (msg, pos) {
-        if (pos == undefined) {
-            pos = i;
-        }
-        return {
-            pos: pos,
-            msg: msg,
-        };
-    };
     for (i = 0; i < text.length; i++) {
         var c = text[i];
         switch (c) {
@@ -125,7 +124,7 @@ var parsePromptLvl1 = function (text) {
             break;
         case '\\':
             if (i >= text.length - 2) {
-                return makeerror("backslash at end of input");
+                return parseerror("backslash at end of input", i);
             }
             // Yes, copy the backslash (this is lvl 1)
             pushchar();
@@ -145,7 +144,6 @@ var parsePromptLvl1 = function (text) {
             } else {
                 // Word boundary
                 pushword();
-                word = null;
             }
             break;
         default:
@@ -156,15 +154,58 @@ var parsePromptLvl1 = function (text) {
     pushword();
     if (quote.type != QUOTE_NONE) {
         var qname = (quote.type == QUOTE_DOUBLE ? "double" : "single");
-        return makeerror("unbalanced " + qname + " quotes", quote.start);
+        return parseerror("unbalanced " + qname + " quotes", quote.start);
     }
     return argv;
-}
+};
+
+// Contains an unescaped ? or *
+var hasGlobChar = function (str) {
+    // equivalent: (?<=\\)[?*]
+    return /^(?:(?!\\[?*]).)*[?*]/.test(str)
+};
+
+var glob = function (pattern) {
+    var files = [];
+    $.ajax('/files.json', {
+        data: {pattern: pattern},
+        success: function (x) {
+            files = x;
+        },
+        async: false});
+    return files;
+};
+
+// Parse array of level 1 blocks: file globbing
+var parsePromptLvl2 = function (lvl1argv) {
+    if (!$.isArray(lvl1argv)) {
+        return lvl1argv;
+    }
+    var argv = [];
+    for (var i = 0; i < lvl1argv.length; i++) {
+        var arg = lvl1argv[i];
+        if (hasGlobChar(arg.text)) {
+            var files = glob(arg.text);
+            if (files.length == 0) {
+                return parseerror("No match for pattern " + arg.text, arg.pos);
+            }
+            argv = argv.concat($.map(files, function (fname) {
+                return {
+                    pos: arg.pos,
+                    text: fname,
+                };
+            }));
+        } else {
+            argv.push(arg);
+        }
+    }
+    return argv;
+};
 
 var parsePrompt = function (text) {
-    var argv = parsePromptLvl1(text);
+    var argv = parsePromptLvl2(parsePromptLvl1(text));
     return argv;
-}
+};
 
 // process a line entered at the command prompt
 var handlePrompt = function (text, term) {
@@ -176,6 +217,7 @@ var handlePrompt = function (text, term) {
         term.error(" ".repeat(argv.pos) + "^");
         return;
     }
+    argv = $.map(argv, attrgetter("text"));
     if (argv.length == 0) {
         return;
     }
