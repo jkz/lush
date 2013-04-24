@@ -123,7 +123,7 @@ var parsePromptLvl1 = function (text) {
             }
             break;
         case '\\':
-            if (i >= text.length - 2) {
+            if (i >= text.length - 1) {
                 return parseerror("backslash at end of input", i);
             }
             // Yes, copy the backslash (this is lvl 1)
@@ -131,7 +131,6 @@ var parsePromptLvl1 = function (text) {
             i++;
             pushchar();
             break;
-        // Special characters outside quoting
         case ' ':
             // treat multiple consecutive spaces as one
             while (i < text.length - 1 && text[i+1] == ' ') {
@@ -146,6 +145,13 @@ var parsePromptLvl1 = function (text) {
                 pushword();
             }
             break;
+        // Special characters outside quoting
+        case '*':
+        case '?':
+            if (quote.type) {
+                pushchar('\\');
+            }
+            // fallthrough
         default:
             pushchar();
             break;
