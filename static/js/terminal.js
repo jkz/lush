@@ -165,7 +165,14 @@ var hasGlobChar = function (str) {
     return /^(?:(?!\\[?*]).)*[?*]/.test(str)
 };
 
-var glob = function (pattern) {
+var startsWithDot = function (str) {
+    return str[0] == ".";
+}
+
+// list of files matching a pattern. if showhidden is false this excludes files
+// starting with a dot. if showhidden is not specified this only shows those
+// files if the pattern itself starts with a dot.
+var glob = function (pattern, showhidden) {
     var files = [];
     $.ajax('/files.json', {
         data: {pattern: pattern},
@@ -173,6 +180,12 @@ var glob = function (pattern) {
             files = x;
         },
         async: false});
+    if (showhidden === undefined) {
+        showhidden = startsWithDot(pattern);
+    }
+    if (!showhidden) {
+        files = $.grep(files, startsWithDot, true);
+    }
     return files;
 };
 
