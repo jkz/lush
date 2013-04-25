@@ -211,11 +211,10 @@ var parsePromptLvl2 = function (lvl1argv) {
             argv = argv.concat($.map(files, function (fname) {
                 return {
                     pos: arg.pos,
-                    text: fname,
+                    text: promptEscape(fname),
                 };
             }));
         } else {
-            arg.text = promptUnescape(arg.text);
             argv.push(arg);
         }
     }
@@ -237,7 +236,7 @@ var handlePrompt = function (text, term) {
         term.error(" ".repeat(argv.pos) + "^");
         return;
     }
-    argv = $.map(argv, attrgetter("text"));
+    argv = $.map($.map(argv, attrgetter("text")), promptUnescape);
     if (argv.length == 0) {
         return;
     }
