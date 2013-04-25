@@ -255,6 +255,36 @@ var handlePrompt = function (text, term) {
     $(cmdform).submit();
 };
 
+// Escape a string such that parsing it will return the original string
+var promptEscape = function (str) {
+    return str.replace(/([\\?* "'])/g, "\\$1");
+};
+
+var echoInput = function (term) {
+    termPrintln(term, term.get_prompt() + term.get_command());
+};
+
+// Called with array of filenames to populate a partially completed command
+// line word as a file. The "partial" argument is the snippet the user is
+// trying to tab complete
+var tabcompleteCallback = function (term, partial, files) {
+    if (files.length == 0) {
+        return;
+    }
+    if (files.length == 1) {
+        term.insert(files[0].slice(partial.length) + " ");
+        return;
+    }
+    var pref = lcp(files);
+    if (pref.length > partial.length) {
+        // all possible completions share a prefix longer than current partial
+        term.insert(pref.slice(partial.length));
+        return;
+    }
+    echoInput(term);
+    $.each(files, function (_, x) { termPrintln(term, x); });
+};
+
 $(document).ready(function () {
     // terminal window
     $('#terminalwrap1').draggable({handle: '#termdraghandle'}).resizable();
@@ -264,8 +294,10 @@ $(document).ready(function () {
         prompt: '$ ',
         tabcompletion: true,
         // completion for files only
-        completion: function (term, text, callback) {
+        completion: function (term, text, _) {
             var pattern = text + "*";
+            // home grown callback function
+            var callback = curry(tabcompleteCallback, term, text);
             $.get('/files.json', {pattern: pattern}, callback);
         },
     });

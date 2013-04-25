@@ -18,6 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+"use strict";
+
 
 // GENERIC UTILITIES
 
@@ -78,7 +80,7 @@ var removeFalse = function (ar) {
 var groupby = function (objs, keyfun) {
     var groups = {};
     $.map(objs, function (obj) {
-        key = keyfun(obj);
+        var key = keyfun(obj);
         // [] if no such group yet
         groups[key] = (groups[key] || []).concat(obj);
     });
@@ -100,6 +102,27 @@ var hassuffix = function (str, suff) {
 var escapeHTML = function (text) {
     // impressive for a lang that is by definition intended to mix with HTML
     return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+};
+
+var min = function (x, y) {
+    return x < y ? x : y;
+};
+
+var lcpbi = function (x, y) {
+    var l = min(x.length, y.length);
+    var i = 0;
+    while (i < l && x[i] == y[i]) {
+        i++;
+    }
+    return x.slice(0, i);
+};
+
+// longest common prefix
+var lcp = function (seqs, i) {
+    if (seqs.length == 0) {
+        return "";
+    }
+    return seqs.reduce(lcpbi);
 };
 
 // http://stackoverflow.com/a/202627
