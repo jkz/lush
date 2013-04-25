@@ -132,15 +132,15 @@ var parsePromptLvl1 = function (text) {
             pushchar();
             break;
         case ' ':
-            // treat multiple consecutive spaces as one
-            while (i < text.length - 1 && text[i+1] == ' ') {
-                i++;
-            }
             if (quote.type) {
                 // Quoted escape
                 pushchar('\\');
                 pushchar();
             } else {
+                // treat multiple consecutive spaces as one
+                while (i < text.length - 1 && text[i+1] == ' ') {
+                    i++;
+                }
                 // Word boundary
                 pushword();
             }
@@ -215,6 +215,7 @@ var parsePromptLvl2 = function (lvl1argv) {
                 };
             }));
         } else {
+            arg.text = promptUnescape(arg.text);
             argv.push(arg);
         }
     }
@@ -260,6 +261,10 @@ var promptEscape = function (str) {
     return str.replace(/([\\?* "'])/g, "\\$1");
 };
 
+var promptUnescape = function (str) {
+    return str.replace(/\\(.)/g, "$1");
+};
+
 var echoInput = function (term) {
     termPrintln(term, term.get_prompt() + term.get_command());
 };
@@ -268,6 +273,7 @@ var echoInput = function (term) {
 // line word as a file. The "partial" argument is the snippet the user is
 // trying to tab complete
 var tabcompleteCallback = function (term, partial, files) {
+    files = $.map(files, promptEscape);
     if (files.length == 0) {
         return;
     }
@@ -294,10 +300,20 @@ $(document).ready(function () {
         prompt: '$ ',
         tabcompletion: true,
         // completion for files only
-        completion: function (term, text, _) {
-            var pattern = text + "*";
+        completion: function (term) {
+            var argv = parsePrompt(term.get_command());
+            if (!$.isArray(argv)) {
+                // parse error
+                return;
+            }
+            if (argv.length < 2) {
+                // only works on filenames
+                return;
+            }
+            var partial = argv.pop().text;
+            var pattern = promptUnescape(partial) + "*";
             // home grown callback function
-            var callback = curry(tabcompleteCallback, term, text);
+            var callback = curry(tabcompleteCallback, term, partial);
             $.get('/files.json', {pattern: pattern}, callback);
         },
     });
