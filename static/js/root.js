@@ -504,4 +504,5 @@ $(document).ready(function () {
             $(this).prop('checked', state['flag.' + this.id]);
         });
     });
+    term = createTerminal();
 });

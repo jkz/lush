@@ -290,10 +290,20 @@ var tabcompleteCallback = function (term, partial, files) {
     $.each(files, function (_, x) { termPrintln(term, x); });
 };
 
-$(document).ready(function () {
-    // terminal window
-    $('#terminalwrap1').draggable({handle: '#termdraghandle'}).resizable();
-    term = $('#terminal').terminal(handlePrompt, {
+var terminalHTML = function () {
+    return "<div class=terminalwrap1><div class=terminalwrap2>" +
+            "<div class='termdraghandle ui-state-default ui-state-active'>" +
+                "<span class='ui-icon ui-icon-arrow-4'></span>" +
+            "</div>" +
+            "<div class=terminal ></div>" +
+        "</div></div>";
+};
+
+// create a new terminal window and append to HTML body
+var createTerminal = function () {
+    var $wrap = $(terminalHTML()).appendTo($('body'));
+    $wrap.resizable().draggable({handle: $('.termdraghandle', $wrap)})
+    return $('.terminal', $wrap).terminal(handlePrompt, {
         greetings: 'Welcome to Luyat shell',
         name: 'lush',
         prompt: '$ ',
@@ -316,4 +326,4 @@ $(document).ready(function () {
             $.get('/files.json', {pattern: pattern}, callback);
         },
     });
-});
+};
