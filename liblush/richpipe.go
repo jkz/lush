@@ -50,12 +50,12 @@ func (p *richpipe) Write(data []byte) (int, error) {
 	for i, w := range p.fwd {
 		_, err := w.Write(data)
 		if err != nil {
-			log.Println("Closing pipe: ", err)
+			log.Print("Closing pipe: ", err)
 			bugged = append(bugged, i)
 		}
 	}
-	for _, x := range bugged {
-		p.fwd = append(p.fwd[:x], p.fwd[x+1:]...)
+	for i, x := range bugged {
+		p.fwd = append(p.fwd[:x-i], p.fwd[x-i+1:]...)
 	}
 	// fifo last poor fifo
 	p.fifo.Write(data) // and errors ignored too aww
