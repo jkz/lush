@@ -19,8 +19,10 @@
 // IN THE SOFTWARE.
 
 
-// SPECIAL PURPOSE
+// Scripting for root page
 
+// websocket connection for control events
+var ctrl;
 
 // build jquery node containing [start] button that starts cmd in background
 var makeStartButton = function (sysId) {
@@ -130,7 +132,7 @@ var restoreposition = function (id) {
     });
 };
 
-// deferred object fetching most recent stdout data for streampeeker
+// deferred object fetching most recent stream data for streampeeker
 var getRecentStream = function (sysId, stream) {
     return $.get('/' + sysId + '/stream/' + stream + '.bin?numbytes=100');
 };
@@ -480,17 +482,11 @@ $(document).ready(function () {
                     createCmdWidget(cmd);
                     rebuildGroupsList();
                     // capture all stdout and stderr to terminal
-                    var wsout = monitorstream(cmd.nid, "stdout", curry(termPrintln, term));
-                    var wserr = monitorstream(cmd.nid, "stderr", curry(termPrintln, term));
+                    ctrl.handleStream(cmd.nid, "stdout", curry(termPrintln, term));
+                    ctrl.handleStream(cmd.nid, "stderr", curry(termPrintln, term));
                     // auto start by simulating keypress on [start]
                     if ($('#autostart').is(':checked')) {
-                        // wait until stdout and stderr are being monitored to
-                        // ensure no stream data is lost
-                        wsout.onopen = function () {
-                            wserr.onopen = function () {
-                                $('#' + cmd.htmlid + ' form.start-cmd').submit();
-                            };
-                        };
+                        $('#' + cmd.htmlid + ' form.start-cmd').submit();
                     }
                 })
                 .fail(function (_, status, error) {
@@ -508,4 +504,10 @@ $(document).ready(function () {
         });
     });
     term = createTerminal();
+    loadScript('/js/ctrl.js', function () {
+        ctrl = new Ctrl();
+        ctrl.ws.onerror = function () {
+            console.log('Error connecting to ' + ctrluri);
+        };
+    });
 });
