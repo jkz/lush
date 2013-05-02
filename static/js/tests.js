@@ -27,3 +27,12 @@ test("lcp(): longest common prefix", function () {
     equal(lcp(["", "foo"]), "");
     equal(lcp(["burt", "burt"]), "burt");
 });
+
+test("splitn(): split string with limit", function () {
+    deepEqual("a,b,c,d".splitn(",", 3), ['a', 'b', 'c,d']);
+    deepEqual("a,b,c,d".splitn(",", 9), ['a', 'b', 'c', 'd']);
+    deepEqual("a,b,c,d".splitn(",", 1), ['a,b,c,d']);
+    deepEqual("foo".splitn("", 2), ['f', 'oo']);
+    deepEqual("".splitn(",", 1), [""]);
+    deepEqual("".splitn("", 1), []);
+});

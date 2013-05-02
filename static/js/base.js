@@ -128,11 +128,47 @@ var lcp = function (seqs, i) {
 // http://stackoverflow.com/a/202627
 String.prototype.repeat = function (num) {
     return new Array(num + 1).join(this);
-}
+};
 
+String.prototype.splitn = function (sep, n) {
+    var components = this.split(sep);
+    var res = [];
+    while (--n && components.length > 0) {
+        res.push(components.shift());
+    }
+    if (components.length > 0) {
+        res.push(components.join(sep));
+    }
+    return res;
+};
+
+// http://stackoverflow.com/a/950146
+// $.getScript does not wait for execution
+// but hey so doesnt want anonymous feedback well not my problem
+// also holy shitballs js
+var loadScript = function (url, callback)
+{
+    // adding the script tag to the head as suggested before
+   var head = document.getElementsByTagName('head')[0];
+   var script = document.createElement('script');
+   script.type = 'text/javascript';
+   script.src = url;
+
+   // then bind the event to the callback function 
+   // there are several events for cross browser compatibility
+   script.onreadystatechange = callback;
+   script.onload = callback;
+
+   // fire the loading
+   head.appendChild(script);
+};
 
 // PROJECT LOCAL UTILTIES
 
+// create full websocket uri from relative path
+var wsURI = function(path) {
+    return 'ws://' + document.location.host + path;
+};
 
 // Call given function whenever the specified stream from this
 // command has an update It is called with the new data so eg if a
@@ -140,8 +176,7 @@ String.prototype.repeat = function (num) {
 // callback("AB"); or callback("A"); callback("B");
 // returns the websocket object associated with this monitor
 var monitorstream = function (sysid, stream, callback) {
-    var uri = 'ws://' + document.location.host + '/'
-            + sysid + '/stream/' + stream + '.bin';
+    var uri = wsURI('/' + sysid + '/stream/' + stream + '.bin');
     var ws = new WebSocket(uri);
     ws.onmessage = function (e) {
         callback(e.data);
