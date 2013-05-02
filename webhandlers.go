@@ -22,6 +22,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -32,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"code.google.com/p/go.net/websocket"
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
@@ -341,6 +343,65 @@ func handleGetFiles(ctx *web.Context) error {
 	return json.NewEncoder(ctx).Encode(paths)
 }
 
+// subscribe websocket client to stream data
+func wseventSubscribe(s *server, ws *websocket.Conn, idstr, streamname string) error {
+	id, _ := liblush.ParseCmdId(idstr)
+	c := s.session.GetCommand(id)
+	if c == nil {
+		return errors.New("no such command: " + idstr)
+	}
+	var stream liblush.OutStream
+	switch streamname {
+	case "stdout":
+		stream = c.Stdout()
+	case "stderr":
+		stream = c.Stderr()
+	default:
+		return errors.New("unknown stream: " + streamname)
+	}
+	// proxy stream data
+	stream.AddPipe(newPrefixedWriter(ws, []byte("stream;"+idstr+";"+streamname+";")))
+	return nil
+}
+
+func parseAndHandleWsEvent(s *server, ws *websocket.Conn, msg []byte) error {
+	argv := strings.Split(string(msg), ";")
+	if len(argv) > 0 {
+		switch argv[0] {
+		case "subscribe":
+			// eg subscribe;3;stdout
+			if len(argv) < 3 {
+				return errors.New("subscribe requires 2 args")
+			}
+			return wseventSubscribe(s, ws, argv[1], argv[2])
+		}
+	}
+	return errors.New("parse error")
+}
+
+// forward all subscribed event information to a client connected through
+// websocket
+func handleWsEvents(ctx *web.Context) error {
+	s := ctx.User.(*server)
+	ws := ctx.WebsockConn
+	for {
+		// if a message from client is longer than 1999 bytes this bums
+		buf := make([]byte, 2000)
+		n, err := ws.Read(buf)
+		if n > 0 {
+			msg := buf[:n]
+			err2 := parseAndHandleWsEvent(s, ws, msg)
+			if err2 != nil {
+				return fmt.Errorf("error handling WS event: %v", err2)
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("WS event connection dropped: %v", err)
+		}
+	}
+	return errors.New("unreachable")
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.web.Get(`/`, handleGetRoot)
@@ -358,5 +419,6 @@ func init() {
 		s.web.Post(`/clientdata`, handlePostClientdata)
 		s.web.Post(`/chdir`, handlePostChdir)
 		s.web.Get(`/files.json`, handleGetFiles)
+		s.web.Websocket(`/events`, handleWsEvents)
 	})
 }
