@@ -360,7 +360,10 @@ func wseventSubscribe(s *server, ws *websocket.Conn, idstr, streamname string) e
 		return errors.New("unknown stream: " + streamname)
 	}
 	// proxy stream data
-	stream.AddPipe(newPrefixedWriter(ws, []byte("stream;"+idstr+";"+streamname+";")))
+	w := newPrefixedWriter(ws, []byte("stream;"+idstr+";"+streamname+";"))
+	// do not close websocket stream when command exits 
+	wc := newNopWriteCloser(w)
+	stream.AddPipe(wc)
 	return nil
 }
 
