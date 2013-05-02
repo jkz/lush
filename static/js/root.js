@@ -371,19 +371,25 @@ var showCmd = function (cmd) {
     jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'block'));
 };
 
+// purely visual
 var hideCmdTree = function (sysid) {
     mapCmdTree(sysid, hideCmd);
+    $('#group' + sysid).addClass('archived');
 };
 
+// purely visual
 var showCmdTree = function (sysid) {
     mapCmdTree(sysid, showCmd);
+    $('#group' + sysid).removeClass('archived');
 };
 
+// archive not only visually but also update configuration
 var archiveCmdTree = function (sysid) {
     hideCmdTree(sysid);
     updateState('group' + sysid + '.' + 'archived', true);
 };
 
+// archive not only visually but also update configuration
 var unarchiveCmdTree = function (sysid) {
     showCmdTree(sysid);
     updateState('group' + sysid + '.' + 'archived', false);
@@ -401,22 +407,18 @@ var rebuildGroupsList = function (groups) {
     }
     var lis = $.map(groups, function (cmds, gid) {
         var names = $.map(cmds, attrgetter("name")).join(", ");
-        var archivef, unarchivef;
-        var archivef = function () {
-            archiveCmdTree(gid);
-            $(this).text('◳')
-                   .one('click', unarchivef);
-        };
-        var unarchivef = function () {
-            unarchiveCmdTree(gid);
-            $(this).text('▬')
-                   .one('click', archivef);
-        };
-        var $btn = $('<button>▬</button>').one('click', archivef);
-        var $li = $('<li>' + gid + ': ' + names + '</li>').append($btn);
-        return $li;
+        var $li = $('<li id=group' + gid + '>' + gid + ': ' + names + '</li>');
+        var $btn = $('<button>').click(function () {
+            if ($li.hasClass('archived')) {
+                unarchiveCmdTree(gid);
+            } else {
+                archiveCmdTree(gid);
+            }
+            return false;
+        });
+        return $li.append($btn);
     });
-    return $('#groups').empty().append(lis);
+    return $('#groups ul').empty().append(lis);
 };
 
 var chdir = function (dir) {
@@ -442,6 +444,9 @@ $(document).ready(function () {
     });
     var groups = makeGroups(cmds);
     rebuildGroupsList(groups);
+    $('<a href>show/hide archived</a>')
+        .click(function () { $('#groups .archived').toggle(); return false; })
+        .insertBefore('#groups ul');
     // process configuration of archived groups on init
     getState(function (state) {
         $.map(groups, function (_, gid) {
