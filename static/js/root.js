@@ -429,6 +429,27 @@ var chdir = function (dir) {
         });
 };
 
+loadScript('/js/ctrl.js', function () {
+    ctrl = new Ctrl();
+    ctrl.ws.onerror = function () {
+        console.log('Error connecting to ' + ctrluri);
+    };
+    // a new command has been created
+    ctrl.handleEvent("newcmd", function (cmdjson) {
+        var cmd = JSON.parse(cmdjson);
+        cmds[cmd.nid] = cmd;
+        createCmdWidget(cmd);
+        rebuildGroupsList();
+        // capture all stdout and stderr to terminal
+        ctrl.handleStream(cmd.nid, "stdout", curry(termPrintln, term));
+        ctrl.handleStream(cmd.nid, "stderr", curry(termPrintln, term));
+        // auto start by simulating keypress on [start]
+        if ($('#autostart').is(':checked')) {
+            $('#' + cmd.htmlid + ' form.start-cmd').submit();
+        }
+    });
+});
+
 $(document).ready(function () {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
@@ -503,24 +524,4 @@ $(document).ready(function () {
         });
     });
     term = createTerminal();
-    loadScript('/js/ctrl.js', function () {
-        ctrl = new Ctrl();
-        ctrl.ws.onerror = function () {
-            console.log('Error connecting to ' + ctrluri);
-        };
-        // a new command has been created
-        ctrl.handleEvent("newcmd", function (cmdjson) {
-            var cmd = JSON.parse(cmdjson);
-            cmds[cmd.nid] = cmd;
-            createCmdWidget(cmd);
-            rebuildGroupsList();
-            // capture all stdout and stderr to terminal
-            ctrl.handleStream(cmd.nid, "stdout", curry(termPrintln, term));
-            ctrl.handleStream(cmd.nid, "stderr", curry(termPrintln, term));
-            // auto start by simulating keypress on [start]
-            if ($('#autostart').is(':checked')) {
-                $('#' + cmd.htmlid + ' form.start-cmd').submit();
-            }
-        });
-    });
 });
