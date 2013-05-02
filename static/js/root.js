@@ -38,6 +38,9 @@ var makeStartButton = function (sysId) {
                             dataType: "json",
                             success: function (infoobj) {
                                 info = infoobj;
+                            },
+                            error: function () {
+                                info = {Exited: true, Error: true};
                             }});
                         if (info.Exited == null) {
                             // not done yet continue polling
