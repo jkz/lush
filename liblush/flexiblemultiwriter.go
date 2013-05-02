@@ -43,16 +43,21 @@ func (mw *FlexibleMultiWriter) Write(data []byte) (int, error) {
 		// this is not called blocking mate
 		return 0, errors.New("FlexibleMultiWriter: set forward pipe before writing")
 	}
-	var bugged []int
-	for i, w := range mw.fwd {
-		_, err := w.Write(data)
+	var err error
+	for i := 0; i < len(mw.fwd); i++ {
+		w := mw.fwd[i]
+		_, err = w.Write(data)
 		if err != nil {
 			log.Print("Closing pipe: ", err)
-			bugged = append(bugged, i)
+			mw.fwd = append(mw.fwd[:i], mw.fwd[i+1:]...)
+			i -= 1
 		}
 	}
-	for i, x := range bugged {
-		mw.fwd = append(mw.fwd[:x-i], mw.fwd[x-i+1:]...)
+	if err != nil {
+		// create fresh slice to allow gc of underlying array
+		fresh := make([]io.Writer, len(mw.fwd))
+		copy(fresh, mw.fwd)
+		mw.fwd = fresh
 	}
 	return len(data), nil
 }
