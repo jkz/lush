@@ -27,6 +27,9 @@ import (
 	"sync"
 )
 
+// slightly tweaked io.MultiWriter: if an underlying writer fails it is removed
+// and no error is returned. writers can be added and removed on the fly. if
+// zero writers are configured Write() calls to this object block.
 type FlexibleMultiWriter struct {
 	fwd []io.Writer
 	l   sync.Mutex

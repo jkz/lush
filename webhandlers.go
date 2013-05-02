@@ -33,7 +33,6 @@ import (
 	"strings"
 	"time"
 
-	"code.google.com/p/go.net/websocket"
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
@@ -45,7 +44,8 @@ type server struct {
 	web     *web.Server
 	// Raw data store where client can save session data
 	// gets me a long way because i trust the client
-	clientdata []byte
+	clientdata  []byte
+	ctrlclients liblush.FlexibleMultiWriter
 }
 
 func redirect(ctx *web.Context, loc *url.URL) {
@@ -343,8 +343,8 @@ func handleGetFiles(ctx *web.Context) error {
 	return json.NewEncoder(ctx).Encode(paths)
 }
 
-// subscribe websocket client to stream data
-func wseventSubscribe(s *server, ws *websocket.Conn, idstr, streamname string) error {
+// subscribe all websocket clients to stream data
+func wseventSubscribe(s *server, idstr, streamname string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	c := s.session.GetCommand(id)
 	if c == nil {
@@ -360,14 +360,14 @@ func wseventSubscribe(s *server, ws *websocket.Conn, idstr, streamname string) e
 		return errors.New("unknown stream: " + streamname)
 	}
 	// proxy stream data
-	w := newPrefixedWriter(ws, []byte("stream;"+idstr+";"+streamname+";"))
+	w := newPrefixedWriter(&s.ctrlclients, []byte("stream;"+idstr+";"+streamname+";"))
 	// do not close websocket stream when command exits 
 	wc := newNopWriteCloser(w)
 	stream.AddWriter(wc)
 	return nil
 }
 
-func wseventNew(s *server, ws *websocket.Conn, optionsJSON string) error {
+func wseventNew(s *server, optionsJSON string) error {
 	var options struct {
 		Cmd, Name        string
 		Args             []string
@@ -384,12 +384,13 @@ func wseventNew(s *server, ws *websocket.Conn, optionsJSON string) error {
 	c.Stdout().ResizeScrollbackBuffer(options.StdoutScrollback)
 	c.Stderr().ResizeScrollbackBuffer(options.StderrScrollback)
 	c.SetName(options.Name)
-	w := newPrefixedWriter(ws, []byte("newcmd;"))
+	// broadcast newcmd message to all connected websocket clients
+	w := newPrefixedWriter(&s.ctrlclients, []byte("newcmd;"))
 	err = json.NewEncoder(w).Encode(metacmd{c}.Metadata())
 	return err
 }
 
-func parseAndHandleWsEvent(s *server, ws *websocket.Conn, msg []byte) error {
+func parseAndHandleWsEvent(s *server, msg []byte) error {
 	argv := strings.Split(string(msg), ";")
 	if len(argv) > 0 {
 		switch argv[0] {
@@ -398,30 +399,31 @@ func parseAndHandleWsEvent(s *server, ws *websocket.Conn, msg []byte) error {
 			if len(argv) < 3 {
 				return errors.New("subscribe requires 2 args")
 			}
-			return wseventSubscribe(s, ws, argv[1], argv[2])
+			return wseventSubscribe(s, argv[1], argv[2])
 		case "new":
 			// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
 			if len(argv) < 2 {
 				return errors.New("new requires 1 arg")
 			}
-			return wseventNew(s, ws, argv[1])
+			return wseventNew(s, argv[1])
 		}
 	}
 	return errors.New("parse error")
 }
 
-// forward all subscribed event information to a client connected through
-// websocket
-func handleWsEvents(ctx *web.Context) error {
+// websocket control connection (all are considered equal)
+func handleWsCtrl(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	ws := ctx.WebsockConn
+	// subscribe to ctrl events dont care about removing
+	s.ctrlclients.AddWriter(ws)
 	for {
 		// if a message from client is longer than 1999 bytes this bums
 		buf := make([]byte, 2000)
 		n, err := ws.Read(buf)
 		if n > 0 {
 			msg := buf[:n]
-			err2 := parseAndHandleWsEvent(s, ws, msg)
+			err2 := parseAndHandleWsEvent(s, msg)
 			if err2 != nil {
 				return fmt.Errorf("error handling WS event: %v", err2)
 			}
@@ -450,6 +452,6 @@ func init() {
 		s.web.Post(`/clientdata`, handlePostClientdata)
 		s.web.Post(`/chdir`, handlePostChdir)
 		s.web.Get(`/files.json`, handleGetFiles)
-		s.web.Websocket(`/events`, handleWsEvents)
+		s.web.Websocket(`/ctrl`, handleWsCtrl)
 	})
 }

@@ -25,7 +25,7 @@
 
 function Ctrl() {
     var ctrl = this;
-    ctrl.ws = new WebSocket(wsURI('/events'));
+    ctrl.ws = new WebSocket(wsURI('/ctrl'));
     ctrl.streamhandlers = {};
     ctrl.handlers = {};
     ctrl.ws.onmessage = function (e) {
