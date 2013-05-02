@@ -367,6 +367,28 @@ func wseventSubscribe(s *server, ws *websocket.Conn, idstr, streamname string) e
 	return nil
 }
 
+func wseventNew(s *server, ws *websocket.Conn, optionsJSON string) error {
+	var options struct {
+		Cmd, Name        string
+		Args             []string
+		StdoutScrollback int
+		StderrScrollback int
+	}
+	err := json.Unmarshal([]byte(optionsJSON), &options)
+	if err != nil {
+		return err
+	}
+	c := s.session.NewCommand(options.Cmd, options.Args...)
+	c.Stdout().AddPipe(liblush.Devnull)
+	c.Stderr().AddPipe(liblush.Devnull)
+	c.Stdout().ResizeScrollbackBuffer(options.StdoutScrollback)
+	c.Stderr().ResizeScrollbackBuffer(options.StderrScrollback)
+	c.SetName(options.Name)
+	w := newPrefixedWriter(ws, []byte("newcmd;"))
+	err = json.NewEncoder(w).Encode(metacmd{c}.Metadata())
+	return err
+}
+
 func parseAndHandleWsEvent(s *server, ws *websocket.Conn, msg []byte) error {
 	argv := strings.Split(string(msg), ";")
 	if len(argv) > 0 {
@@ -377,6 +399,12 @@ func parseAndHandleWsEvent(s *server, ws *websocket.Conn, msg []byte) error {
 				return errors.New("subscribe requires 2 args")
 			}
 			return wseventSubscribe(s, ws, argv[1], argv[2])
+		case "new":
+			// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
+			if len(argv) < 2 {
+				return errors.New("new requires 1 arg")
+			}
+			return wseventNew(s, ws, argv[1])
 		}
 	}
 	return errors.New("parse error")

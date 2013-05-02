@@ -27,13 +27,20 @@ function Ctrl() {
     var ctrl = this;
     ctrl.ws = new WebSocket(wsURI('/events'));
     ctrl.streamhandlers = {};
+    ctrl.handlers = {};
     ctrl.ws.onmessage = function (e) {
         var x = e.data.splitn(';', 2);
         var cmd = x[0];
         var rest = x[1];
-        switch (cmd) {
-        case "stream":
-            if (ctrl._handleStream(rest)) {
+        // special case
+        if (cmd == "stream") {
+            if (ctrl._handleEventStream(rest)) {
+                return;
+            }
+        } else {
+            var handler = ctrl.handlers[cmd];
+            if (handler) {
+                handler(rest);
                 return;
             }
         }
@@ -41,7 +48,8 @@ function Ctrl() {
     };
 }
 
-Ctrl.prototype._handleStream = function (rawmsg) {
+// handle incoming event 'stream'
+Ctrl.prototype._handleEventStream = function (rawmsg) {
     var x = rawmsg.splitn(';', 3);
     var handler = (this.streamhandlers[x[0]] || {})[x[1]];
     if (handler) {
@@ -55,6 +63,11 @@ Ctrl.prototype.send = function () {
     var args = Array.prototype.slice.call(arguments);
     this.ws.send(args.join(';'));
 };
+
+// execute callback(data) for incoming event of this name
+Ctrl.prototype.handleEvent = function (name, callback) {
+    this.handlers[name] = callback;
+}
 
 // execute callback(data) for incoming stream data from this command
 Ctrl.prototype.handleStream = function (id, stream, callback) {

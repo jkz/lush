@@ -163,6 +163,26 @@ var loadScript = function (url, callback)
    head.appendChild(script);
 };
 
+// serialize html form to jquery object ready for jsoning
+// http://stackoverflow.com/a/1186309
+$.fn.serializeObject = function()
+{
+    var o = {};
+    var a = this.serializeArray();
+    $.each(a, function() {
+        if (o[this.name] !== undefined) {
+            if (!o[this.name].push) {
+                o[this.name] = [o[this.name]];
+            }
+            o[this.name].push(this.value || '');
+        } else {
+            o[this.name] = this.value || '';
+        }
+    });
+    return o;
+};
+
+
 // PROJECT LOCAL UTILTIES
 
 // create full websocket uri from relative path

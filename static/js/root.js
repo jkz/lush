@@ -468,30 +468,24 @@ $(document).ready(function () {
     // set command name to argv
     $('form[action="/new"]')
         .append($('<input type=hidden name=name>'))
-        // ajaxify creation of new command
+        // ajaxify creation of new command, send it over ctrl stream
         .submit(function () {
             var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
+            argv = removeFalse(argv);
             if (argv[0] == "cd") {
                 chdir(argv[1]);
                 return false;
             }
-            $('input[name=name]', this).val(removeFalse(argv).join(' '));
-            $.post(this.action + '?noredirect', $(this).serialize())
-                .done(function (cmd) {
-                    cmds[cmd.nid] = cmd;
-                    createCmdWidget(cmd);
-                    rebuildGroupsList();
-                    // capture all stdout and stderr to terminal
-                    ctrl.handleStream(cmd.nid, "stdout", curry(termPrintln, term));
-                    ctrl.handleStream(cmd.nid, "stderr", curry(termPrintln, term));
-                    // auto start by simulating keypress on [start]
-                    if ($('#autostart').is(':checked')) {
-                        $('#' + cmd.htmlid + ' form.start-cmd').submit();
-                    }
-                })
-                .fail(function (_, status, error) {
-                    alert(status + ": " + error);
-                });
+            $('input[name=name]', this).val(argv.join(' '));
+            var o = $(this).serializeObject();
+            // cast numeric inputs to JS ints
+            $.each(o, function (key, val) {
+                if (/^\d+$/.test(val)) {
+                    o[key] = parseInt(val);
+                }
+            });
+            o.args = argv.slice(1);
+            ctrl.send("new", JSON.stringify(o));
             return false;
         });
     // persistent checkbox configurations
@@ -509,5 +503,19 @@ $(document).ready(function () {
         ctrl.ws.onerror = function () {
             console.log('Error connecting to ' + ctrluri);
         };
+        // a new command has been created
+        ctrl.handleEvent("newcmd", function (cmdjson) {
+            var cmd = JSON.parse(cmdjson);
+            cmds[cmd.nid] = cmd;
+            createCmdWidget(cmd);
+            rebuildGroupsList();
+            // capture all stdout and stderr to terminal
+            ctrl.handleStream(cmd.nid, "stdout", curry(termPrintln, term));
+            ctrl.handleStream(cmd.nid, "stderr", curry(termPrintln, term));
+            // auto start by simulating keypress on [start]
+            if ($('#autostart').is(':checked')) {
+                $('#' + cmd.htmlid + ' form.start-cmd').submit();
+            }
+        });
     });
 });
