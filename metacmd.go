@@ -41,7 +41,7 @@ type cmdmetadata struct {
 }
 
 // if this writer is the instream of a command return that
-func iscmd(w io.WriteCloser) liblush.Cmd {
+func iscmd(w io.Writer) liblush.Cmd {
 	if ins, ok := w.(liblush.InStream); ok {
 		return ins.Cmd()
 	}
@@ -50,7 +50,7 @@ func iscmd(w io.WriteCloser) liblush.Cmd {
 
 // return command that this stream pipes to, if any
 func pipedcmd(outs liblush.OutStream) liblush.Cmd {
-	for _, w := range outs.Pipes() {
+	for _, w := range outs.Writers() {
 		if c := iscmd(w); c != nil {
 			return c
 		}

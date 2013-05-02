@@ -197,7 +197,7 @@ func handlePostConnect(ctx *web.Context, idstr string) error {
 	if err != nil {
 		return err
 	}
-	stream.AddPipe(other.Stdin())
+	stream.AddWriter(other.Stdin())
 	redirect(ctx, cmdloc(c))
 	return nil
 }
@@ -232,8 +232,8 @@ func handlePostNew(ctx *web.Context) error {
 		argv = append(argv, val)
 	}
 	c := s.session.NewCommand(ctx.Params["cmd"], argv...)
-	c.Stdout().AddPipe(liblush.Devnull)
-	c.Stderr().AddPipe(liblush.Devnull)
+	c.Stdout().AddWriter(liblush.Devnull)
+	c.Stderr().AddWriter(liblush.Devnull)
 	// live dangerously die young thats the navajo spirit my friends
 	i, _ := strconv.Atoi(ctx.Params["stdoutScrollback"])
 	c.Stdout().ResizeScrollbackBuffer(i)
@@ -307,7 +307,7 @@ func handleWsStream(ctx *web.Context, idstr, streamname string) error {
 	default:
 		return web.WebError{400, "No such stream: " + streamname}
 	}
-	stream.AddPipe(ctx.WebsockConn)
+	stream.AddWriter(ctx.WebsockConn)
 	buf := make([]byte, 1)
 	ctx.WebsockConn.Read(buf)
 	return nil
@@ -363,7 +363,7 @@ func wseventSubscribe(s *server, ws *websocket.Conn, idstr, streamname string) e
 	w := newPrefixedWriter(ws, []byte("stream;"+idstr+";"+streamname+";"))
 	// do not close websocket stream when command exits 
 	wc := newNopWriteCloser(w)
-	stream.AddPipe(wc)
+	stream.AddWriter(wc)
 	return nil
 }
 
@@ -379,8 +379,8 @@ func wseventNew(s *server, ws *websocket.Conn, optionsJSON string) error {
 		return err
 	}
 	c := s.session.NewCommand(options.Cmd, options.Args...)
-	c.Stdout().AddPipe(liblush.Devnull)
-	c.Stderr().AddPipe(liblush.Devnull)
+	c.Stdout().AddWriter(liblush.Devnull)
+	c.Stderr().AddWriter(liblush.Devnull)
 	c.Stdout().ResizeScrollbackBuffer(options.StdoutScrollback)
 	c.Stderr().ResizeScrollbackBuffer(options.StderrScrollback)
 	c.SetName(options.Name)

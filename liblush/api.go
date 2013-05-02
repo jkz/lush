@@ -43,12 +43,12 @@ type OutStream interface {
 	// Send all output to this writer. Multiple writers can be hooked up and
 	// unloaded at any time. If this writer's Write returns an error it is
 	// removed from the list without affecting anything else.  Output is
-	// blocked if no pipes are configured.
-	AddPipe(w io.WriteCloser)
-	// Remove a pipe previously set with AddPipe. Returns false if not set.
-	RemovePipe(w io.WriteCloser) bool
-	// sinks set with SetPipe
-	Pipes() []io.WriteCloser
+	// blocked if no writers are configured.
+	AddWriter(w io.Writer)
+	// Remove a writer previously set with AddWriter. Returns false if not set.
+	RemoveWriter(w io.Writer) bool
+	Writers() []io.Writer
+	// most recently written bytes
 	Last(p []byte) int
 	ResizeScrollbackBuffer(n int)
 }

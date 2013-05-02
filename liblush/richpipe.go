@@ -21,7 +21,6 @@
 package liblush
 
 import (
-	"errors"
 	"io"
 	"log"
 	"sync"
@@ -31,45 +30,31 @@ import (
 // nice cos you can keep track of the latest bytes that were sent through.
 // safe for concurrent use
 type richpipe struct {
+	FlexibleMultiWriter
 	// Most recently written bytes
 	fifo ringbuf
-	// Pipe all incoming writes to this writer
-	fwd []io.WriteCloser
-	l   sync.Mutex
+	l    sync.Mutex
 }
 
 // always great success responsibility for failure is here not with caller
 func (p *richpipe) Write(data []byte) (int, error) {
 	p.l.Lock()
 	defer p.l.Unlock()
-	if len(p.fwd) == 0 {
-		// this is not called blocking mate
-		return 0, errors.New("rich pipe: set forward pipe before writing")
-	}
-	var bugged []int
-	for i, w := range p.fwd {
-		_, err := w.Write(data)
-		if err != nil {
-			log.Print("Closing pipe: ", err)
-			bugged = append(bugged, i)
-		}
-	}
-	for i, x := range bugged {
-		p.fwd = append(p.fwd[:x-i], p.fwd[x-i+1:]...)
-	}
-	// fifo last poor fifo
-	p.fifo.Write(data) // and errors ignored too aww
+	p.FlexibleMultiWriter.Write(data)
+	p.fifo.Write(data)
 	return len(data), nil
 }
 
-// returns the first error raised by a writer on close, if any
+// close underlying writers return the first error encountered, if any
 func (p *richpipe) Close() (err error) {
 	p.l.Lock()
 	defer p.l.Unlock()
-	for _, w := range p.fwd {
-		err2 := w.Close()
-		if err2 != nil && err == nil {
-			err = err2
+	for _, w := range p.Writers() {
+		if c, ok := w.(io.Closer); ok {
+			err2 := c.Close()
+			if err2 != nil && err == nil {
+				err = err2
+			}
 		}
 	}
 	return err
@@ -79,30 +64,6 @@ func (p *richpipe) Last(buf []byte) int {
 	p.l.Lock()
 	defer p.l.Unlock()
 	return p.fifo.Last(buf)
-}
-
-func (p *richpipe) AddPipe(w io.WriteCloser) {
-	p.l.Lock()
-	defer p.l.Unlock()
-	p.fwd = append(p.fwd, w)
-}
-
-func (p *richpipe) RemovePipe(w io.WriteCloser) bool {
-	p.l.Lock()
-	defer p.l.Unlock()
-	for i, w2 := range p.fwd {
-		if w == w2 {
-			p.fwd = append(p.fwd[:i], p.fwd[i+1:]...)
-			return true
-		}
-	}
-	return false
-}
-
-func (p *richpipe) Pipes() []io.WriteCloser {
-	p.l.Lock()
-	defer p.l.Unlock()
-	return p.fwd
 }
 
 func (p *richpipe) ResizeScrollbackBuffer(n int) {
