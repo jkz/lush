@@ -429,6 +429,15 @@ var chdir = function (dir) {
         });
 };
 
+// print text to this terminal's output and mark it as coming from this
+// command. sets a class in the div that holds the output in the terminal.
+var termPrintlnCmd = function (term, sysid, data) {
+    var finalize = function (container) {
+        container.addClass('output-' + sysid);
+    };
+    return termPrintln(term, data, finalize);
+};
+
 loadScript('/js/ctrl.js', function () {
     ctrl = new Ctrl();
     ctrl.ws.onerror = function () {
@@ -441,8 +450,8 @@ loadScript('/js/ctrl.js', function () {
         createCmdWidget(cmd);
         rebuildGroupsList();
         // capture all stdout and stderr to terminal
-        ctrl.handleStream(cmd.nid, "stdout", curry(termPrintln, term));
-        ctrl.handleStream(cmd.nid, "stderr", curry(termPrintln, term));
+        ctrl.handleStream(cmd.nid, "stdout", curry(termPrintlnCmd, term, cmd.nid));
+        ctrl.handleStream(cmd.nid, "stderr", curry(termPrintlnCmd, term, cmd.nid));
         // auto start by simulating keypress on [start]
         if ($('#autostart').is(':checked')) {
             $('#' + cmd.htmlid + ' form.start-cmd').submit();

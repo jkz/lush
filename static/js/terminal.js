@@ -27,7 +27,7 @@
 var term;
 
 // Print text to this terminal. Ensures the text always ends in newline.
-var termPrintln = function (term, text) {
+var termPrintln = function (term, text, finalize) {
     // term.echo will always append newline so strip one off if exists
     if (hassuffix(text, '\r\n')) {
         text = text.slice(0, -2);
@@ -37,7 +37,7 @@ var termPrintln = function (term, text) {
     text = escapeHTML(text);
     // jquery.terminal interprets square brackets
     text = text.replace(/\[/g, '&#91;');
-    return term.echo(text);
+    return term.echo(text, finalize);
 };
 
 var parseerror = function (msg, pos) {
@@ -264,8 +264,9 @@ var promptUnescape = function (str) {
     return str.replace(/\\(.)/g, "$1");
 };
 
+// send what is currently on the prompt to the terminal output
 var echoInput = function (term) {
-    termPrintln(term, term.get_prompt() + term.get_command());
+    return termPrintln(term, term.get_prompt() + term.get_command());
 };
 
 // Called with array of filenames to populate a partially completed command
