@@ -418,7 +418,16 @@ var rebuildGroupsList = function (groups) {
         });
         return $li.append($btn);
     });
-    return $('#groups ul').empty().append(lis);
+    var $g = $('#groups ul').empty().append(lis);
+    // process configuration of archived groups
+    getState(function (state) {
+        $.map(groups, function (_, gid) {
+            if (state['group' + gid + '.archived']) {
+                hideCmdTree(gid);
+            }
+        });
+    });
+    return $g;
 };
 
 var chdir = function (dir) {
@@ -477,14 +486,6 @@ $(document).ready(function () {
     $('<a href>show/hide archived</a>')
         .click(function () { $('#groups .archived').toggle(); return false; })
         .insertBefore('#groups ul');
-    // process configuration of archived groups on init
-    getState(function (state) {
-        $.map(groups, function (_, gid) {
-            if (state['group' + gid + '.archived']) {
-                hideCmdTree(gid);
-            }
-        });
-    });
     jsPlumb.importDefaults({
         ConnectionsDetachable: false,
         // Put all connectors at z-index 3 and endpoints at 4
