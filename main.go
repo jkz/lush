@@ -24,6 +24,8 @@ import (
 	"go/build"
 	"html/template"
 	"log"
+	"os"
+	"runtime"
 
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
@@ -33,14 +35,34 @@ const basePkg = "github.com/hraban/lush/"
 
 var serverinitializers []func(*server)
 
+// Create new PATH envvar value by adding dir to existing PATH
+func appendPath(oldpath, dir string) string {
+	if oldpath == "" {
+		return dir
+	}
+	sep := ":"
+	if runtime.GOOS == "windows" {
+		sep = ";"
+	}
+	return oldpath + sep + dir
+}
+
 func main() {
 	p, err := build.Default.Import(basePkg, "", build.FindOnly)
 	if err != nil {
-		log.Fatalf("Couldn't find lush resource files: ", err)
+		log.Fatal("Couldn't find lush resource files: ", err)
 	}
 	root := p.Dir
 	tmplts := template.New("")
 	tmplts = template.Must(tmplts.ParseGlob(root + "/templates/*.html"))
+	// also search for binaries local /bin folder
+	path := os.Getenv("PATH")
+	path = appendPath(path, root+"/bin")
+	err = os.Setenv("PATH", path)
+	if err != nil {
+		log.Print("Failed to add ./bin to the PATH: ", err)
+		// continue
+	}
 	s := &server{
 		session: liblush.NewSession(),
 		root:    root,
