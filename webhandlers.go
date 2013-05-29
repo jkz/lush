@@ -360,7 +360,7 @@ func wseventSubscribe(s *server, idstr, streamname string) error {
 	}
 	// proxy stream data
 	w := newPrefixedWriter(&s.ctrlclients, []byte("stream;"+idstr+";"+streamname+";"))
-	// do not close websocket stream when command exits 
+	// do not close websocket stream when command exits
 	wc := newNopWriteCloser(w)
 	stream.AddWriter(wc)
 	return nil
