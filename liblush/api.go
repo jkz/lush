@@ -85,6 +85,11 @@ type Session interface {
 	NewCommand(name string, arg ...string) Cmd
 	GetCommand(id CmdId) Cmd
 	GetCommandIds() []CmdId
+	// Environment that will be passed to child processes. NOT the environment
+	// variables of this shell process. Eg setting Path will not affect where
+	// this session looks for binaries. It will, however, affect how child
+	// processes search for binaries because they will actually have the
+	// modified PATH as an envvar.
 	Setenv(key, value string)
 	Unsetenv(key string)
 	Getenv(name string) string
