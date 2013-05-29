@@ -85,4 +85,8 @@ type Session interface {
 	NewCommand(name string, arg ...string) Cmd
 	GetCommand(id CmdId) Cmd
 	GetCommandIds() []CmdId
+	Setenv(key, value string)
+	Unsetenv(key string)
+	Getenv(name string) string
+	Environ() map[string]string
 }
