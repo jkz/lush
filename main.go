@@ -36,7 +36,7 @@ var serverinitializers []func(*server)
 func main() {
 	p, err := build.Default.Import(basePkg, "", build.FindOnly)
 	if err != nil {
-		log.Fatalf("Couldn't find lush resource files")
+		log.Fatalf("Couldn't find lush resource files: ", err)
 	}
 	root := p.Dir
 	tmplts := template.New("")
