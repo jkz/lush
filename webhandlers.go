@@ -434,6 +434,24 @@ func handleWsCtrl(ctx *web.Context) error {
 	return errors.New("unreachable")
 }
 
+func handleGetEnviron(ctx *web.Context) map[string]string {
+	ctx.ContentType("json")
+	s := ctx.User.(*server)
+	return s.session.Environ()
+}
+
+func handlePostSetenv(ctx *web.Context) {
+	s := ctx.User.(*server)
+	s.session.Setenv(ctx.Params["key"], ctx.Params["value"])
+	return
+}
+
+func handlePostUnsetenv(ctx *web.Context) {
+	s := ctx.User.(*server)
+	s.session.Unsetenv(ctx.Params["key"])
+	return
+}
+
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.web.Get(`/`, handleGetRoot)
@@ -452,5 +470,8 @@ func init() {
 		s.web.Post(`/chdir`, handlePostChdir)
 		s.web.Get(`/files.json`, handleGetFiles)
 		s.web.Websocket(`/ctrl`, handleWsCtrl)
+		s.web.Get(`/environ.json`, handleGetEnviron)
+		s.web.Post(`/setenv`, handlePostSetenv)
+		s.web.Post(`/unsetenv`, handlePostUnsetenv)
 	})
 }
