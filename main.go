@@ -27,6 +27,7 @@ import (
 	"os"
 	"runtime"
 
+	"bitbucket.org/kardianos/osext"
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
@@ -47,18 +48,33 @@ func appendPath(oldpath, dir string) string {
 	return oldpath + sep + dir
 }
 
-func main() {
+// find the directory containing the lush resource files. looks for a
+// "templates" directory in the directory of the executable. if not found try
+// to look for them in GOPATH ($GOPATH/src/github.com/....). Panics if no
+// resources are found.
+func resourceDir() string {
+	root, err := osext.ExecutableFolder()
+	if err == nil {
+		if _, err = os.Stat(root + "/templates"); err == nil {
+			return root
+		}
+	}
+	// didn't find <dir of executable>/templates
 	p, err := build.Default.Import(basePkg, "", build.FindOnly)
 	if err != nil {
-		log.Fatal("Couldn't find lush resource files: ", err)
+		panic("Couldn't find lush resource files")
 	}
-	root := p.Dir
+	return p.Dir
+}
+
+func main() {
+	root := resourceDir()
 	tmplts := template.New("")
 	tmplts = template.Must(tmplts.ParseGlob(root + "/templates/*.html"))
 	// also search for binaries local /bin folder
 	path := os.Getenv("PATH")
 	path = appendPath(path, root+"/bin")
-	err = os.Setenv("PATH", path)
+	err := os.Setenv("PATH", path)
 	if err != nil {
 		log.Print("Failed to add ./bin to the PATH: ", err)
 		// continue
