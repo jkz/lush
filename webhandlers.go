@@ -389,6 +389,26 @@ func wseventNew(s *server, optionsJSON string) error {
 	return err
 }
 
+func wseventSetpath(s *server, pathJSON string) error {
+	var path []string
+	err := json.Unmarshal([]byte(pathJSON), &path)
+	if err != nil {
+		return err
+	}
+	err = setPath(path)
+	if err != nil {
+		return err
+	}
+	// broadcast new path to all connected websocket clients
+	_, err = s.ctrlclients.Write([]byte("path;" + pathJSON))
+	return err
+}
+
+func wseventGetpath(s *server) error {
+	w := newPrefixedWriter(&s.ctrlclients, []byte("path;"))
+	return json.NewEncoder(w).Encode(getPath())
+}
+
 func parseAndHandleWsEvent(s *server, msg []byte) error {
 	argv := strings.SplitN(string(msg), ";", 2)
 	if len(argv) != 2 {
@@ -405,6 +425,12 @@ func parseAndHandleWsEvent(s *server, msg []byte) error {
 	case "new":
 		// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
 		return wseventNew(s, argv[1])
+	case "setpath":
+		// eg addpath;["c:\foo\bar\bin", "c:\bin"]
+		return wseventSetpath(s, argv[1])
+	case "getpath":
+		// eg getpath;
+		return wseventGetpath(s)
 	}
 	return errors.New("unknown command")
 }
