@@ -101,24 +101,27 @@ func wseventGetpath(s *server, _ string) error {
 	return json.NewEncoder(w).Encode(getPath())
 }
 
+type wsHandler func(*server, string) error
+
+var wsHandlers = map[string]wsHandler{
+	// eg subscribe;3;stdout
+	"subscribe": wseventSubscribe,
+	// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
+	"new": wseventNew,
+	// eg setpath;["c:\foo\bar\bin", "c:\bin"]
+	"setpath": wseventSetpath,
+	// eg getpath;
+	"getpath": wseventGetpath,
+}
+
 func parseAndHandleWsEvent(s *server, msg []byte) error {
 	argv := strings.SplitN(string(msg), ";", 2)
 	if len(argv) != 2 {
 		return errors.New("parse error")
 	}
-	switch argv[0] {
-	case "subscribe":
-		// eg subscribe;3;stdout
-		return wseventSubscribe(s, argv[1])
-	case "new":
-		// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
-		return wseventNew(s, argv[1])
-	case "setpath":
-		// eg addpath;["c:\foo\bar\bin", "c:\bin"]
-		return wseventSetpath(s, argv[1])
-	case "getpath":
-		// eg getpath;
-		return wseventGetpath(s, argv[1])
+	handler, ok := wsHandlers[argv[0]]
+	if !ok {
+		return errors.New("unknown command")
 	}
-	return errors.New("unknown command")
+	return handler(s, argv[1])
 }
