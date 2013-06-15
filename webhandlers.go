@@ -390,24 +390,23 @@ func wseventNew(s *server, optionsJSON string) error {
 }
 
 func parseAndHandleWsEvent(s *server, msg []byte) error {
-	argv := strings.Split(string(msg), ";")
-	if len(argv) > 0 {
-		switch argv[0] {
-		case "subscribe":
-			// eg subscribe;3;stdout
-			if len(argv) < 3 {
-				return errors.New("subscribe requires 2 args")
-			}
-			return wseventSubscribe(s, argv[1], argv[2])
-		case "new":
-			// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
-			if len(argv) < 2 {
-				return errors.New("new requires 1 arg")
-			}
-			return wseventNew(s, argv[1])
-		}
+	argv := strings.SplitN(string(msg), ";", 2)
+	if len(argv) != 2 {
+		return errors.New("parse error")
 	}
-	return errors.New("parse error")
+	switch argv[0] {
+	case "subscribe":
+		// eg subscribe;3;stdout
+		args := strings.Split(argv[1], ";")
+		if len(args) != 2 {
+			return errors.New("subscribe requires 2 args")
+		}
+		return wseventSubscribe(s, args[0], args[1])
+	case "new":
+		// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
+		return wseventNew(s, argv[1])
+	}
+	return errors.New("unknown command")
 }
 
 // websocket control connection (all are considered equal)
