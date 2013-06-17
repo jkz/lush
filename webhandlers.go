@@ -332,6 +332,7 @@ func handlePostChdir(ctx *web.Context) error {
 
 // List of files nice for tab completion
 func handleGetFiles(ctx *web.Context) error {
+	ctx.ContentType("json")
 	paths, err := filepath.Glob(ctx.Params["pattern"])
 	if err != nil {
 		return err
