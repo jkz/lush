@@ -458,9 +458,19 @@ var createPathInput = function (dir) {
     var id = 'path-' + nextNum();
     return $('<div id='+id+'>').append([
         // when a path changes submit the entire new path
-        $('<input>').val(dir).change(function () {
-            $('form#path').submit();
-        }),
+        $('<input>')
+            .val(dir)
+            .change(function () {
+                $('form#path').submit();
+            })
+            .keypress(function () {
+                var w = ((this.value.length + 1) * 8);
+                if (w < 200) {
+                    w = 200;
+                }
+                this.style.width = w + 'px';
+            })
+            .keypress(),
         // delete path button
         $('<button>×</button>').click(function () {
             $('#'+id).remove();
