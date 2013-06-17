@@ -447,6 +447,60 @@ var termPrintlnCmd = function (term, sysid, data) {
     return termPrintln(term, data, finalize);
 };
 
+var mynum = 0;
+
+// page-local increasing number
+var nextNum = function () {
+    return mynum++;
+};
+
+var createPathInput = function (dir) {
+    var id = 'path-' + nextNum();
+    return $('<div id='+id+'>').append([
+        // when a path changes submit the entire new path
+        $('<input>').val(dir).change(function () {
+            $('form#path').submit();
+        }),
+        // delete path button
+        $('<button>×</button>').click(function () {
+            $('#'+id).remove();
+            // when a path is removed submit the entire new path
+            $('form#path').submit();
+            return false;
+        }),
+        '<br>',
+    ]);
+};
+
+// Initialization for the PATH UI
+var initPathForm = function(ctrl) {
+    // Hook up form submission to ctrl channel
+    $('form#path')
+        .submit(function () {
+            var paths = $.map($('#path input'), attrgetter('value'));
+            // filter out empty paths
+            paths = $.grep(paths, identity);
+            ctrl.send('setpath', JSON.stringify(paths));
+            return false;
+        })
+        // + button to allow creating entirely new PATH entries
+        .after($('<button>+</button>').click(function () {
+            $('form#path').append(createPathInput(''))
+            return false;
+        }));
+    // Refresh form when server notifies PATH changes
+    ctrl.handleEvent("path", function (pathjson) {
+        var dirs = JSON.parse(pathjson);
+        $('form#path')
+            .empty()
+            .append($.map(dirs, createPathInput));
+    });
+    // Request initial PATH from server
+    ctrl.ws.onopen = function () {
+        ctrl.send("getpath");
+    };
+};
+
 loadScript('/js/ctrl.js', function () {
     ctrl = new Ctrl();
     ctrl.ws.onerror = function () {
@@ -466,6 +520,7 @@ loadScript('/js/ctrl.js', function () {
             $('#' + cmd.htmlid + ' form.start-cmd').submit();
         }
     });
+    initPathForm(ctrl);
 });
 
 $(document).ready(function () {

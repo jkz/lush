@@ -61,6 +61,10 @@ Ctrl.prototype._handleEventStream = function (rawmsg) {
 
 Ctrl.prototype.send = function () {
     var args = Array.prototype.slice.call(arguments);
+    if (args.length == 1) {
+        // needs at least 1 argument
+        args.push("");
+    }
     this.ws.send(args.join(';'));
 };
 
