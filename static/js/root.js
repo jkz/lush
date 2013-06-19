@@ -555,6 +555,40 @@ loadScript('/js/ctrl.js', function () {
     initPathForm(ctrl);
 });
 
+var createNewCmdWidget = function () {
+    var $div = $('#newcmd_template').clone().removeAttr("id");
+    $div.find('form')
+        // send "newcmd" message over ctrl stream
+        .submit(function () {
+            var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
+            argv = removeFalse(argv);
+            if (argv[0] == "cd") {
+                chdir(argv[1]);
+                return false;
+            }
+            var o = $(this).serializeObject();
+            // cast numeric inputs to JS ints
+            $.each(o, function (key, val) {
+                if (/^\d+$/.test(val)) {
+                    o[key] = parseInt(val);
+                }
+            });
+            // set command name to argv
+            o.name = argv.join(' ');
+            o.args = argv.slice(1);
+            o.userdata = $(this).data();
+            o.userdata.autostart = this.autostart.checked;
+            o.userdata.autoarchive = this.autoarchive.checked;
+            ctrl.send("new", JSON.stringify(o));
+            // delete the form
+            $div.remove();
+            return false;
+        })
+        .find('input[name=cmd]')
+        .autocomplete({source: "/new/names.json"});
+    return $div;
+};
+
 $(document).ready(function () {
     $.map(cmds, createCmdWidget);
     // Second iteration to ensure that connections are only made after all
@@ -586,38 +620,9 @@ $(document).ready(function () {
             info.connection.getParameter("stream")());
         return false;
     });
-    // Auto complete
-    $('form[action="/new"] input[name="cmd"]').autocomplete({source: "/new/names.json"});
-    // set command name to argv
-    $('form[action="/new"]')
-        .append($('<input type=hidden name=name>'))
-        // ajaxify creation of new command, send it over ctrl stream
-        .submit(function () {
-            var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
-            argv = removeFalse(argv);
-            if (argv[0] == "cd") {
-                chdir(argv[1]);
-                return false;
-            }
-            $('input[name=name]', this).val(argv.join(' '));
-            var o = $(this).serializeObject();
-            // cast numeric inputs to JS ints
-            $.each(o, function (key, val) {
-                if (/^\d+$/.test(val)) {
-                    o[key] = parseInt(val);
-                }
-            });
-            o.args = argv.slice(1);
-            o.userdata = $(this).data();
-            // special case: always auto start & archive prompt commands
-            var fromprompt = (o.userdata.creator == 'prompt');
-            o.userdata.autostart = fromprompt || this.autostart.checked;
-            o.userdata.autoarchive = fromprompt || this.autoarchive.checked;
-            ctrl.send("new", JSON.stringify(o));
-            // reset creator field
-            $(this).removeData('creator');
-            return false;
-        });
+    $('button#newcmd').click(function () {
+        $('body').append(createNewCmdWidget());
+    });
     // persistent checkbox configurations
     var $flags = $('input[type=checkbox]').change(function () {
         updateState('flag.' + this.id, $(this).is(':checked'));

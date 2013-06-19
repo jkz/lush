@@ -240,10 +240,12 @@ var handlePrompt = function (text, term) {
     if (argv.length == 0) {
         return;
     }
-    var $cmdform = $('form[action="/new"]');
+    var $cmdform = createNewCmdWidget().find('form');
     $('input[name=cmd], input[name^=arg]', $cmdform).val('');
     $cmdform[0].cmd.value = argv[0];
     $cmdform[0].name.value = argv.join(' ');
+    $cmdform[0].autostart.checked = true;
+    $cmdform[0].autoarchive.checked = true;
     $cmdform.data('creator', 'prompt');
     for (var i = 1; i < argv.length; i++) {
         var $input = $('input[name=arg'+i+']', $cmdform);

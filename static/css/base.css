@@ -82,3 +82,8 @@ div.streampeeker {
 #groups .archived button:after {
     content: "◳";
 }
+
+/* hide template nodes intended for cloning */
+[id$="_template"] {
+	display: none;
+}
