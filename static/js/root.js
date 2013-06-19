@@ -556,7 +556,12 @@ loadScript('/js/ctrl.js', function () {
 });
 
 var createNewCmdWidget = function () {
-    var $div = $('#newcmd_template').clone().removeAttr("id");
+    var $div = $('#newcmd_template')
+        .clone()
+        .removeAttr("id")
+        .draggable()
+        // element's position is set to relative, but hwy?
+        .css('position', 'absolute');
     $div.find('form')
         // send "newcmd" message over ctrl stream
         .submit(function () {
@@ -621,7 +626,7 @@ $(document).ready(function () {
         return false;
     });
     $('button#newcmd').click(function () {
-        $('body').append(createNewCmdWidget());
+        $(this).after(createNewCmdWidget());
     });
     // persistent checkbox configurations
     var $flags = $('input[type=checkbox]').change(function () {
