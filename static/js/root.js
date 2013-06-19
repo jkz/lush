@@ -250,6 +250,29 @@ var createRepeatButton = function (sysid) {
         });
 };
 
+var helpAction = function (cmd) {
+    switch (cmd.argv[0]) {
+    case 'tar':
+        return function (cmd) {
+            window.open('http://unixhelp.ed.ac.uk/CGI/man-cgi?tar', '_blank');
+        };
+    }
+    return null;
+};
+
+// help link in command widget to explain command and flags
+var createHelpLink = function (cmd) {
+    var action = helpAction(cmd);
+    if (!action) {
+        return null;
+    }
+    return $('<a href="" class=cmdhelp>(help)</a>')
+        .click(function () {
+            action(cmd);
+            return false;
+        });
+};
+
 // create widget with command info and add it to the DOM
 // the argument is a cmd object implementation defined by the cmds array in
 // root.html
@@ -265,7 +288,8 @@ var createCmdWidget = function (cmd) {
         '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
         '<tt>' + cmd.argv.join(" ") + ' </tt> </a>')
         .append(setStatNode(cmd.nid, cmd.status, $('<span>')))
-        .append(createRepeatButton(cmd.nid));
+        .append(createRepeatButton(cmd.nid))
+        .append(createHelpLink(cmd));
     $('#cmds').append($widget);
     restoreposition(cmd.htmlid);
     $widget.resizable({
@@ -478,7 +502,6 @@ var createPathInput = function (dir) {
             $('form#path').submit();
             return false;
         }),
-        '<br>',
     ]);
 };
 
