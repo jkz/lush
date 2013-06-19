@@ -479,7 +479,7 @@ var nextNum = function () {
 
 var createPathInput = function (dir) {
     var id = 'path-' + nextNum();
-    return $('<div id='+id+'>').append([
+    return $('<li id='+id+' class="ui-state-default">').append([
         // when a path changes submit the entire new path
         $('<input>')
             .val(dir)
@@ -517,13 +517,17 @@ var initPathForm = function(ctrl) {
         })
         // + button to allow creating entirely new PATH entries
         .after($('<button>+</button>').click(function () {
-            $('form#path').append(createPathInput(''))
+            $('form#path ol').append(createPathInput(''))
             return false;
-        }));
+        }))
+        // reordering path entries is also an edit
+        .find('ol').on("sortstop", function () {
+            $('form#path').submit();
+        });
     // Refresh form when server notifies PATH changes
     ctrl.handleEvent("path", function (pathjson) {
         var dirs = JSON.parse(pathjson);
-        $('form#path')
+        $('form#path ol')
             .empty()
             .append($.map(dirs, createPathInput));
     });
@@ -638,4 +642,5 @@ $(document).ready(function () {
         });
     });
     term = createTerminal();
+    $('.sortable').disableSelection().sortable();
 });

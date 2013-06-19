@@ -85,5 +85,19 @@ div.streampeeker {
 
 /* hide template nodes intended for cloning */
 [id$="_template"] {
-	display: none;
+    display: none;
+}
+
+#path {
+    width: 600px;
+    overflow: auto;
+}
+
+#path ol {
+    list-style-type: none;
+    padding: 0;
+}
+
+#path ol li {
+    margin-top: .5em;
 }
