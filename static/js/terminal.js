@@ -240,19 +240,20 @@ var handlePrompt = function (text, term) {
     if (argv.length == 0) {
         return;
     }
-    var cmdform = $('form[action="/new"]')[0];
-    $('input[name=cmd], input[name^=arg]', cmdform).val('');
-    cmdform.cmd.value = argv[0];
-    cmdform.name.value = argv.join(' ');
+    var $cmdform = $('form[action="/new"]');
+    $('input[name=cmd], input[name^=arg]', $cmdform).val('');
+    $cmdform[0].cmd.value = argv[0];
+    $cmdform[0].name.value = argv.join(' ');
+    $cmdform.data('creator', 'prompt');
     for (var i = 1; i < argv.length; i++) {
-        var $input = $('input[name=arg'+i+']', cmdform);
+        var $input = $('input[name=arg'+i+']', $cmdform);
         if ($input.length == 0) {
             $input = $('<input name=arg'+i+'>');
-            $(cmdform).append($input);
+            $cmdform.append($input);
         }
         $input.val(argv[i])
     }
-    $(cmdform).submit();
+    $cmdform.submit();
 };
 
 // Escape a string such that parsing it will return the original string

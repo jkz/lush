@@ -609,7 +609,10 @@ $(document).ready(function () {
                 }
             });
             o.args = argv.slice(1);
+            o.userdata = $(this).data();
             ctrl.send("new", JSON.stringify(o));
+            // reset creator field
+            $(this).removeData('creator');
             return false;
         });
     // persistent checkbox configurations
