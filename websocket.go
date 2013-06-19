@@ -64,6 +64,7 @@ func wseventNew(s *server, optionsJSON string) error {
 		Args             []string
 		StdoutScrollback int
 		StderrScrollback int
+		UserData         interface{}
 	}
 	err := json.Unmarshal([]byte(optionsJSON), &options)
 	if err != nil {
@@ -75,6 +76,7 @@ func wseventNew(s *server, optionsJSON string) error {
 	c.Stdout().ResizeScrollbackBuffer(options.StdoutScrollback)
 	c.Stderr().ResizeScrollbackBuffer(options.StderrScrollback)
 	c.SetName(options.Name)
+	c.SetUserData(options.UserData)
 	// broadcast newcmd message to all connected websocket clients
 	w := newPrefixedWriter(&s.ctrlclients, []byte("newcmd;"))
 	err = json.NewEncoder(w).Encode(metacmd{c}.Metadata())

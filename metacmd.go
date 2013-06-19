@@ -38,6 +38,7 @@ type cmdmetadata struct {
 	Status     int           `json:"status"`
 	StdouttoId liblush.CmdId `json:"stdoutto,omitempty"`
 	StderrtoId liblush.CmdId `json:"stderrto,omitempty"`
+	UserData   interface{}   `json:"userdata"`
 }
 
 // if this writer is the instream of a command return that
@@ -63,6 +64,7 @@ func (mc metacmd) Metadata() (data cmdmetadata) {
 	data.HtmlId = fmt.Sprint("cmd", mc.Id())
 	data.Name = mc.Name()
 	data.Argv = mc.Argv()
+	data.UserData = mc.UserData()
 	if cmd := pipedcmd(mc.Stdout()); cmd != nil {
 		data.StdouttoId = cmd.Id()
 	}

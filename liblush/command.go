@@ -78,6 +78,7 @@ type cmd struct {
 	stderr *richpipe
 	stdin  InStream
 	name   string
+	user   interface{}
 }
 
 func (c *cmd) Id() CmdId {
@@ -149,6 +150,14 @@ func (c *cmd) Stderr() OutStream {
 
 func (c *cmd) Status() CmdStatus {
 	return c.status
+}
+
+func (c *cmd) UserData() interface{} {
+	return c.user
+}
+
+func (c *cmd) SetUserData(data interface{}) {
+	c.user = data
 }
 
 type devnull int

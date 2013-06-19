@@ -78,6 +78,9 @@ type Cmd interface {
 	Stdout() OutStream
 	Stderr() OutStream
 	Status() CmdStatus
+	// Opaque data, untouched by the shell
+	UserData() interface{}
+	SetUserData(interface{})
 }
 
 type Session interface {
