@@ -54,6 +54,7 @@ var makeStartButton = function (sysId) {
                         } else {
                             $(e.target).html('✓');
                             var cmd = cmds[sysId];
+                            // only archive group leaders
                             if (cmd.userdata.autoarchive && cmd.getGroupId() == sysId) {
                                 archiveCmdTree(sysId);
                             }
@@ -608,8 +609,10 @@ $(document).ready(function () {
             });
             o.args = argv.slice(1);
             o.userdata = $(this).data();
-            o.userdata.autostart = this.autostart.checked;
-            o.userdata.autoarchive = this.autoarchive.checked;
+            // special case: always auto start & archive prompt commands
+            var fromprompt = (o.userdata.creator == 'prompt');
+            o.userdata.autostart = fromprompt || this.autostart.checked;
+            o.userdata.autoarchive = fromprompt || this.autoarchive.checked;
             ctrl.send("new", JSON.stringify(o));
             // reset creator field
             $(this).removeData('creator');
