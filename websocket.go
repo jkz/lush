@@ -23,12 +23,14 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/hraban/lush/liblush"
 )
 
 // subscribe all websocket clients to stream data
+// eg subscribe;3;stdout
 func wseventSubscribe(s *server, options string) error {
 	args := strings.Split(options, ";")
 	if len(args) != 2 {
@@ -58,14 +60,19 @@ func wseventSubscribe(s *server, options string) error {
 	return nil
 }
 
+type cmdOptions struct {
+	// this one is actually only for updatecmd
+	Id               liblush.CmdId `json:"nid"`
+	Cmd, Name        string
+	Args             []string
+	StdoutScrollback int
+	StderrScrollback int
+	UserData         interface{}
+}
+
+// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
 func wseventNew(s *server, optionsJSON string) error {
-	var options struct {
-		Cmd, Name        string
-		Args             []string
-		StdoutScrollback int
-		StderrScrollback int
-		UserData         interface{}
-	}
+	var options cmdOptions
 	err := json.Unmarshal([]byte(optionsJSON), &options)
 	if err != nil {
 		return err
@@ -83,6 +90,7 @@ func wseventNew(s *server, optionsJSON string) error {
 	return err
 }
 
+// eg setpath;["c:\foo\bar\bin", "c:\bin"]
 func wseventSetpath(s *server, pathJSON string) error {
 	var path []string
 	err := json.Unmarshal([]byte(pathJSON), &path)
@@ -98,22 +106,57 @@ func wseventSetpath(s *server, pathJSON string) error {
 	return err
 }
 
+// eg getpath;
 func wseventGetpath(s *server, _ string) error {
 	w := newPrefixedWriter(&s.ctrlclients, []byte("path;"))
 	return json.NewEncoder(w).Encode(getPath())
 }
 
+// update command metadata like name or args or anything.
+// requires at least the nid key, everything else is optional.
+// eg updatecmd;{"nid":3,"name":"echo"}
+func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
+	var options cmdOptions
+	// parse structurally
+	err := json.Unmarshal([]byte(cmdmetaJSON), &options)
+	if err != nil {
+		return err
+	}
+	c := s.session.GetCommand(options.Id)
+	if c == nil {
+		return fmt.Errorf("no such command: %d", options.Id)
+	}
+	// parse as raw map to lookup which keys were specified
+	var cm map[string]interface{}
+	json.Unmarshal([]byte(cmdmetaJSON), &cm)
+	// update every key that was specified in the update object
+	if cm["stdoutscrollback"] != nil {
+		c.Stdout().ResizeScrollbackBuffer(options.StdoutScrollback)
+	}
+	if cm["stderrscrollback"] != nil {
+		c.Stderr().ResizeScrollbackBuffer(options.StderrScrollback)
+	}
+	if cm["name"] != nil {
+		c.SetName(options.Name)
+	}
+	if cm["userdata"] != nil {
+		c.SetUserData(options.UserData)
+	}
+	// TODO: update args & cmd
+	// broadcast command update to all connected websocket clients
+	w := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
+	err = json.NewEncoder(w).Encode(metacmd{c}.Metadata())
+	return err
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
-	// eg subscribe;3;stdout
 	"subscribe": wseventSubscribe,
-	// eg new;{"cmd":"echo","args":["arg1","arg2"],...}
-	"new": wseventNew,
-	// eg setpath;["c:\foo\bar\bin", "c:\bin"]
-	"setpath": wseventSetpath,
-	// eg getpath;
-	"getpath": wseventGetpath,
+	"new":       wseventNew,
+	"setpath":   wseventSetpath,
+	"getpath":   wseventGetpath,
+	"updatecmd": wseventUpdatecmd,
 }
 
 func parseAndHandleWsEvent(s *server, msg []byte) error {
