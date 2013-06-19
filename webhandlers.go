@@ -220,32 +220,6 @@ func handlePostClose(ctx *web.Context, idstr string) error {
 	return nil
 }
 
-func handlePostNew(ctx *web.Context) error {
-	s := ctx.User.(*server)
-	argv := []string{}
-	for i := 1; ; i++ {
-		key := fmt.Sprintf("arg%d", i)
-		val := ctx.Params[key]
-		if val == "" {
-			break
-		}
-		argv = append(argv, val)
-	}
-	c := s.session.NewCommand(ctx.Params["cmd"], argv...)
-	c.Stdout().AddWriter(liblush.Devnull)
-	c.Stderr().AddWriter(liblush.Devnull)
-	// live dangerously die young thats the navajo spirit my friends
-	i, _ := strconv.Atoi(ctx.Params["stdoutScrollback"])
-	c.Stdout().ResizeScrollbackBuffer(i)
-	i, _ = strconv.Atoi(ctx.Params["stderrScrollback"])
-	c.Stderr().ResizeScrollbackBuffer(i)
-	c.SetName(ctx.Params["name"])
-	redirect(ctx, &url.URL{Path: "/"})
-	ctx.Header().Set("content-type", "application/json")
-	err := json.NewEncoder(ctx).Encode(metacmd{c}.Metadata())
-	return err
-}
-
 func handleGetNewNames(ctx *web.Context) error {
 	var bins []string
 	term := ctx.Params["term"]
@@ -394,7 +368,6 @@ func init() {
 		s.web.Post(`/(\d+)/send`, handlePostSend)
 		s.web.Post(`/(\d+)/connect`, handlePostConnect)
 		s.web.Post(`/(\d+)/close`, handlePostClose)
-		s.web.Post(`/new`, handlePostNew)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
 		s.web.Websocket(`/(\d+)/stream/(\w+).bin`, handleWsStream)
 		s.web.Get(`/(\d+)/stream/(\w+).bin`, handleGetStream)
