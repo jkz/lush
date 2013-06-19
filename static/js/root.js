@@ -282,13 +282,30 @@ var createHelpLink = function (cmd) {
 // eachother. this function creates the endpoints and stores their reference in
 // the cmd argument object as .stdinep, .stdoutep and .stderrep.
 var createCmdWidget = function (cmd) {
+    cmd.onupdate = eventHandler();
+    var $argv = $('<tt>');
+    var $link = $('<a href="/' + cmd.nid + '/">')
+        .text(cmd.nid + ': ')
+        .append($argv);
     var $widget = $(
-        '<div class=cmdwidget id="' + cmd.htmlid + '">' +
-        '<a href="/' + cmd.nid + '/">' + cmd.nid + ': ' +
-        '<tt>' + cmd.argv.join(" ") + ' </tt> </a>')
+        '<div class=cmdwidget id="' + cmd.htmlid + '">')
+        .append($link)
         .append(setStatNode(cmd.nid, cmd.status, $('<span>')))
         .append(createRepeatButton(cmd.nid))
         .append(createHelpLink(cmd));
+    var argv = cmd.argv;
+    // override standard property with get/setter property
+    Object.defineProperty(cmd, "argv", {
+        set: function (val) {
+            argv = val;
+            $argv.text(val.join(" "));
+        },
+        get: function () {
+            return argv;
+        },
+    });
+    // invoke setter
+    cmd.argv = argv;
     $('#cmds').append($widget);
     restoreposition(cmd.htmlid);
     $widget.resizable({
@@ -555,6 +572,12 @@ loadScript('/js/ctrl.js', function () {
         if (cmd.userdata.autostart) {
             $('#' + cmd.htmlid + ' form.start-cmd').submit();
         }
+    });
+    // command has been updated
+    ctrl.handleEvent("updatecmd", function (cmdjson) {
+        var cmd = JSON.parse(cmdjson);
+        // automatically invokes property setters
+        $.extend(cmds[cmd.nid], cmd);
     });
     initPathForm(ctrl);
 });
