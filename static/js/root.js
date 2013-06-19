@@ -53,11 +53,9 @@ var makeStartButton = function (sysId) {
                             $(e.target).html('✗');
                         } else {
                             $(e.target).html('✓');
-                            if ($('#autoarchive').is(':checked')) {
-                                // only archive group leaders
-                                if (cmds[sysId].getGroupId() == sysId) {
-                                    archiveCmdTree(sysId);
-                                }
+                            var cmd = cmds[sysId];
+                            if (cmd.userdata.autoarchive && cmd.getGroupId() == sysId) {
+                                archiveCmdTree(sysId);
                             }
                         }
                         return false;
@@ -549,7 +547,7 @@ loadScript('/js/ctrl.js', function () {
         ctrl.handleStream(cmd.nid, "stdout", curry(termPrintlnCmd, term, cmd.nid));
         ctrl.handleStream(cmd.nid, "stderr", curry(termPrintlnCmd, term, cmd.nid));
         // auto start by simulating keypress on [start]
-        if ($('#autostart').is(':checked')) {
+        if (cmd.userdata.autostart) {
             $('#' + cmd.htmlid + ' form.start-cmd').submit();
         }
     });
@@ -610,6 +608,8 @@ $(document).ready(function () {
             });
             o.args = argv.slice(1);
             o.userdata = $(this).data();
+            o.userdata.autostart = this.autostart.checked;
+            o.userdata.autoarchive = this.autoarchive.checked;
             ctrl.send("new", JSON.stringify(o));
             // reset creator field
             $(this).removeData('creator');
