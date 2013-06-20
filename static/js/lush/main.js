@@ -559,7 +559,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         };
     };
 
-    var processCmd = function (ctrl, options) {
+    var processCmd = function (options) {
         if (options.cmd == "cd") {
             chdir(options.args[0]);
         } else {
@@ -672,7 +672,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             $.extend(cmds[cmd.nid], cmd);
         });
         initPathForm(ctrl);
-        term = terminal(curry(processCmd, ctrl));
+        term = terminal(processCmd);
     });
 
 });
