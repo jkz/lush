@@ -75,7 +75,7 @@ func wseventNew(s *server, optionsJSON string) error {
 	var options cmdOptions
 	err := json.Unmarshal([]byte(optionsJSON), &options)
 	if err != nil {
-		return err
+		return fmt.Errorf("malformed JSON: %v", err)
 	}
 	c := s.session.NewCommand(options.Cmd, options.Args...)
 	c.Stdout().AddWriter(liblush.Devnull)
@@ -95,7 +95,7 @@ func wseventSetpath(s *server, pathJSON string) error {
 	var path []string
 	err := json.Unmarshal([]byte(pathJSON), &path)
 	if err != nil {
-		return err
+		return fmt.Errorf("malformed JSON: %v", err)
 	}
 	err = setPath(path)
 	if err != nil {
@@ -120,7 +120,7 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 	// parse structurally
 	err := json.Unmarshal([]byte(cmdmetaJSON), &options)
 	if err != nil {
-		return err
+		return fmt.Errorf("malformed JSON: %v", err)
 	}
 	c := s.session.GetCommand(options.Id)
 	if c == nil {
