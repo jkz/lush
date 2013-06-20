@@ -68,6 +68,8 @@ type Cmd interface {
 	Name() string
 	SetName(string)
 	Argv() []string
+	// Error to call this after command has started
+	SetArgv([]string) error
 	// Run command and wait for it to exit
 	Run() error
 	// Start the command in the background. Follow by Wait() to get exit status

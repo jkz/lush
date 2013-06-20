@@ -41,7 +41,9 @@ func (s *session) newid() CmdId {
 
 // Start a new command in this shell session. Returned object is not threadsafe
 func (s *session) NewCommand(name string, arg ...string) Cmd {
-	execcmd := exec.Command(name, arg...)
+	execcmd := &exec.Cmd{
+		Args: append([]string{name}, arg...),
+	}
 	s.environlock.RLock()
 	for k, v := range s.environ {
 		execcmd.Env = append(execcmd.Env, k+"="+v)

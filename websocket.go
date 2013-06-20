@@ -142,7 +142,21 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 	if cm["userdata"] != nil {
 		c.SetUserData(options.UserData)
 	}
-	// TODO: update args & cmd
+	if cm["cmd"] != nil {
+		argv := c.Argv()
+		argv[0] = options.Cmd
+		err := c.SetArgv(argv)
+		if err != nil {
+			return fmt.Errorf("failed to update command: %v", err)
+		}
+	}
+	if cm["args"] != nil {
+		cmd := c.Argv()[0]
+		err := c.SetArgv(append([]string{cmd}, options.Args...))
+		if err != nil {
+			return fmt.Errorf("failed to update args: %v", err)
+		}
+	}
 	// broadcast command update to all connected websocket clients
 	w := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
 	err = json.NewEncoder(w).Encode(metacmd{c}.Metadata())

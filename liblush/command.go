@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"sync"
 	"time"
@@ -94,7 +95,21 @@ func (c *cmd) SetName(name string) {
 }
 
 func (c *cmd) Argv() []string {
-	return c.execCmd.Args
+	// copy
+	return append([]string{}, c.execCmd.Args...)
+}
+
+func (c *cmd) SetArgv(argv []string) error {
+	log.Println(c.execCmd.Args, "->", argv)
+	if c.status.started != nil {
+		return errors.New("cannot change arguments after command has started")
+	}
+	if len(argv) == 0 {
+		return errors.New("empty argv list")
+	}
+	c.execCmd.Args = argv
+	log.Printf("%#v", c.execCmd)
+	return nil
 }
 
 func (c *cmd) Run() error {
@@ -109,6 +124,12 @@ func (c *cmd) Run() error {
 		}
 		c.stdin = newLightPipe(c, pw)
 	}
+	// Lookup the executable
+	p, err := exec.LookPath(c.execCmd.Args[0])
+	if err != nil {
+		p = c.execCmd.Args[0]
+	}
+	c.execCmd.Path = p
 	c.status.err = c.execCmd.Run()
 	c.stdout.Close()
 	c.stderr.Close()
