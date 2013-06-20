@@ -27,6 +27,7 @@
 
 <link rel="shortcut icon" href="/gnome-terminal.png">
 <link type="text/css" rel="stylesheet" href="/css/base.css">
+<script data-main="/js/lush" src="/js/ext/require.js"></script>
 
 </head>
 <body>
@@ -104,9 +105,9 @@ connect to:
 <h2>stderr</h2>
 <pre class=monitor-stream data-stream=stderr data-sysid={{.Cmd.Id}}>{{.Stderr}}</pre>
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-<script src="/js/base.js"></script>
-<script src="/js/cmd.js"></script>
+<script>
+requirejs(["lush/cmd"]);
+</script>
 </body>
 </html>
 {{end}}

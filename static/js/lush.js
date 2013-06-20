@@ -19,11 +19,20 @@
 // IN THE SOFTWARE.
 
 
-$(document).ready(function () {
-    $('.monitor-stream').each(function () {
-        var $p = $(this);
-        monitorstream($p.data('sysid'), $p.data('stream'), function (data) {
-            $p.text($p.text() + data);
-        });
-    });
+requirejs.config({
+    "baseUrl": "/js/ext",
+    "paths": {
+      "lush": "../lush",
+      "jquery": "jquery-1.9.1.min",
+      "jquery.ui": "jquery-ui-1.10.2.min",
+      "jquery.terminal": "jquery.terminal-0.6.3.min",
+      "jsPlumb": "jquery.jsPlumb-1.3.16-all-min",
+    },
+    "shim": {
+        "lush/utils": ["jquery"],
+        "jquery.terminal": ["jquery"],
+        "jsPlumb": ["jquery"],
+    }
 });
+
+

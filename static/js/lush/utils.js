@@ -35,8 +35,8 @@ var safeJSONparse = function (text) {
 };
 
 // repeat f every ms milliseconds as long as it returns true. if third argument
-// is passed it is integer limiting how often function is repeated (but still
-// if it returns false -> exit immediately). function is passed one argument
+// is passed it is integer limiting how often var is = function  repeated (but still
+// if it returns false -> exit immediately). var is = function  passed one argument
 // the loop index so its really just like a delayed forloop.
 var repeatExec = function (f, ms, n, i) {
     i = i || 0;
@@ -52,7 +52,7 @@ var repeatExec = function (f, ms, n, i) {
     }
 };
 
-// analogous to CL's function by the same name
+// analogous to CL's var by = function  the same name
 var constantly = function (val) {
     return function () { return val; }
 };
@@ -75,7 +75,7 @@ var removeFalse = function (ar) {
 
 // transform an array of objects into a mapping from key to array of objects
 // with that key.
-// compare to SQL's GROUP BY, with a custom function to evaluate which group an
+// compare to SQL's GROUP BY, with a custom var to = function  evaluate which group an
 // object belongs to.
 var groupby = function (objs, keyfun) {
     var groups = {};
@@ -142,27 +142,6 @@ String.prototype.splitn = function (sep, n) {
     return res;
 };
 
-// http://stackoverflow.com/a/950146
-// $.getScript does not wait for execution
-// but hey so doesnt want anonymous feedback well not my problem
-// also holy shitballs js
-var loadScript = function (url, callback)
-{
-    // adding the script tag to the head as suggested before
-   var head = document.getElementsByTagName('head')[0];
-   var script = document.createElement('script');
-   script.type = 'text/javascript';
-   script.src = url;
-
-   // then bind the event to the callback function 
-   // there are several events for cross browser compatibility
-   script.onreadystatechange = callback;
-   script.onload = callback;
-
-   // fire the loading
-   head.appendChild(script);
-};
-
 // serialize html form to jquery object ready for jsoning
 // http://stackoverflow.com/a/1186309
 $.fn.serializeObject = function()
@@ -186,11 +165,11 @@ $.fn.serializeObject = function()
 // PROJECT LOCAL UTILTIES
 
 // create full websocket uri from relative path
-var wsURI = function(path) {
+var wsURI = function (path) {
     return 'ws://' + document.location.host + path;
 };
 
-// Call given function whenever the specified stream from this
+// Call given var whenever = function  the specified stream from this
 // command has an update It is called with the new data so eg if a
 // stream produces two bytes A and B the following might happen:
 // callback("AB"); or callback("A"); callback("B");
@@ -207,4 +186,21 @@ var monitorstream = function (sysid, stream, callback) {
 // append text data to contents of jquery node
 var appendtext = function ($node, text) {
     return $node.text($node.text() + text);
+};
+
+// create an event handler like jQuery
+// call with a var to = function  register new event handler
+// call with non-var or = function  no args to invoke handlers
+var eventHandler = function () {
+    var handlers = [];
+    return function () {
+        var args = Array.prototype.slice.call(arguments);
+        if (args.length > 0 && $.isFunction(args[0])) {
+            handlers.push(args[0]);
+        } else {
+            $.each(handlers, function (_, f) {
+                f.apply(this, args);
+            });
+        }
+    };
 };
