@@ -35,6 +35,14 @@ div.cmdwidget {
     padding: 0.5em;
 }
 
+.viewmode .edit {
+    display: none;
+}
+
+.editmode .view {
+    display: none;
+}
+
 div.streampeeker {
     position: absolute;
     background-color: white;

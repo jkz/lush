@@ -246,14 +246,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         });
     };
 
-    // create dom node with a button that when clicked will prepare this
-    // command for repeating (argv -> prompt, focus prompt)
-    var createRepeatButton = function (sysid) {
-        return $('<button>↻</button>').click(function () {
-                term.set_command(cmds[sysid].argv.join(' ')).focus();
-            });
-    };
-
     var helpAction = function (cmd) {
         switch (cmd.argv[0]) {
         case 'tar':
@@ -262,19 +254,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             };
         }
         return null;
-    };
-
-    // help link in command widget to explain command and flags
-    var createHelpLink = function (cmd) {
-        var action = helpAction(cmd);
-        if (!action) {
-            return null;
-        }
-        return $('<a href="" class=cmdhelp>(help)</a>')
-            .click(function () {
-                action(cmd);
-                return false;
-            });
     };
 
     // create widget with command info and add it to the DOM
@@ -288,22 +267,37 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
     // the cmd argument object as .stdinep, .stdoutep and .stderrep.
     var createCmdWidget = function (cmd) {
         cmd.onupdate = eventHandler();
-        var $argv = $('<tt>');
-        var $link = $('<a href="/' + cmd.nid + '/">')
-            .text(cmd.nid + ': ')
-            .append($argv);
-        var $widget = $(
-            '<div class=cmdwidget id="' + cmd.htmlid + '">')
-            .append($link)
-            .append(setStatNode(cmd.nid, cmd.status, $('<span>')))
-            .append(createRepeatButton(cmd.nid))
-            .append(createHelpLink(cmd));
+        // Fresh command widget in view mode
+        var $widget = $('#cmdwidget_template')
+            .clone()
+            .attr("id", cmd.htmlid)
+            .addClass("viewmode");
+        $('.link', $widget).attr('href', '/' + cmd.nid + '/');
+        $('.linktext', $widget).text(cmd.nid + ': ');
+        setStatNode(cmd.nid, cmd.status, $('.status', $widget));
+        // when clicked will prepare this command for repeating (argv ->
+        // prompt, focus prompt)
+        $('.repeat', $widget).click(function () {
+            term.set_command(cmd.argv.join(' ')).focus();
+        });
+        // (help) link top-right
+        (function ($link, action) {
+            if (action) {
+                $link.click(function () {
+                    action(cmd);
+                    return false;
+                });
+            } else {
+                // no help action? remove the link
+                $link.remove();
+            }
+        })($('.help', $widget), helpAction(cmd));
         var argv = cmd.argv;
         // override standard property with get/setter property
         Object.defineProperty(cmd, "argv", {
             set: function (val) {
                 argv = val;
-                $argv.text(val.join(" "));
+                $('.argv', $widget).text(val.join(" "));
             },
             get: function () {
                 return argv;

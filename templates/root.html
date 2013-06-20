@@ -61,6 +61,40 @@ archive when done: <input type=checkbox name=autoarchive><br>
 </div>
 <!-- /newcmd_template -->
 
+
+<!-- HTML template for a command widget -->
+<div id=cmdwidget_template class='cmdwidget'>
+
+  <!-- View mode -->
+  <div class=view>
+    <a class=link><span class=linktext></span><tt class=argv></tt></a>
+    <span class=status></span>
+    <button class=repeat>↻</button>
+    <a class=help href="#">(help)</a>
+  </div>
+
+  <!-- edit mode -->
+  <div class=edit>
+    <form>
+     name <input name=cmd><br>
+     args:
+       <input size=10 name=arg1>
+       <input size=10 name=arg2>
+       <input size=10 name=arg3><br>
+     <button>save</button>
+
+    <h2>Configuration</h2>
+    <p>stdout scrollback: <input size=4 name=stdoutScrollback value=1000> bytes<br>
+    stderr scrollback: <input size=4 name=stderrScrollback value=1000> bytes
+    <p>
+    start immediately: <input type=checkbox name=autostart><br>
+    archive when done: <input type=checkbox name=autoarchive><br>
+    </form>
+  </div>
+
+</div>
+<!-- /cmdwidget_template -->
+
 <p>Path:
 <form id=path>
 <ol class="sortable"></ol>
