@@ -553,16 +553,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         return term.termPrintln(data, finalize);
     };
 
-    var mynum = 0;
-
-    // page-local increasing number
-    var nextNum = function () {
-        return mynum++;
-    };
-
     var createPathInput = function (dir) {
-        var id = 'path-' + nextNum();
-        return $('<li id='+id+' class="ui-state-default">').append([
+        return $('<li class="ui-state-default">').append([
             // when a path changes submit the entire new path
             $('<input>')
                 .val(dir)
@@ -579,7 +571,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
                 .keypress(),
             // delete path button
             $('<button>×</button>').click(function () {
-                $('#'+id).remove();
+                $(this).closest('li').remove();
                 // when a path is removed submit the entire new path
                 $('form#path').submit();
                 return false;
