@@ -276,17 +276,18 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             .clone()
             .attr("id", cmd.htmlid)
             .addClass("viewmode");
+        var $viewm = $('.view', $widget);
         // static parts of the UI (depend on constant cmd property "nid")
-        $('.link', $widget).attr('href', '/' + cmd.nid + '/');
-        $('.linktext', $widget).text(cmd.nid + ': ');
+        $('.link', $viewm).attr('href', '/' + cmd.nid + '/');
+        $('.linktext', $viewm).text(cmd.nid + ': ');
         // when clicked will prepare this command for repeating (argv ->
         // prompt, focus prompt)
-        $('.repeat', $widget).click(function () {
+        $('.repeat', $viewm).click(function () {
             term.set_command(cmd.argv.join(' ')).focus();
         });
         // dynamic parts of the UI
         $(cmd).on('update', function () {
-            setStatNode(this.nid, this.status, $('.status', $widget));
+            setStatNode(this.nid, this.status, $('.status', $viewm));
             // (help) link top-right
             (function ($link, action) {
                 if (action) {
@@ -299,13 +300,23 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
                     // no help action? hide the link
                     $link.hide();
                 }
-            })($('.help', $widget), helpAction(this));
-            $('.argv', $widget).text(this.argv.join(" "));
+            })($('.help', $viewm), helpAction(this));
+            $('.argv', $viewm).text(this.argv.join(" "));
+        });
+        // Edit mode
+        var $editm = $('.edit', $widget);
+        $(cmd).on('update', function () {
+            $('[name=cmd]', $editm).val(this.argv[0]);
+            // TODO: args
+            // TODO: scrollback
+            $('[name=autostart]', $editm)[0].checked = this.userdata.autostart;
+            $('[name=autoarchive]', $editm)[0].checked = this.userdata.autoarchive;
         });
         // initialize view
         $(cmd).trigger('update');
         $('#cmds').append($widget);
         restoreposition(cmd.htmlid);
+        // jsPlumb stuff
         $widget.resizable({
             resize: function (e, ui) {
                 jsPlumb.repaint(ui.helper);
