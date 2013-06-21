@@ -39,38 +39,9 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
             .submit(function (e) {
                 $.post(this.action + "?noredirect", $(this).serialize())
+                    // substitute the entire form by a glyph indicating status
                     .done(function () {
-                        // substitute the entire form by a glyph indicating status
                         $(e.target).html('⌚');
-                        repeatExec(function () {
-                            var info;
-                            $.ajax({
-                                url: '/' + sysId + '/info.json',
-                                async: false,
-                                dataType: "json",
-                                success: function (infoobj) {
-                                    info = infoobj;
-                                },
-                                error: function () {
-                                    info = {Exited: true, Error: true};
-                                }});
-                            if (info.Exited == null) {
-                                // not done yet continue polling
-                                return true;
-                            }
-                            // done!
-                            if (info.Error) {
-                                $(e.target).html('✗');
-                            } else {
-                                $(e.target).html('✓');
-                                var cmd = cmds[sysId];
-                                // only archive group leaders
-                                if (cmd.userdata.autoarchive && cmd.getGroupId() == sysId) {
-                                    archiveCmdTree(sysId);
-                                }
-                            }
-                            return false;
-                        }, 1000);
                     }).fail(function () {
                         $(e.target).html('✗');
                     });
@@ -279,6 +250,12 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         // dynamic parts of the UI
         $(cmd).on('update', function () {
             setStatNode(this.nid, this.status, $('.status', $viewm));
+            // group id (0 if not initialized yet hacky but bite me)
+            var gid = this.getGroupId ? this.getGroupId() : 0;
+            // only archive group leaders
+            if (this.userdata.autoarchive && this.status == 2 && gid == this.nid) {
+                archiveCmdTree(this.nid);
+            }
             // (help) link top-right
             (function ($link, action) {
                 if (action) {
