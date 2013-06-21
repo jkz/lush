@@ -258,25 +258,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         return null;
     };
 
-    // create widget with command info and add it to the DOM
-    // the argument is a cmd object implementation defined by the cmds array in
-    // root.html
-    //
-    // jsPlumb endpoints:
-    // widgets have three endpoints: stdin, stdout and stderr. these endoints are
-    // jsPlumb.Endpoint objects and their reference is needed to connect them to
-    // eachother. this function creates the endpoints and stores their reference in
-    // the cmd argument object as .stdinep, .stdoutep and .stderrep.
-    //
-    // Hooks view updaters to a custom jQuery event 'update'. I.e. after
-    // changing the cmd run $(cmd).trigger('update') to update the UI.
-    var createCmdWidget = function (cmd) {
-        // Fresh command widget in view mode
-        var $widget = $('#cmdwidget_template')
-            .clone()
-            .attr("id", cmd.htmlid)
-            .addClass("viewmode");
-        var $viewm = $('.view', $widget);
+    var initViewMode = function (cmd, $viewm) {
         // static parts of the UI (depend on constant cmd property "nid")
         $('.link', $viewm).attr('href', '/' + cmd.nid + '/');
         $('.linktext', $viewm).text(cmd.nid + ': ');
@@ -303,8 +285,10 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             })($('.help', $viewm), helpAction(this));
             $('.argv', $viewm).text(this.argv.join(" "));
         });
+    };
+
+    var initEditMode = function (cmd, $editm) {
         // Edit mode
-        var $editm = $('.edit', $widget);
         $(cmd).on('update', function () {
             $('[name=cmd]', $editm).val(this.argv[0]);
             // TODO: args
@@ -312,8 +296,36 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             $('[name=autostart]', $editm)[0].checked = this.userdata.autostart;
             $('[name=autoarchive]', $editm)[0].checked = this.userdata.autoarchive;
         });
+    };
+
+    // Init the command view (the V in MVC) given the model (the cmd).
+    var initView = function (cmd, $widget) {
+        // Command widget has two faces: edit and view mode
+        initViewMode(cmd, $('.view', $widget));
+        initEditMode(cmd, $('.edit', $widget));
         // initialize view
         $(cmd).trigger('update');
+    };
+
+    // create widget with command info and add it to the DOM
+    // the argument is a cmd object implementation defined by the cmds array in
+    // root.html
+    //
+    // jsPlumb endpoints:
+    // widgets have three endpoints: stdin, stdout and stderr. these endoints are
+    // jsPlumb.Endpoint objects and their reference is needed to connect them to
+    // eachother. this function creates the endpoints and stores their reference in
+    // the cmd argument object as .stdinep, .stdoutep and .stderrep.
+    //
+    // Hooks view updaters to a custom jQuery event 'update'. I.e. after
+    // changing the cmd run $(cmd).trigger('update') to update the UI.
+    var createCmdWidget = function (cmd) {
+        // Fresh command widget in view mode
+        var $widget = $('#cmdwidget_template')
+            .clone()
+            .attr("id", cmd.htmlid)
+            .addClass("viewmode");
+        initView(cmd, $widget);
         $('#cmds').append($widget);
         restoreposition(cmd.htmlid);
         // jsPlumb stuff
