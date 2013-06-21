@@ -258,7 +258,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         return null;
     };
 
-    var initViewMode = function (cmd, $viewm) {
+    var initViewMode = function (cmd, $widget) {
+        var $viewm = $('.view', $widget);
         // static parts of the UI (depend on constant cmd property "nid")
         $('.link', $viewm).attr('href', '/' + cmd.nid + '/');
         $('.linktext', $viewm).text(cmd.nid + ': ');
@@ -266,6 +267,11 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         // prompt, focus prompt)
         $('.repeat', $viewm).click(function () {
             term.set_command(cmd.argv.join(' ')).focus();
+        });
+        $('.editbtn', $viewm).click(function () {
+            $widget.removeClass('viewmode');
+            $widget.addClass('editmode');
+            jsPlumb.repaint($widget);
         });
         // dynamic parts of the UI
         $(cmd).on('update', function () {
@@ -284,10 +290,19 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
                 }
             })($('.help', $viewm), helpAction(this));
             $('.argv', $viewm).text(this.argv.join(" "));
+            if (this.status > 0) {
+                $('.editbtn', $viewm).remove();
+            }
         });
     };
 
-    var initEditMode = function (cmd, $editm) {
+    var initEditMode = function (cmd, $widget) {
+        var $editm = $('.edit', $widget);
+        $('.savebtn', $editm).click(function () {
+            $widget.removeClass('editmode');
+            $widget.addClass('viewmode');
+            jsPlumb.repaint($widget);
+        });
         // Edit mode
         $(cmd).on('update', function () {
             $('[name=cmd]', $editm).val(this.argv[0]);
@@ -301,8 +316,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
     // Init the command view (the V in MVC) given the model (the cmd).
     var initView = function (cmd, $widget) {
         // Command widget has two faces: edit and view mode
-        initViewMode(cmd, $('.view', $widget));
-        initEditMode(cmd, $('.edit', $widget));
+        initViewMode(cmd, $widget);
+        initEditMode(cmd, $widget);
         // initialize view
         $(cmd).trigger('update');
     };
