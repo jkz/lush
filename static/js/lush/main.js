@@ -304,6 +304,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             jsPlumb.repaint($widget);
         };
         $('[name=nid]', $editm).val(cmd.nid);
+        $('[name=cmd]', $editm).autocomplete({source: "/new/names.json"});
         $('.cancelbtn', $editm).click(function () {
             // restore form contents from model
             $(cmd).trigger('update');
@@ -630,19 +631,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             }
             ctrl.send("new", JSON.stringify(options));
         }
-    };
-
-    var createNewCmdWidget = function () {
-        var $div = $('#newcmd_template')
-            .clone()
-            .removeAttr("id")
-            .draggable()
-            // element's position is set to relative, but hwy?
-            .css('position', 'absolute');
-        $div.find('form')
-            .find('input[name=cmd]')
-            .autocomplete({source: "/new/names.json"});
-        return $div;
     };
 
     $(document).ready(function () {

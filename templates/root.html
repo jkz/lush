@@ -40,27 +40,6 @@
 
 <button id=newcmd>new command</button>
 
-<!-- HTML template for a "new command" widget -->
-<div id=newcmd_template class=cmdwidget>
-<form>
-<h1>New command</h1>
- name <input name=cmd><br>
- args:
-   <input size=10 name=arg1>
-   <input size=10 name=arg2>
-   <input size=10 name=arg3><br>
- <button>prepare</button>
-
-<h2>Configuration</h2>
-<p>stdout scrollback: <input size=4 name=stdoutScrollback value=1000> bytes<br>
-stderr scrollback: <input size=4 name=stderrScrollback value=1000> bytes
-<p>
-start immediately: <input type=checkbox name=autostart><br>
-archive when done: <input type=checkbox name=autoarchive><br>
- </form>
-</div>
-<!-- /newcmd_template -->
-
 
 <!-- HTML template for a command widget -->
 <div id=cmdwidget_template class='cmdwidget'>
