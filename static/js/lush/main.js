@@ -265,46 +265,43 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
     // jsPlumb.Endpoint objects and their reference is needed to connect them to
     // eachother. this function creates the endpoints and stores their reference in
     // the cmd argument object as .stdinep, .stdoutep and .stderrep.
+    //
+    // Hooks view updaters to a custom jQuery event 'update'. I.e. after
+    // changing the cmd run $(cmd).trigger('update') to update the UI.
     var createCmdWidget = function (cmd) {
-        cmd.onupdate = eventHandler();
         // Fresh command widget in view mode
         var $widget = $('#cmdwidget_template')
             .clone()
             .attr("id", cmd.htmlid)
             .addClass("viewmode");
+        // static parts of the UI (depend on constant cmd property "nid")
         $('.link', $widget).attr('href', '/' + cmd.nid + '/');
         $('.linktext', $widget).text(cmd.nid + ': ');
-        setStatNode(cmd.nid, cmd.status, $('.status', $widget));
         // when clicked will prepare this command for repeating (argv ->
         // prompt, focus prompt)
         $('.repeat', $widget).click(function () {
             term.set_command(cmd.argv.join(' ')).focus();
         });
-        // (help) link top-right
-        (function ($link, action) {
-            if (action) {
-                $link.click(function () {
-                    action(cmd);
-                    return false;
-                });
-            } else {
-                // no help action? remove the link
-                $link.remove();
-            }
-        })($('.help', $widget), helpAction(cmd));
-        var argv = cmd.argv;
-        // override standard property with get/setter property
-        Object.defineProperty(cmd, "argv", {
-            set: function (val) {
-                argv = val;
-                $('.argv', $widget).text(val.join(" "));
-            },
-            get: function () {
-                return argv;
-            },
+        // dynamic parts of the UI
+        $(cmd).on('update', function () {
+            setStatNode(this.nid, this.status, $('.status', $widget));
+            // (help) link top-right
+            (function ($link, action) {
+                if (action) {
+                    $link.show();
+                    $link.click(function () {
+                        action(this);
+                        return false;
+                    });
+                } else {
+                    // no help action? hide the link
+                    $link.hide();
+                }
+            })($('.help', $widget), helpAction(this));
+            $('.argv', $widget).text(this.argv.join(" "));
         });
-        // invoke setter
-        cmd.argv = argv;
+        // initialize view
+        $(cmd).trigger('update');
         $('#cmds').append($widget);
         restoreposition(cmd.htmlid);
         $widget.resizable({
@@ -660,10 +657,11 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             }
         });
         // command has been updated
-        ctrl.handleEvent("updatecmd", function (cmdjson) {
-            var cmd = JSON.parse(cmdjson);
-            // automatically invokes property setters
-            $.extend(cmds[cmd.nid], cmd);
+        ctrl.handleEvent("updatecmd", function (updatejson) {
+            var update = JSON.parse(updatejson);
+            var cmd = cmds[update.nid];
+            cmd = $.extend(cmd, update);
+            $(cmd).trigger('update');
         });
         initPathForm(ctrl);
         term = terminal(processCmd);

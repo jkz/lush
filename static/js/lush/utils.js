@@ -187,20 +187,3 @@ var monitorstream = function (sysid, stream, callback) {
 var appendtext = function ($node, text) {
     return $node.text($node.text() + text);
 };
-
-// create an event handler like jQuery
-// call with a var to = function  register new event handler
-// call with non-var or = function  no args to invoke handlers
-var eventHandler = function () {
-    var handlers = [];
-    return function () {
-        var args = Array.prototype.slice.call(arguments);
-        if (args.length > 0 && $.isFunction(args[0])) {
-            handlers.push(args[0]);
-        } else {
-            $.each(handlers, function (_, f) {
-                f.apply(this, args);
-            });
-        }
-    };
-};
