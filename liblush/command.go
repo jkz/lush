@@ -30,9 +30,10 @@ import (
 )
 
 type cmdstatus struct {
-	started *time.Time
-	exited  *time.Time
-	err     error
+	started   *time.Time
+	exited    *time.Time
+	err       error
+	listeners []func(CmdStatus) error
 }
 
 // command life-time phases
@@ -42,20 +43,39 @@ const (
 	done
 )
 
-func (s cmdstatus) Started() *time.Time {
+func (s *cmdstatus) Started() *time.Time {
 	return s.started
 }
 
-func (s cmdstatus) Exited() *time.Time {
+func (s *cmdstatus) Exited() *time.Time {
 	return s.exited
 }
 
-func (s cmdstatus) Success() bool {
+func (s *cmdstatus) Success() bool {
 	return s.err == nil
 }
 
-func (s cmdstatus) Err() error {
+func (s *cmdstatus) Err() error {
 	return s.err
+}
+
+func (s *cmdstatus) NotifyChange(f func(CmdStatus) error) {
+	s.listeners = append(s.listeners, f)
+}
+
+// call this whenever the status has changed to notify the listeners
+func (s *cmdstatus) changed() {
+	for i := 0; i < len(s.listeners); i++ {
+		err := s.listeners[i](s)
+		if err != nil {
+			s.listeners = append(s.listeners[:i], s.listeners[i+1:]...)
+			i--
+		}
+	}
+	if s.Exited() != nil {
+		// no more state changes are expected
+		s.listeners = nil
+	}
 }
 
 // Guaranteed to be unique for every command at one specific point in time but
@@ -112,6 +132,7 @@ func (c *cmd) SetArgv(argv []string) error {
 func (c *cmd) Run() error {
 	startt := time.Now()
 	c.status.started = &startt
+	c.status.changed()
 	// If not set explicitly bind stdin to a system pipe. This allows the
 	// spawned process to close it without reading if it is not needed.
 	if c.stdin == nil {
@@ -132,6 +153,7 @@ func (c *cmd) Run() error {
 	c.stderr.Close()
 	exitt := time.Now()
 	c.status.exited = &exitt
+	c.status.changed()
 	c.done.Done()
 	return c.status.err
 }
@@ -167,7 +189,7 @@ func (c *cmd) Stderr() OutStream {
 }
 
 func (c *cmd) Status() CmdStatus {
-	return c.status
+	return &c.status
 }
 
 func (c *cmd) UserData() interface{} {

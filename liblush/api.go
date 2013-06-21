@@ -36,6 +36,9 @@ type CmdStatus interface {
 	Success() bool
 	// nil iff Success() == true
 	Err() error
+	// Called with this status as an argument on every update. If the callback
+	// returns a non-nil error it will not be called for future updates.
+	NotifyChange(func(CmdStatus) error)
 }
 
 // Circular fifo buffer.

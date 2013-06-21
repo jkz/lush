@@ -61,6 +61,23 @@ func pipedcmd(outs liblush.OutStream) liblush.Cmd {
 	return nil
 }
 
+func cmdstatus2int(s liblush.CmdStatus) (i int) {
+	if s.Exited() == nil {
+		if s.Started() == nil {
+			i = 0
+		} else {
+			i = 1
+		}
+	} else {
+		if s.Success() {
+			i = 2
+		} else {
+			i = 3
+		}
+	}
+	return
+}
+
 func (mc metacmd) Metadata() (data cmdmetadata) {
 	data.Id = mc.Id()
 	data.HtmlId = fmt.Sprint("cmd", mc.Id())
@@ -75,18 +92,6 @@ func (mc metacmd) Metadata() (data cmdmetadata) {
 	if cmd := pipedcmd(mc.Stderr()); cmd != nil {
 		data.StderrtoId = cmd.Id()
 	}
-	if mc.Status().Exited() == nil {
-		if mc.Status().Started() == nil {
-			data.Status = 0
-		} else {
-			data.Status = 1
-		}
-	} else {
-		if mc.Status().Success() {
-			data.Status = 2
-		} else {
-			data.Status = 3
-		}
-	}
+	data.Status = cmdstatus2int(mc.Status())
 	return
 }

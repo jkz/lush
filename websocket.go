@@ -87,7 +87,18 @@ func wseventNew(s *server, optionsJSON string) error {
 	// broadcast newcmd message to all connected websocket clients
 	w := newPrefixedWriter(&s.ctrlclients, []byte("newcmd;"))
 	err = json.NewEncoder(w).Encode(metacmd{c}.Metadata())
-	return err
+	if err != nil {
+		return err
+	}
+	// subscribe everyone to status updates
+	c.Status().NotifyChange(func(status liblush.CmdStatus) error {
+		facebook := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
+		return json.NewEncoder(facebook).Encode(map[string]interface{}{
+			"nid":    c.Id(),
+			"status": cmdstatus2int(status),
+		})
+	})
+	return nil
 }
 
 // eg setpath;["c:\foo\bar\bin", "c:\bin"]
