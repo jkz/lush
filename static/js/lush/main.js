@@ -577,6 +577,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             .find('ol').on("sortstop", function () {
                 $('form#path').submit();
             });
+        $('#togglepath').click(function () { $('#pathcontainer').toggle(); }).click();
         // Refresh form when server notifies PATH changes
         ctrl.handleEvent("path", function (pathjson) {
             var dirs = JSON.parse(pathjson);
