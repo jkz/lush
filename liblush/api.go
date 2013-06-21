@@ -38,6 +38,15 @@ type CmdStatus interface {
 	Err() error
 }
 
+// Circular fifo buffer.
+type Ringbuffer interface {
+	Size() int
+	Resize(int)
+	// Fill this buffer with the most recently written bytes
+	Last(p []byte) int
+	Write(data []byte) (int, error)
+}
+
 // Output stream of a command
 type OutStream interface {
 	// Send all output to this writer. Multiple writers can be hooked up and
@@ -48,9 +57,7 @@ type OutStream interface {
 	// Remove a writer previously set with AddWriter. Returns false if not set.
 	RemoveWriter(w io.Writer) bool
 	Writers() []io.Writer
-	// most recently written bytes
-	Last(p []byte) int
-	ResizeScrollbackBuffer(n int)
+	Scrollback() Ringbuffer
 }
 
 // Input stream of a command.  Writes to this stream block until the command is

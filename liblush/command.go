@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 	"sync"
 	"time"
@@ -100,7 +99,6 @@ func (c *cmd) Argv() []string {
 }
 
 func (c *cmd) SetArgv(argv []string) error {
-	log.Println(c.execCmd.Args, "->", argv)
 	if c.status.started != nil {
 		return errors.New("cannot change arguments after command has started")
 	}
@@ -108,7 +106,6 @@ func (c *cmd) SetArgv(argv []string) error {
 		return errors.New("empty argv list")
 	}
 	c.execCmd.Args = argv
-	log.Printf("%#v", c.execCmd)
 	return nil
 }
 

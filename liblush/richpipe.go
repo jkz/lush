@@ -22,7 +22,6 @@ package liblush
 
 import (
 	"io"
-	"log"
 	"sync"
 )
 
@@ -32,7 +31,7 @@ import (
 type richpipe struct {
 	FlexibleMultiWriter
 	// Most recently written bytes
-	fifo ringbuf
+	fifo Ringbuffer
 	l    sync.Mutex
 }
 
@@ -60,32 +59,8 @@ func (p *richpipe) Close() (err error) {
 	return err
 }
 
-func (p *richpipe) Last(buf []byte) int {
-	p.l.Lock()
-	defer p.l.Unlock()
-	return p.fifo.Last(buf)
-}
-
-func (p *richpipe) ResizeScrollbackBuffer(n int) {
-	p.l.Lock()
-	defer p.l.Unlock()
-	p.fifo = resizeringbuf(p.fifo, n)
-}
-
-// Create new ringbuffer and copy the old data over. Not a pretty nor an
-// efficient implementation but it gets the job done.
-func resizeringbuf(r ringbuf, i int) ringbuf {
-	r2 := newRingbuf(i)
-	buf := make([]byte, r.Size())
-	// Useful bytes
-	n := r2.Last(buf)
-	buf = buf[:n]
-	_, err := r2.Write(buf)
-	if err != nil {
-		log.Print("Write error to ringbuffer: ", err)
-		// still, who cares? just fail the resize and continue operation
-	}
-	return r2
+func (p *richpipe) Scrollback() Ringbuffer {
+	return p.fifo
 }
 
 func newRichPipe(fifosize int) *richpipe {

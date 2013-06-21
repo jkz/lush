@@ -99,9 +99,9 @@ func handleGetCmd(ctx *web.Context, idstr string) error {
 	}
 	stdout := make([]byte, 1000)
 	stderr := make([]byte, 1000)
-	n := c.Stdout().Last(stdout)
+	n := c.Stdout().Scrollback().Last(stdout)
 	stdout = stdout[:n]
-	n = c.Stderr().Last(stderr)
+	n = c.Stderr().Scrollback().Last(stderr)
 	stderr = stderr[:n]
 	ch := make(chan liblush.Cmd)
 	go func() {
@@ -259,7 +259,7 @@ func handleGetStream(ctx *web.Context, idstr, streamname string) error {
 	}
 	n, _ := strconv.Atoi(ctx.Params["numbytes"])
 	buf := make([]byte, n)
-	n = stream.Last(buf)
+	n = stream.Scrollback().Last(buf)
 	buf = buf[:n]
 	_, err := ctx.Write(buf)
 	return err

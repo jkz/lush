@@ -65,4 +65,18 @@ func TestRingbuf(t *testing.T) {
 	if seen != 13 {
 		t.Error("Saw 13 bytes, recorded ", seen)
 	}
+	r.Resize(3)
+	n = r.Last(buf)
+	buf = buf[:n]
+	if n != 3 {
+		t.Errorf("Filled read buffer with %d bytes expected 3", n)
+	}
+	if !bytes.Equal(buf, []byte{10, 11, 12}) {
+		t.Error("Unexpected last bytes after resizing: ", buf)
+	}
+	r.Resize(0)
+	n = r.Last(buf)
+	if n != 0 {
+		t.Errorf("Last wrote data to buffer after Resize(0)")
+	}
 }

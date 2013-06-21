@@ -340,14 +340,15 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             ctrl.send("updatecmd", JSON.stringify(o));
             switchToView();
             return false;
-        })
+        });
         $(cmd).on('update', function () {
             $('[name=cmd]', $editm).val(this.argv[0]);
             this.argv.slice(1).forEach(function (arg, idx) {
                 // keydown triggers the "create new arg input" handler
                 $('[name=arg' + (idx + 1) + ']', $editm).val(arg).keydown();
             });
-            // TODO: scrollback
+            $('[name=stdoutScrollback]', $editm).val(cmd.stdoutScrollback)
+            $('[name=stderrScrollback]', $editm).val(cmd.stderrScrollback)
             $('[name=autostart]', $editm)[0].checked = this.userdata.autostart;
             $('[name=autoarchive]', $editm)[0].checked = this.userdata.autoarchive;
         });

@@ -25,14 +25,6 @@ import (
 	"sync"
 )
 
-// Circular fifo buffer.
-type ringbuf interface {
-	Size() int
-	// Fill this buffer with the most recently written bytes
-	Last(p []byte) int
-	Write(data []byte) (int, error)
-}
-
 type ringbuf_unsafe struct {
 	buf []byte
 	// Oldest byte in the buffer (write starts here)
@@ -54,6 +46,17 @@ func imin(i int, rest ...int) int {
 
 func (r *ringbuf_unsafe) Size() int {
 	return len(r.buf)
+}
+
+// Create buffer and copy the old data over. Not pretty but it gets the job
+// done.
+func (r *ringbuf_unsafe) Resize(i int) {
+	buf := make([]byte, i)
+	n := r.Last(buf)
+	if i > 0 {
+		r.head = n % i
+	}
+	r.buf = buf
 }
 
 // Fill p with most recently written bytes. Returns number of bytes written to
@@ -116,6 +119,12 @@ func (rs *ringbuf_safe) Size() int {
 	return rs.ringbuf_unsafe.Size()
 }
 
+func (rs *ringbuf_safe) Resize(i int) {
+	rs.l.Lock()
+	defer rs.l.Unlock()
+	rs.ringbuf_unsafe.Resize(i)
+}
+
 func (rs *ringbuf_safe) Last(p []byte) int {
 	rs.l.Lock()
 	defer rs.l.Unlock()
@@ -128,7 +137,7 @@ func (rs *ringbuf_safe) Write(data []byte) (int, error) {
 	return rs.ringbuf_unsafe.Write(data)
 }
 
-func newRingbuf(size int) ringbuf {
+func newRingbuf(size int) Ringbuffer {
 	var rs ringbuf_safe
 	rs.ringbuf_unsafe.buf = make([]byte, size)
 	return &rs

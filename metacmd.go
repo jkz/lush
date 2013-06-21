@@ -31,14 +31,16 @@ import (
 type metacmd struct{ liblush.Cmd }
 
 type cmdmetadata struct {
-	Id         liblush.CmdId `json:"nid"`
-	HtmlId     string        `json:"htmlid"`
-	Name       string        `json:"name"`
-	Argv       []string      `json:"argv"`
-	Status     int           `json:"status"`
-	StdouttoId liblush.CmdId `json:"stdoutto,omitempty"`
-	StderrtoId liblush.CmdId `json:"stderrto,omitempty"`
-	UserData   interface{}   `json:"userdata"`
+	Id               liblush.CmdId `json:"nid"`
+	HtmlId           string        `json:"htmlid"`
+	Name             string        `json:"name"`
+	Argv             []string      `json:"argv"`
+	Status           int           `json:"status"`
+	StdouttoId       liblush.CmdId `json:"stdoutto,omitempty"`
+	StderrtoId       liblush.CmdId `json:"stderrto,omitempty"`
+	StdoutScrollback int           `json:"stdoutScrollback"`
+	StderrScrollback int           `json:"stderrScrollback"`
+	UserData         interface{}   `json:"userdata"`
 }
 
 // if this writer is the instream of a command return that
@@ -65,6 +67,8 @@ func (mc metacmd) Metadata() (data cmdmetadata) {
 	data.Name = mc.Name()
 	data.Argv = mc.Argv()
 	data.UserData = mc.UserData()
+	data.StdoutScrollback = mc.Stdout().Scrollback().Size()
+	data.StderrScrollback = mc.Stderr().Scrollback().Size()
 	if cmd := pipedcmd(mc.Stdout()); cmd != nil {
 		data.StdouttoId = cmd.Id()
 	}

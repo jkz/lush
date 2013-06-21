@@ -80,8 +80,8 @@ func wseventNew(s *server, optionsJSON string) error {
 	c := s.session.NewCommand(options.Cmd, options.Args...)
 	c.Stdout().AddWriter(liblush.Devnull)
 	c.Stderr().AddWriter(liblush.Devnull)
-	c.Stdout().ResizeScrollbackBuffer(options.StdoutScrollback)
-	c.Stderr().ResizeScrollbackBuffer(options.StderrScrollback)
+	c.Stdout().Scrollback().Resize(options.StdoutScrollback)
+	c.Stderr().Scrollback().Resize(options.StderrScrollback)
 	c.SetName(options.Name)
 	c.SetUserData(options.UserData)
 	// broadcast newcmd message to all connected websocket clients
@@ -130,11 +130,11 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 	var cm map[string]interface{}
 	json.Unmarshal([]byte(cmdmetaJSON), &cm)
 	// update every key that was specified in the update object
-	if cm["stdoutscrollback"] != nil {
-		c.Stdout().ResizeScrollbackBuffer(options.StdoutScrollback)
+	if cm["stdoutScrollback"] != nil {
+		c.Stdout().Scrollback().Resize(options.StdoutScrollback)
 	}
-	if cm["stderrscrollback"] != nil {
-		c.Stderr().ResizeScrollbackBuffer(options.StderrScrollback)
+	if cm["stderrScrollback"] != nil {
+		c.Stderr().Scrollback().Resize(options.StderrScrollback)
 	}
 	if cm["name"] != nil {
 		c.SetName(options.Name)
