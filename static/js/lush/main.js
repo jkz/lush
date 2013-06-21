@@ -310,6 +310,13 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             $(cmd).trigger('update');
             switchToView();
         });
+        var lastarg = 1;
+        var addarg = function () {
+            $('[name=arg' + lastarg + ']', $editm).after(
+                $('<input size=10 name=arg' + (++lastarg) + '>')
+                    .one('keydown', addarg));
+        };
+        $('[name=arg1]', $editm).one('keydown', addarg);
         // send "updatecmd" message over ctrl stream.  server will reply with
         // updatecmd, which will invoke a handler to update the cmd object,
         // which will invoke $(cmd).trigger('update'), which will invoke the
@@ -336,7 +343,10 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         })
         $(cmd).on('update', function () {
             $('[name=cmd]', $editm).val(this.argv[0]);
-            // TODO: args
+            this.argv.slice(1).forEach(function (arg, idx) {
+                // keydown triggers the "create new arg input" handler
+                $('[name=arg' + (idx + 1) + ']', $editm).val(arg).keydown();
+            });
             // TODO: scrollback
             $('[name=autostart]', $editm)[0].checked = this.userdata.autostart;
             $('[name=autoarchive]', $editm)[0].checked = this.userdata.autoarchive;
