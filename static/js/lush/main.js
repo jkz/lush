@@ -595,6 +595,10 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         if (options.cmd == "cd") {
             chdir(options.args[0]);
         } else {
+            // ensure userdata is an object (rest of the code depends on this)
+            if (!$.isPlainObject(options.userdata)) {
+                options.userdata = {};
+            }
             ctrl.send("new", JSON.stringify(options));
         }
     };
@@ -666,7 +670,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             return false;
         });
         $('button#newcmd').click(function () {
-            $(this).after(createNewCmdWidget());
+            // create an empty command
+            processCmd({});
         });
         // persistent checkbox configurations
         var $flags = $('input[type=checkbox]').change(function () {
@@ -692,9 +697,13 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             // capture all stdout and stderr to terminal
             ctrl.handleStream(cmd.nid, "stdout", curry(termPrintlnCmd, term, cmd.nid));
             ctrl.handleStream(cmd.nid, "stderr", curry(termPrintlnCmd, term, cmd.nid));
-            // auto start by simulating keypress on [start]
+            var $widget = $('#' + cmd.htmlid);
             if (cmd.userdata.autostart) {
-                $('#' + cmd.htmlid + ' form.start-cmd').submit();
+                // auto start by simulating keypress on [start]
+                $('form.start-cmd', $widget).submit();
+            } else {
+                // If not autostarting, go directly into edit mode
+                $('.editbtn', $widget).click();
             }
         });
         // command has been updated
