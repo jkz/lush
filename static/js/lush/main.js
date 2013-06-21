@@ -31,6 +31,9 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
     // jQuery terminal plugin object
     var term;
 
+    // sometimes i just dont know who i am anymore...
+    var moi = guid();
+
     // build jquery node containing [start] button that starts cmd in background
     var makeStartButton = function (sysId) {
         return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
@@ -632,6 +635,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             if (!$.isPlainObject(options.userdata)) {
                 options.userdata = {};
             }
+            options.userdata.god = moi;
             ctrl.send("new", JSON.stringify(options));
         }
     };
@@ -692,16 +696,19 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             cmds[cmd.nid] = cmd;
             createCmdWidget(cmd);
             rebuildGroupsList();
-            // capture all stdout and stderr to terminal
-            ctrl.handleStream(cmd.nid, "stdout", curry(termPrintlnCmd, term, cmd.nid));
-            ctrl.handleStream(cmd.nid, "stderr", curry(termPrintlnCmd, term, cmd.nid));
-            var $widget = $('#' + cmd.htmlid);
-            if (cmd.userdata.autostart) {
-                // auto start by simulating keypress on [start]
-                $('form.start-cmd', $widget).submit();
-            } else {
-                // If not autostarting, go directly into edit mode
-                $('.editbtn', $widget).click();
+            if (cmd.userdata.god == moi) {
+                // i made this!
+                // capture all stdout and stderr to terminal
+                ctrl.handleStream(cmd.nid, "stdout", curry(termPrintlnCmd, term, cmd.nid));
+                ctrl.handleStream(cmd.nid, "stderr", curry(termPrintlnCmd, term, cmd.nid));
+                var $widget = $('#' + cmd.htmlid);
+                if (cmd.userdata.autostart) {
+                    // auto start by simulating keypress on [start]
+                    $('form.start-cmd', $widget).submit();
+                } else {
+                    // If not autostarting, go directly into edit mode
+                    $('.editbtn', $widget).click();
+                }
             }
         });
         // command has been updated

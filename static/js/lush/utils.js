@@ -161,6 +161,20 @@ $.fn.serializeObject = function()
     return o;
 };
 
+// append text data to contents of jquery node
+var appendtext = function ($node, text) {
+    return $node.text($node.text() + text);
+};
+
+// http://stackoverflow.com/a/2117523
+// i like this guy
+var guid = function () {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random()*16|0;
+        return (c == 'x' ? r : (r&0x3|0x8)).toString(16);
+    });
+}
+
 
 // PROJECT LOCAL UTILTIES
 
@@ -181,9 +195,4 @@ var monitorstream = function (sysid, stream, callback) {
         callback(e.data);
     };
     return ws;
-};
-
-// append text data to contents of jquery node
-var appendtext = function ($node, text) {
-    return $node.text($node.text() + text);
 };
