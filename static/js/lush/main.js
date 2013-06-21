@@ -298,12 +298,41 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
 
     var initEditMode = function (cmd, $widget) {
         var $editm = $('.edit', $widget);
-        $('.savebtn', $editm).click(function () {
+        var switchToView = function () {
             $widget.removeClass('editmode');
             $widget.addClass('viewmode');
             jsPlumb.repaint($widget);
+        };
+        $('[name=nid]', $editm).val(cmd.nid);
+        $('.cancelbtn', $editm).click(function () {
+            // restore form contents from model
+            $(cmd).trigger('update');
+            switchToView();
         });
-        // Edit mode
+        // send "updatecmd" message over ctrl stream.  server will reply with
+        // updatecmd, which will invoke a handler to update the cmd object,
+        // which will invoke $(cmd).trigger('update'), which will invoke the
+        // handler that updates the view for viewmode (<div class=view>).
+        $('form', $editm).submit(function () {
+            var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
+            argv = removeFalse(argv);
+            var o = $(this).serializeObject();
+            // cast numeric inputs to JS ints
+            $.each(o, function (key, val) {
+                if (/^\d+$/.test(val)) {
+                    o[key] = parseInt(val);
+                }
+            });
+            // set command name to argv
+            o.name = argv.join(' ');
+            o.args = argv.slice(1);
+            o.userdata = $(this).data();
+            o.userdata.autostart = this.autostart.checked;
+            o.userdata.autoarchive = this.autoarchive.checked;
+            ctrl.send("updatecmd", JSON.stringify(o));
+            switchToView();
+            return false;
+        })
         $(cmd).on('update', function () {
             $('[name=cmd]', $editm).val(this.argv[0]);
             // TODO: args
@@ -611,28 +640,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             // element's position is set to relative, but hwy?
             .css('position', 'absolute');
         $div.find('form')
-            // send "newcmd" message over ctrl stream
-            .submit(function () {
-                var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
-                argv = removeFalse(argv);
-                var o = $(this).serializeObject();
-                // cast numeric inputs to JS ints
-                $.each(o, function (key, val) {
-                    if (/^\d+$/.test(val)) {
-                        o[key] = parseInt(val);
-                    }
-                });
-                // set command name to argv
-                o.name = argv.join(' ');
-                o.args = argv.slice(1);
-                o.userdata = $(this).data();
-                o.userdata.autostart = this.autostart.checked;
-                o.userdata.autoarchive = this.autoarchive.checked;
-                processCmd(o);
-                // delete the form
-                $div.remove();
-                return false;
-            })
             .find('input[name=cmd]')
             .autocomplete({source: "/new/names.json"});
         return $div;

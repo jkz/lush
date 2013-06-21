@@ -77,12 +77,14 @@ archive when done: <input type=checkbox name=autoarchive><br>
   <!-- edit mode -->
   <div class=edit>
     <form>
+      <input type=hidden name=nid>
      name <input name=cmd><br>
      args:
        <input size=10 name=arg1>
        <input size=10 name=arg2>
        <input size=10 name=arg3><br>
-     <button class=savebtn type=button>save</button>
+     <button>save</button>
+     <button class=cancelbtn type=button>cancel</button>
 
     <h2>Configuration</h2>
     <p>stdout scrollback: <input size=4 name=stdoutScrollback value=1000> bytes<br>
