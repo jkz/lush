@@ -53,7 +53,7 @@
 // server talk to eachother about food and fashion and larry king. shockingly,
 // there is no spec for this, either. check out websocket.go for the messages
 // that the server can handle. check out every line of every .js file to see
-// what messages the client can handle. or grep handleEvent in this file thats
+// what messages the client can handle. or grep $(ctrl).on in this file thats
 // probably easier. see ctrl.js for details. in code. haha what you thought in
 // documentation?
 //
@@ -72,7 +72,7 @@
 // it wants, for whatever reason. it HAPPENS to only do it when a client
 // requests it or when the path changes, but the client doesnt treat it that
 // way. what it does is whenever the "path" websocket message comes in (look
-// for ctrl.handleEvent("path")) it updates the entire UI with this new path.
+// for $(ctrl).on("path", ...)) it updates the entire UI with this new path.
 // THEN it says "hey server send me the path" ("getpah"), knowing that when it
 // does, the handling of the response is in place.
 //
@@ -440,7 +440,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         initView(cmd, $widget);
         $('#cmds').append($widget);
         // eg: userdata.cmd3.pos;{"top": 3, "left": 10}
-        ctrl.handleEvent('userdata.' + cmd.htmlid + '.pos', function (posjson) {
+        $(ctrl).on('userdata.' + cmd.htmlid + '.pos', function (_, posjson) {
             var pos = JSON.parse(posjson);
             jsPlumb.repaint($('#' + cmd.htmlid).offset(pos));
         });
@@ -674,7 +674,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             });
         $('#togglepath').click(function () { $('#pathcontainer').toggle(); }).click();
         // Refresh form when server notifies PATH changes
-        ctrl.handleEvent("path", function (pathjson) {
+        $(ctrl).on("path", function (_, pathjson) {
             var dirs = JSON.parse(pathjson);
             $('form#path ol')
                 .empty()
@@ -760,7 +760,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         });
         $('.sortable').disableSelection().sortable();
         // a new command has been created
-        ctrl.handleEvent("newcmd", function (cmdjson) {
+        $(ctrl).on("newcmd", function (_, cmdjson) {
             var cmd = JSON.parse(cmdjson);
             cmds[cmd.nid] = cmd;
             createCmdWidget(cmd);
@@ -781,7 +781,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             }
         });
         // command has been updated
-        ctrl.handleEvent("updatecmd", function (updatejson) {
+        $(ctrl).on("updatecmd", function (_, updatejson) {
             var update = JSON.parse(updatejson);
             var cmd = cmds[update.nid];
             cmd = $.extend(cmd, update);

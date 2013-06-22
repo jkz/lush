@@ -29,24 +29,17 @@ define(["jquery"], function ($) {
         var ctrl = this;
         ctrl.ws = new WebSocket(wsURI('/ctrl'));
         ctrl.streamhandlers = {};
-        ctrl.handlers = {};
         ctrl.ws.onmessage = function (e) {
             var x = e.data.splitn(';', 2);
             var cmd = x[0];
             var rest = x[1];
             // special case
             if (cmd == "stream") {
-                if (ctrl._handleEventStream(rest)) {
-                    return;
-                }
+                ctrl._handleEventStream(rest)
             } else {
-                var handler = ctrl.handlers[cmd];
-                if (handler) {
-                    handler(rest);
-                    return;
-                }
+                // transform to jquery event on control stream object
+                $(ctrl).trigger(cmd, rest);
             }
-            console.log('no handler found for ctrl message: ' + e.data);
         };
     }
 
@@ -69,11 +62,6 @@ define(["jquery"], function ($) {
         }
         this.ws.send(args.join(';'));
     };
-
-    // execute callback(data) for incoming event of this name
-    Ctrl.prototype.handleEvent = function (name, callback) {
-        this.handlers[name] = callback;
-    }
 
     // execute callback(data) for incoming stream data from this command
     Ctrl.prototype.handleStream = function (id, stream, callback) {
