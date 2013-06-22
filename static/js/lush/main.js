@@ -617,6 +617,16 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         }
     };
 
+    // Handle what comes after the # on page load
+    var processHash = function (h) {
+        var i = h.indexOf(';');
+        var rest = h.slice(i + 1);
+        switch (h.slice(0, i)) {
+        case "prompt":
+            term.set_command(rest);
+        }
+    };
+
     $(document).ready(function () {
         $.map(cmds, createCmdWidget);
         // Second iteration to ensure that connections are only made after all
@@ -697,6 +707,9 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         });
         initPathForm(ctrl);
         term = terminal(processCmd);
+        if (window.location.hash) {
+            processHash(window.location.hash.slice(1));
+        }
     });
 
 });
