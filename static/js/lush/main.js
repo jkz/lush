@@ -149,7 +149,11 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
     var getState = function (success) {
         // this is me not caring about wrapping the deferred
         return $.get('/clientdata').done(function (json) {
-            success(safeJSONparse(json));
+            var state = safeJSONparse(json);
+            if (state === null) {
+                state = {};
+            }
+            success(state);
         });
     };
 
@@ -329,7 +333,11 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             // group id (0 if not initialized yet hacky but bite me)
             var gid = this.getGroupId ? this.getGroupId() : 0;
             // only archive group leaders
-            if (this.userdata.autoarchive && this.status == 2 && gid == this.nid) {
+            if (this.userdata.autoarchive &&
+                this.status == 2 &&
+                gid == this.nid &&
+                // only god archives a command, the rest will follow indirectly
+                this.userdata.god == moi) {
                 archiveCmdTree(this.nid);
             }
             // (help) link top-right
@@ -562,16 +570,14 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         $('#group' + sysid).removeClass('archived');
     };
 
-    // archive not only visually but also update configuration
+    // set userdata to 'archived', rely on event handler for this key to do the
+    // actual archiving when the server replies to this event
     var archiveCmdTree = function (sysid) {
-        hideCmdTree(sysid);
-        updateState('group' + sysid + '.' + 'archived', true);
+        ctrl.send('setuserdata', 'group' + sysid + '.archived', 'true');
     };
 
-    // archive not only visually but also update configuration
     var unarchiveCmdTree = function (sysid) {
-        showCmdTree(sysid);
-        updateState('group' + sysid + '.' + 'archived', false);
+        ctrl.send('setuserdata', 'group' + sysid + '.archived', 'false');
     };
 
     // map(sysid => cmdobj) to map(groupid => [cmdobj])
@@ -595,6 +601,19 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
                 }
                 return false;
             });
+            $(ctrl).on('userdata.group' + gid + '.archived', function (_, statejson) {
+                var state = safeJSONparse(statejson);
+                // if no state was stored on the server var state will be null
+                // which evaluates to false which is good because the default
+                // status is false (unarchived)
+                if (state) {
+                    hideCmdTree(gid);
+                } else {
+                    showCmdTree(gid);
+                }
+            });
+            // initialize the UI with current archival status (if any)
+            ctrl.send('getuserdata', 'group' + gid + '.archived')
             return $li.append($btn);
         });
         var $g = $('#groups ul').empty().append(lis);
@@ -681,9 +700,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
                 .append($.map(dirs, createPathInput));
         });
         // Request initial PATH from server
-        ctrl.ws.onopen = function () {
-            ctrl.send("getpath");
-        };
+        ctrl.send("getpath");
     };
 
     var processCmd = function (options) {

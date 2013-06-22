@@ -24,13 +24,13 @@
 // GENERIC UTILITIES
 
 
-// tries to parse JSON returns {} on any failure
+// tries to parse JSON returns null on any failure
 var safeJSONparse = function (text) {
     // how wrong is a wild-card catch in JS?
     try {
         return JSON.parse(text);
     } catch(e) {
-        return {};
+        return null;
     }
 };
 

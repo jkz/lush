@@ -41,6 +41,9 @@ define(["jquery"], function ($) {
                 $(ctrl).trigger(cmd, rest);
             }
         };
+        ctrl.ws.onopen = function () {
+            $(ctrl).trigger('open')
+        };
     }
 
     // handle incoming event 'stream'
@@ -55,7 +58,25 @@ define(["jquery"], function ($) {
     };
 
     Ctrl.prototype.send = function () {
+        var ctrl = this;
         var args = Array.prototype.slice.call(arguments);
+        switch (this.ws.readyState) {
+        case WebSocket.OPEN:
+            // send normally
+            break;
+        case WebSocket.CONNECTING:
+            // wait for open.
+            // no race bc js is single threaded
+            $(ctrl).on('open', function () {
+                // try again
+                Ctrl.prototype.send.apply(ctrl, args)
+            });
+            return;
+        default:
+            // closing / closed? send is error
+            throw "sending over closed control channel";
+        }
+        // normal send
         if (args.length == 1) {
             // needs at least 1 argument
             args.push("");
