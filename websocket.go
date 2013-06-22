@@ -174,14 +174,54 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 	return err
 }
 
+// store opaque data in a session-local key/value store on server.
+//
+// eg setuserdata;somewindow.pos;{x: 234, y: 222}
+// reply: userdata.somewindow.pos;{x: 234, y: 222}
+//
+// yes the name of the event caused by a setuserdata is not just "userdata" but
+// it includes the key of the data set. this is weird, you may even consider
+// this ugly, but its really nice cos' it leverages the websocket event
+// handling system for custom events without needing an extra event system
+// layered on top of it for custom events.
+//
+// why not make it part of the client -> server event name as well then, as in
+// setuserdata.somewindow.pos, you ask? excellent question! because the server
+// actually doesnt want to treat these events differently. the client does.
+// thats why client -> server events are unified, and server -> client events
+// are not.
+//
+// thats what you get when you let implementation drive spec and I have to say
+// i dont think i dislike it.
+//
+// the only requirement to userdata key names is they can't contain a
+// semicolon.
+func wseventSetuserdata(s *server, argsjoined string) error {
+	args := strings.SplitN(argsjoined, ";", 2)
+	if len(args) != 2 {
+		return errors.New("setuserdata requires two args")
+	}
+	s.userdata[args[0]] = args[1]
+	// inform all connected clients about the updated userdata
+	return wseventGetuserdata(s, args[0])
+}
+
+func wseventGetuserdata(s *server, key string) error {
+	msg := []byte("userdata." + key + ";" + s.userdata[key])
+	_, err := s.ctrlclients.Write(msg)
+	return err
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
-	"subscribe": wseventSubscribe,
-	"new":       wseventNew,
-	"setpath":   wseventSetpath,
-	"getpath":   wseventGetpath,
-	"updatecmd": wseventUpdatecmd,
+	"subscribe":   wseventSubscribe,
+	"new":         wseventNew,
+	"setpath":     wseventSetpath,
+	"getpath":     wseventGetpath,
+	"updatecmd":   wseventUpdatecmd,
+	"setuserdata": wseventSetuserdata,
+	"getuserdata": wseventGetuserdata,
 }
 
 func parseAndHandleWsEvent(s *server, msg []byte) error {

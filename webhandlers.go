@@ -42,9 +42,12 @@ type server struct {
 	root    string
 	tmplts  *template.Template
 	web     *web.Server
+	// DEPRECATED
 	// Raw data store where client can save session data
 	// gets me a long way because i trust the client
-	clientdata  []byte
+	clientdata []byte
+	// indexed data store for arbitrary session data from client
+	userdata    map[string]string
 	ctrlclients liblush.FlexibleMultiWriter
 }
 
@@ -361,6 +364,7 @@ func handlePostUnsetenv(ctx *web.Context) {
 
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
+		s.userdata = map[string]string{}
 		s.web.Get(`/`, handleGetRoot)
 		s.web.Get(`/(\d+)/`, handleGetCmd)
 		s.web.Get(`/(\d+)/info.json`, handleGetCmdInfo)
