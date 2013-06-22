@@ -21,6 +21,7 @@
 package main
 
 import (
+	"flag"
 	"go/build"
 	"html/template"
 	"log"
@@ -68,6 +69,8 @@ func resourceDir() string {
 }
 
 func main() {
+	listenaddr := flag.String("l", "localhost:8081", "listen address")
+	flag.Parse()
 	root := resourceDir()
 	tmplts := template.New("")
 	tmplts = template.Must(tmplts.ParseGlob(root + "/templates/*.html"))
@@ -90,6 +93,6 @@ func main() {
 	for _, f := range serverinitializers {
 		f(s)
 	}
-	s.web.Run("localhost:8081")
+	s.web.Run(*listenaddr)
 	return
 }
