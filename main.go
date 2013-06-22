@@ -93,6 +93,9 @@ func main() {
 	for _, f := range serverinitializers {
 		f(s)
 	}
-	s.web.Run(*listenaddr)
+	err = s.web.Run(*listenaddr)
+	if err != nil {
+		log.Fatalf("Failed to listen on %s: %v", *listenaddr, err)
+	}
 	return
 }
