@@ -50,6 +50,13 @@ GOPATH:
 3. **create a new "user variable": name GOPATH, value C:\go3d**
 4. victory! hail cthulhu ^(;,;)^
 
+go tool in PATH:
+
+1. **open the "environment variables" dialog**
+2. **find the PATH (or Path) variable in the System variables**
+3. **edit it and append this to the value: ;C:\go\bin**
+4. now you can just type `go` in the command window as all instructions everywhere just assume you can (why this is not done by the installer baffles me)
+
 Now when you use `go get` it will put stuff in C:\go3d.
 
 ### install lush
