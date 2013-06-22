@@ -19,6 +19,26 @@
 // IN THE SOFTWARE.
 
 
+// welcome!
+//
+// this file configures require.js for lush. external libraries (jquery etc)
+// are in /static/js/ext/. lush scripts (haha go home script you're drunk) are
+// all in /static/js/lush/. every file in there (except utils.js) is a "AMD"
+// module that must be loaded using requirejs.
+//
+// to use these modules a page must first load require.js and configure it
+// using this configuration file. this is how:
+//
+// <script src=/js/ext/require.js></script>
+//
+// it then chooses a module to load. e.g. the root page uses "lush/main":
+//
+// <script>
+// requirejs(["lush/main"])
+// </script>
+//
+// that will load /static/js/lush/main.js.
+
 requirejs.config({
     "baseUrl": "/js/ext",
     "paths": {

@@ -22,6 +22,81 @@
 
 
 // Scripting for root page
+//
+// sorry for the mess
+//
+// general idea:
+//
+// COMMAND OBJECTS
+//
+// commands are represented in the global array "cmds" as objects (usually
+// called "cmd" when assigned to a variable). there is no spec on the
+// properties in a cmd object (frowny face) but you can get the idea from a
+// couple places:
+//
+// metacmd.go defines serialization of the cmd object from the server side.
+// this is where a cmd object comes to life as a JSON object
+//
+// that json thing finds its way to the createCmdWidget function. there a
+// widget is created and initialized for the command and some extra stuff is
+// added to the cmd object like functions and more properties.
+//
+// sounds good to me what could possibly go wrong?
+//
+// WIDGETS
+//
+// thats what I call those draggable boxes that represent a command in the UI
+//
+// CONTROL STREAM
+//
+// this script opens a websocket connection to /ctrl where the client and
+// server talk to eachother about food and fashion and larry king. shockingly,
+// there is no spec for this, either. check out websocket.go for the messages
+// that the server can handle. check out every line of every .js file to see
+// what messages the client can handle. or grep handleEvent in this file thats
+// probably easier. see ctrl.js for details. in code. haha what you thought in
+// documentation?
+//
+// Note that websocket messages are broadcasted to every connected client.
+// There is no request/reply system even though it does look like that its
+// slightly different. This is mostly relevant when you have multiple connected
+// clients.
+//
+// Eg when you want to get the path. You say "getpath", but the server doesnt
+// really reply with the path. okay it kinda does but this is about the idea
+// bear (haha) (thats the lamest joke since the invention of paper) with me
+// here.
+//
+// what it does is send (wow i still cant believe i made that bear joke) "This
+// is the path: " message to all clients. the server can do that whenever
+// it wants, for whatever reason. it HAPPENS to only do it when a client
+// requests it or when the path changes, but the client doesnt treat it that
+// way. what it does is whenever the "path" websocket message comes in (look
+// for ctrl.handleEvent("path")) it updates the entire UI with this new path.
+// THEN it says "hey server send me the path" ("getpah"), knowing that when it
+// does, the handling of the response is in place.
+//
+// so basically instead of this (in order of execution):
+//
+// 1 ask question
+// 2 get answer
+// 3 handle answer
+//
+// the code does this:
+//
+// 1 handle answer (ctrl.handleEvent(...))
+// 2 ask question (ctrl.send())
+// 3 get answer
+//
+// that bear joke wasn't even a double meaning i just misspelled something and
+// it happened to be another word. oh my god. hilarity.
+//
+// the path example is simplest but a lot of command related messaging also
+// works this way. this helps in making the whole thing asynchronous and also
+// easily scales to > 1 clients; when you get an answer you handle it, even if
+// you didn't ask a question.
+//
+// good luck.
 
 define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], function ($, Ctrl, terminal) {
 
