@@ -54,7 +54,7 @@ go tool in PATH:
 
 1. **open the "environment variables" dialog**
 2. **find the PATH (or Path) variable in the System variables**
-3. **edit it and append this to the value: ;C:\go\bin**
+3. **edit it and append this to the value: ;C:\go\bin** (note the ; to separate it from the previous path. that's a : on UNIX systems btw. you know, in case you were wondering, "gee I wonder what character is used as a separator for entries in the PATH environment variable on UNIX systems", or something along those lines)
 4. now you can just type `go` in the command window as all instructions everywhere just assume you can (why this is not done by the installer baffles me)
 
 Now when you use `go get` it will put stuff in C:\go3d.
