@@ -439,6 +439,11 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             .addClass("viewmode");
         initView(cmd, $widget);
         $('#cmds').append($widget);
+        // eg: userdata.cmd3.pos;{"top": 3, "left": 10}
+        ctrl.handleEvent('userdata.' + cmd.htmlid + '.pos', function (posjson) {
+            var pos = JSON.parse(posjson);
+            jsPlumb.repaint($('#' + cmd.htmlid).offset(pos));
+        });
         restoreposition(cmd.htmlid);
         // jsPlumb stuff
         $widget.resizable({
@@ -447,7 +452,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             }});
         jsPlumb.draggable($widget, {
             stop: function (e, ui) {
-                storeposition(this.id, ui.offset);
+                var posjson = JSON.stringify(ui.offset);
+                ctrl.send("setuserdata", cmd.htmlid + '.pos', posjson);
             }});
         cmd.stdinep = jsPlumb.addEndpoint($widget, {
             anchor: 'TopCenter',
@@ -704,6 +710,11 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
     };
 
     $(document).ready(function () {
+        // Control stream (Websocket)
+        ctrl = new Ctrl();
+        ctrl.ws.onerror = function () {
+            console.log('Error connecting to ' + ctrluri);
+        };
         $.map(cmds, createCmdWidget);
         // Second iteration to ensure that connections are only made after all
         // nodes have configured endpoints
@@ -748,11 +759,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             });
         });
         $('.sortable').disableSelection().sortable();
-        // Control stream (Websocket)
-        ctrl = new Ctrl();
-        ctrl.ws.onerror = function () {
-            console.log('Error connecting to ' + ctrluri);
-        };
         // a new command has been created
         ctrl.handleEvent("newcmd", function (cmdjson) {
             var cmd = JSON.parse(cmdjson);
