@@ -109,3 +109,7 @@ div.streampeeker {
 #path ol li {
     margin-top: .5em;
 }
+
+.bookmark {
+    display: inline-block;
+}

@@ -242,6 +242,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         $('.repeat', $viewm).click(function () {
             term.set_command(cmd.argv.join(' ')).focus();
         });
+        $('.bookmark', $viewm).attr('href', '#prompt;' + cmd.argv.join(' '));
         $('.editbtn', $viewm).click(function () {
             $widget.removeClass('viewmode');
             $widget.addClass('editmode');
