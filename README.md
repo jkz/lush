@@ -10,12 +10,12 @@ third option that leverages the webbrowser as the UI.
 
 Download and install:
 
-$ go get github.com/hraban/lush
+    $ go get github.com/hraban/lush
 
 To run the program find the executable (somewhere in $GOPATH/bin/..) and launch
 it. E.g.:
 
-$ ${GOPATH%%:*}/bin/lush
+    $ ${GOPATH%%:*}/bin/lush
 
 Also works on Windows provided you installed Go and Git (which is surprisingly
 easy using the official installers).
