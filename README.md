@@ -26,7 +26,9 @@ Alright I just drank coffee so I can finally write this part without passing out
 
 The caffeine is kicking in and life is great.
 
-Listen up the deal here is that to install Go on Windows you have to do two things: run the installer and set a GOPATH. I'm not gonna explain why just how. Let's get this over with.
+Listen up the deal here is that to install Go on Windows you have to do **two things: run the installer and set a GOPATH.** I'm not gonna explain why just how. Let's get this over with.
+
+Go installer:
 
 1. **Go to https://code.google.com/p/go/downloads/list**
 2. **Select the MSI installer that matches your system: 32- or 64-bit** (so it ends in windows-386.msi OR windows-amd64.msi).
@@ -41,7 +43,7 @@ Listen up the deal here is that to install Go on Windows you have to do two thin
 6. is defragmenting still a thing?
 7. **yay done**
 
-now GOPATH:
+GOPATH:
 
 1. **create a new directory called go3d next to where go is installed** (c:\Go by default). e.g. c:\go3d
 2. **open the "environment variables" dialog** (windows 7: control panel -> System -> Advanced system settings -> "Advanced" tab -> Environment Variables)
@@ -50,13 +52,15 @@ now GOPATH:
 
 Now when you use `go get` it will put stuff in C:\go3d.
 
-Once you've done this you can install lush by opening a command window and typing:
+### install lush
+
+**open a command window and type:**
 
     go get github.com/hraban/lush
 
 It will download lush (to c:\go3d\src\github.com\hraban\lush) and install it (as c:\go3d\bin\lush.exe).
 
-Run lush by double clicking the .exe! Create a shortcut to your desktop for easy access.
+**Run lush by double clicking the .exe!** Create a shortcut to your desktop for easy access.
 
 To update lush:
 
