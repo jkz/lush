@@ -20,7 +20,6 @@
 
 "use strict";
 
-
 // Scripting for root page
 //
 // sorry for the mess
@@ -408,12 +407,7 @@ define(["jquery",
             $help.empty();
             var action = help(this);
             if (action) {
-                action(this, $help);
-                // not extremely pretty but also extremely wip
-                $help.append($('<div>').append($('<a href="">back</a>').click(function () {
-                    switchModeToView($widget);
-                    return false;
-                })));
+                action(this, $help, curry(switchModeToView, $widget));
             }
         });
     };

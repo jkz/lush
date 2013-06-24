@@ -25,11 +25,46 @@
 
 define(["jquery"], function ($) {
     var actions = {
-        tar: function (cmd, $help) {
+        tar: function (cmd, $help, switchModeToView) {
             $help.append($('<a href="http://unixhelp.ed.ac.uk/CGI/man-cgi?tar" target=_blank>online man page</a>'));
+            $help.append($('<br>'));
+            $help.append('extract: ');
+            var $changeflag = $('<input type=checkbox>').change(function () {
+                if (this.checked) {
+                    if (cmd.argv.length < 2) {
+                        cmd.argv.push('x');
+                    } else if (cmd.argv[1].indexOf('x') == -1) {
+                        // order is important
+                        cmd.argv[1] = 'x' + cmd.argv[1];
+                    }
+                } else {
+                    // should always be true
+                    if (cmd.argv.length >= 2) {
+                        cmd.argv[1].replace(/x/g, '')
+                    } else {
+                        console.log('weird: unchecked extract, but no 1st arg');
+                        console.log(cmd);
+                    }
+                }
+            });
+            $changeflag[0].checked = (cmd.argv.length >= 2 && cmd.argv[1].indexOf('x') != -1);
+            $help.append($changeflag);
+            // not extremely pretty but also extremely wip
+            $help.append($('<br>'))
+            $help.append($('<a href="">back</a>').click(function () {
+                $(cmd).trigger('update');
+                switchModeToView();
+                return false;
+            }));
         },
-        git: function (cmd, $help) {
+        git: function (cmd, $help, switchModeToView) {
             $help.append($('<a href="https://www.kernel.org/pub/software/scm/git/docs/" target=_blank>online man page</a>'));
+            $help.append($('<br>'))
+            $help.append('FOOO')
+            $help.append($('<a href="">back</a>').click(function (e) {
+                switchModeToView();
+                return false;
+            }));
         },
     };
 
