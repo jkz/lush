@@ -144,24 +144,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
         return $node.empty().append(content);
     };
 
-    // fetch state as json, pass decoded object to callback arg
-    // returns jquery jqxhr handle
-    var getState = function (success) {
-        // this is me not caring about wrapping the deferred
-        return $.get('/clientdata').done(function (json) {
-            var state = safeJSONparse(json);
-            if (state === null) {
-                state = {};
-            }
-            success(state);
-        });
-    };
-
-    // state object is passed to JSON.stringify
-    var setState = function (state) {
-        return $.post('/clientdata', {data: JSON.stringify(state)});
-    };
-
     // deferred object fetching most recent stream data for streampeeker
     var getRecentStream = function (sysId, stream) {
         return $.get('/' + sysId + '/stream/' + stream + '.bin?numbytes=100');
@@ -623,16 +605,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
             });
             return $li.append($btn);
         });
-        var $g = $('#groups ul').empty().append(lis);
-        // process configuration of archived groups
-        getState(function (state) {
-            $.map(groups, function (_, gid) {
-                if (state['group' + gid + '.archived']) {
-                    hideCmdTree(gid);
-                }
-            });
-        });
-        return $g;
+        return $('#groups ul').empty().append(lis);
     };
 
     var initGroupsList = function () {

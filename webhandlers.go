@@ -42,10 +42,6 @@ type server struct {
 	root    string
 	tmplts  *template.Template
 	web     *web.Server
-	// DEPRECATED
-	// Raw data store where client can save session data
-	// gets me a long way because i trust the client
-	clientdata []byte
 	// indexed data store for arbitrary session data from client
 	userdata    map[string]string
 	ctrlclients liblush.FlexibleMultiWriter
@@ -266,18 +262,6 @@ func handleWsStream(ctx *web.Context, idstr, streamname string) error {
 	return nil
 }
 
-func handleGetClientdata(ctx *web.Context) error {
-	s := ctx.User.(*server)
-	_, err := ctx.Write(s.clientdata)
-	return err
-}
-
-func handlePostClientdata(ctx *web.Context) error {
-	s := ctx.User.(*server)
-	s.clientdata = []byte(ctx.Params["data"])
-	return nil
-}
-
 func handlePostChdir(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	return s.session.Chdir(ctx.Params["dir"])
@@ -350,8 +334,6 @@ func init() {
 		s.web.Get(`/new/names.json`, handleGetNewNames)
 		s.web.Websocket(`/(\d+)/stream/(\w+).bin`, handleWsStream)
 		s.web.Get(`/(\d+)/stream/(\w+).bin`, handleGetStream)
-		s.web.Get(`/clientdata`, handleGetClientdata)
-		s.web.Post(`/clientdata`, handlePostClientdata)
 		s.web.Post(`/chdir`, handlePostChdir)
 		s.web.Get(`/files.json`, handleGetFiles)
 		s.web.Websocket(`/ctrl`, handleWsCtrl)
