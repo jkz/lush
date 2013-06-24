@@ -162,38 +162,49 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
         return $.post('/clientdata', {data: JSON.stringify(state)});
     };
 
-    var updateState = function (key, value) {
-        return getState(function (state) {
-            state[key] = value;
-            // would prefer to return this deferred.. $.when.done? dont care enough
-            setState(state);
-        });
-    };
-
-    var storeposition = function (id, pos) {
-        updateState(id + '.pos', pos)
-            .fail(function (_, msg) {
-                console.log("failed to update position: " + msg);
-            });
-    };
-
-    var getposition = function (id, callback) {
-        return getState(function (state) {
-            callback(state[id + '.pos']);
-        });
-    };
-
-    var restoreposition = function (id) {
-        getposition(id, function (pos) {
-            if (pos !== undefined) {
-                jsPlumb.repaint($('#' + id).offset(pos));
-            }
-        });
-    };
-
     // deferred object fetching most recent stream data for streampeeker
     var getRecentStream = function (sysId, stream) {
         return $.get('/' + sysId + '/stream/' + stream + '.bin?numbytes=100');
+    };
+
+    // store position of this DOM node on the server as userdata.
+    //
+    // call this whenever a synced node moved. can't do that automatically
+    // because there was some whining about cross browser ladida idk just hook
+    // this in the postMove handlers manually.
+    //
+    // assuming a <div id=myhtmlid> at x=123 and y=58008
+    //
+    // generated event:
+    //
+    // setuserdata;position.myhtmlid;{"left": 123, "top": 58008}
+    //
+    // causes the server to broadcast a userdata event to all connected
+    // websocket clients (including this one!), as it is wont to do:
+    //
+    // userdata.position.myhtmlid;{"left": 123, "top": 58008}
+    var storePosition = function (node) {
+        var posjson = JSON.stringify($(node).offset());
+        ctrl.send("setuserdata", 'position.' + node.id, posjson);
+    };
+
+    // when the server says this node was moved, actually move the node in the
+    // UI. also asks the server what the current position is to initialize the
+    // position correctly.
+    // if a second argument is supplied it is called every time the position
+    // changes.
+    var syncPosition = function (node, extraCallback) {
+        $(ctrl).on('userdata.position.' + node.id, function (e, offsetJSON) {
+            var offset = safeJSONparse(offsetJSON);
+            if (offset) {
+                $(node).offset(offset);
+                if (extraCallback) {
+                    // TODO: this = node?
+                    extraCallback();
+                }
+            }
+        });
+        ctrl.send('getuserdata', 'position.' + node.id);
     };
 
     // Stream peeker is like a small dumb terminal window showing a stream's most
@@ -253,16 +264,13 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
         };
         collapsef();
         jsPlumb.draggable($sp, {
-            stop: function (e, ui) {
-                storeposition(this.id, ui.offset);
-            }});
+            stop: function () { storePosition(this); },
+        });
         var myep = jsPlumb.addEndpoint(id, {
             anchor: 'TopCenter',
             isTarget: true,
             endpoint: 'Rectangle',
         });
-        // if there is already a configured position restore that
-        restoreposition(id);
         // connect to the source endpoint (create a new endpoint on the source dynamically)
         jsPlumb.connect({
             source: srcep.getElement(),
@@ -270,6 +278,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
             anchors: [stream2anchor(stream), myep],
             parameters: { isStreampeek: true },
         });
+        // TODO: extra callback to redraw connection
+        syncPosition($sp[0]);
         return $sp;
     };
 
@@ -452,22 +462,17 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
             .addClass("viewmode");
         initView(cmd, $widget);
         $('#cmds').append($widget);
-        // eg: userdata.cmd3.pos;{"top": 3, "left": 10}
-        $(ctrl).on('userdata.' + cmd.htmlid + '.pos', function (_, posjson) {
-            var pos = JSON.parse(posjson);
-            jsPlumb.repaint($('#' + cmd.htmlid).offset(pos));
+        syncPosition($widget[0], function () {
+            jsPlumb.repaint($widget);
         });
-        restoreposition(cmd.htmlid);
         // jsPlumb stuff
         $widget.resizable({
             resize: function (e, ui) {
                 jsPlumb.repaint(ui.helper);
             }});
         jsPlumb.draggable($widget, {
-            stop: function (e, ui) {
-                var posjson = JSON.stringify(ui.offset);
-                ctrl.send("setuserdata", cmd.htmlid + '.pos', posjson);
-            }});
+            stop: function () { storePosition(this); },
+        });
         cmd.stdinep = jsPlumb.addEndpoint($widget, {
             anchor: 'TopCenter',
             isTarget: true,
