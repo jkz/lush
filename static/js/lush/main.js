@@ -181,8 +181,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
             if (offset) {
                 $(node).offset(offset);
                 if (extraCallback) {
-                    // TODO: this = node?
-                    extraCallback();
+                    extraCallback.call(node);
                 }
             }
         });
@@ -254,14 +253,15 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
             endpoint: 'Rectangle',
         });
         // connect to the source endpoint (create a new endpoint on the source dynamically)
-        jsPlumb.connect({
+        var connection = jsPlumb.connect({
             source: srcep.getElement(),
             target: myep,
             anchors: [stream2anchor(stream), myep],
             parameters: { isStreampeek: true },
         });
-        // TODO: extra callback to redraw connection
-        syncPosition($sp[0]);
+        syncPosition($sp[0], function () {
+            jsPlumb.repaint($(this));
+        });
         return $sp;
     };
 
@@ -445,13 +445,14 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
         initView(cmd, $widget);
         $('#cmds').append($widget);
         syncPosition($widget[0], function () {
-            jsPlumb.repaint($widget);
+            jsPlumb.repaint($(this));
         });
         // jsPlumb stuff
         $widget.resizable({
-            resize: function (e, ui) {
-                jsPlumb.repaint(ui.helper);
-            }});
+            resize: function () {
+                jsPlumb.repaint($(this));
+            }
+        });
         jsPlumb.draggable($widget, {
             stop: function () { storePosition(this); },
         });
