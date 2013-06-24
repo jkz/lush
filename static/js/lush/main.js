@@ -98,7 +98,7 @@
 //
 // good luck.
 
-define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], function ($, Ctrl, terminal) {
+define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/utils"], function ($, Ctrl, terminal, path) {
 
     // websocket connection for control events
     var ctrl;
@@ -661,64 +661,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         return term.termPrintln(data, finalize);
     };
 
-    var createPathInput = function (dir) {
-        return $('<li class="ui-state-default">').append([
-            // when a path changes submit the entire new path
-            $('<input>')
-                .val(dir)
-                .change(function () {
-                    $('form#path').submit();
-                })
-                .keypress(function () {
-                    var w = ((this.value.length + 1) * 8);
-                    if (w < 200) {
-                        w = 200;
-                    }
-                    this.style.width = w + 'px';
-                })
-                .keypress(),
-            // delete path button
-            $('<button>×</button>').click(function () {
-                $(this).closest('li').remove();
-                // when a path is removed submit the entire new path
-                $('form#path').submit();
-                return false;
-            }),
-        ]);
-    };
-
-    // Initialization for the PATH UI
-    var initPathForm = function(ctrl) {
-        // Hook up form submission to ctrl channel
-        $('form#path')
-            .submit(function () {
-                var paths = $.map($('#path input'), attrgetter('value'));
-                // filter out empty paths
-                paths = $.grep(paths, identity);
-                ctrl.send('setpath', JSON.stringify(paths));
-                return false;
-            })
-            // + button to allow creating entirely new PATH entries
-            .after($('<button>+</button>').click(function () {
-                $('form#path ol').append(createPathInput(''))
-                return false;
-            }))
-            // reordering path entries is also an edit
-            .find('ol').on("sortstop", function () {
-                $('form#path').submit();
-            });
-        $('#togglepath').click(function () { $('#pathcontainer').toggle(); }).click();
-        // Refresh form when server notifies PATH changes
-        $(ctrl).on("path", function (_, pathjson) {
-            var dirs = JSON.parse(pathjson);
-            $('form#path ol')
-                .empty()
-                .append($.map(dirs, createPathInput));
-        });
-        // Request initial PATH from server
-        ctrl.send("getpath");
-    };
-
     var processCmd = function (options) {
         if (options.cmd == "cd") {
             chdir(options.args[0]);
@@ -819,7 +761,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             cmd = $.extend(cmd, update);
             $(cmd).trigger('update');
         });
-        initPathForm(ctrl);
+        path($('form#path'), ctrl);
         term = terminal(processCmd);
         if (window.location.hash) {
             processHash(window.location.hash.slice(1));
