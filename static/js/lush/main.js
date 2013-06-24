@@ -301,8 +301,15 @@ define(["jquery",
         ctrl.send('connect', JSON.stringify(options));
     };
 
+    var switchModeToView = function ($widget) {
+        $widget.removeClass('editmode');
+        $widget.removeClass('helpmode');
+        $widget.addClass('viewmode');
+        jsPlumb.repaint($widget);
+    };
+
     var initViewMode = function (cmd, $widget) {
-        var $viewm = $('.view', $widget);
+        var $viewm = $('.tab_view', $widget);
         // static parts of the UI (depend on constant cmd property "nid")
         $('.link', $viewm).attr('href', '/' + cmd.nid + '/');
         $('.linktext', $viewm).text(cmd.nid + ': ');
@@ -317,22 +324,22 @@ define(["jquery",
             $widget.addClass('editmode');
             jsPlumb.repaint($widget);
         });
+        var $helplink = $('.helplink', $viewm).click(function () {
+            $widget.removeClass('viewmode');
+            $widget.addClass('helpmode');
+            jsPlumb.repaint($widget);
+            return false;
+        });
         // dynamic parts of the UI
         $(cmd).on('update', function () {
             setStatNode(this.nid, this.status, $('.status', $viewm));
-            // (help) link top-right
-            (function ($link, action) {
-                if (action) {
-                    $link.show();
-                    $link.click(function () {
-                        action(this);
-                        return false;
-                    });
-                } else {
-                    // no help action? hide the link
-                    $link.hide();
-                }
-            })($('.help', $viewm), help(this));
+            var action = help(this);
+            if (action) {
+                $helplink.show();
+            } else {
+                // no help action? hide the link
+                $helplink.hide();
+            }
             $('.argv', $viewm).text(this.argv.join(" "));
             if (this.status > 0) {
                 $('.editbtn', $viewm).remove();
@@ -341,18 +348,13 @@ define(["jquery",
     };
 
     var initEditMode = function (cmd, $widget) {
-        var $editm = $('.edit', $widget);
-        var switchToView = function () {
-            $widget.removeClass('editmode');
-            $widget.addClass('viewmode');
-            jsPlumb.repaint($widget);
-        };
+        var $editm = $('.tab_edit', $widget);
         $('[name=nid]', $editm).val(cmd.nid);
         $('[name=cmd]', $editm).autocomplete({source: "/new/names.json"});
         $('.cancelbtn', $editm).click(function () {
             // restore form contents from model
             $(cmd).trigger('update');
-            switchToView();
+            switchModeToView($widget);
         });
         var lastarg = 1;
         var addarg = function () {
@@ -382,7 +384,7 @@ define(["jquery",
             o.userdata.autostart = this.autostart.checked;
             o.userdata.autoarchive = this.autoarchive.checked;
             ctrl.send("updatecmd", JSON.stringify(o));
-            switchToView();
+            switchModeToView($widget);
             return false;
         });
         $(cmd).on('update', function () {
@@ -398,11 +400,30 @@ define(["jquery",
         });
     };
 
+    // initialize a widget's help view
+    var initHelpMode = function (cmd, $widget) {
+        var $help = $('.tab_help', $widget);
+        $(cmd).on('update', function () {
+            // clean out help div
+            $help.empty();
+            var action = help(this);
+            if (action) {
+                action(this, $help);
+                // not extremely pretty but also extremely wip
+                $help.append($('<div>').append($('<a href="">back</a>').click(function () {
+                    switchModeToView($widget);
+                    return false;
+                })));
+            }
+        });
+    };
+
     // Init the command view (the V in MVC) given the model (the cmd).
     var initView = function (cmd, $widget) {
         // Command widget has two faces: edit and view mode
         initViewMode(cmd, $widget);
         initEditMode(cmd, $widget);
+        initHelpMode(cmd, $widget);
         // initialize view
         $(cmd).trigger('update');
     };

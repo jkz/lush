@@ -35,12 +35,17 @@ div.cmdwidget {
     padding: 0.5em;
 }
 
-.viewmode .edit {
+/* hide all tabs */
+.cmdwidget > [class^=tab_] {
     display: none;
 }
 
-.editmode .view {
-    display: none;
+/* except the active ones */
+.viewmode .tab_view,
+.editmode .tab_edit,
+.helpmode .tab_help
+{
+    display: block;
 }
 
 div.streampeeker {

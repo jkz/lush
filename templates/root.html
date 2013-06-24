@@ -47,17 +47,17 @@
 <div id=cmdwidget_template class='cmdwidget'>
 
   <!-- View mode -->
-  <div class=view>
+  <div class=tab_view>
     <a class=link><span class=linktext></span><tt class=argv></tt></a>
     <span class=status></span>
     <button class=editbtn>edit</button>
     <a class='ui-icon ui-icon-link bookmark' title='link to bookmark this command'></a>
     <button class=repeat>↻</button>
-    <a class=help href="#">(help)</a>
+    <a class=helplink href="#">(help)</a>
   </div>
 
   <!-- edit mode -->
-  <div class=edit>
+  <div class=tab_edit>
     <form>
       <input type=hidden name=nid>
      name <input name=cmd><br>
@@ -74,6 +74,9 @@
     start immediately: <input type=checkbox name=autostart><br>
     archive when done: <input type=checkbox name=autoarchive><br>
     </form>
+  </div>
+
+  <div class=tab_help>
   </div>
 
 </div>

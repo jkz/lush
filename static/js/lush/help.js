@@ -25,11 +25,11 @@
 
 define(["jquery"], function ($) {
     var actions = {
-        tar: function (cmd, $widget) {
-            window.open('http://unixhelp.ed.ac.uk/CGI/man-cgi?tar', '_blank');
+        tar: function (cmd, $help) {
+            $help.append($('<a href="http://unixhelp.ed.ac.uk/CGI/man-cgi?tar" target=_blank>online man page</a>'));
         },
-        git: function (cmd, $widget) {
-            window.open('https://www.kernel.org/pub/software/scm/git/docs/', '_blank');
+        git: function (cmd, $help) {
+            $help.append($('<a href="https://www.kernel.org/pub/software/scm/git/docs/" target=_blank>online man page</a>'));
         },
     };
 
