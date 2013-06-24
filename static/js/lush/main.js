@@ -631,6 +631,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         $('#groups').data('archivals', {});
         $(ctrl).on('userdata.groups.archived', function (_, archivalsjson) {
             var archivals = safeJSONparse(archivalsjson) || {};
+            // update local archivals status with that from server
+            archivals = $.extend($('#groups').data('archivals'), archivals);
             $.each(archivals, function (gid, state) {
                 if (state) {
                     hideCmdTree(gid);
