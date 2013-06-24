@@ -330,16 +330,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         // dynamic parts of the UI
         $(cmd).on('update', function () {
             setStatNode(this.nid, this.status, $('.status', $viewm));
-            // group id (0 if not initialized yet hacky but bite me)
-            var gid = this.getGroupId ? this.getGroupId() : 0;
-            // only archive group leaders
-            if (this.userdata.autoarchive &&
-                this.status == 2 &&
-                gid == this.nid &&
-                // only god archives a command, the rest will follow indirectly
-                this.userdata.god == moi) {
-                archiveCmdTree(this.nid);
-            }
             // (help) link top-right
             (function ($link, action) {
                 if (action) {
@@ -512,6 +502,20 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         // Doubleclicking a source endpoint creates a streampeeker
         createStreamPeekerWhenDblClicked(cmd.stdoutep);
         createStreamPeekerWhenDblClicked(cmd.stderrep);
+        // true iff this command does not take its stdin from another command
+        cmd.isRoot = function () {
+            return cmd.stdinep.connections.length == 0;
+        }
+        $(cmd).on('update', function () {
+            // only archive group leaders
+            if (this.userdata.autoarchive &&
+                this.status == 2 &&
+                this.isRoot() &&
+                // only god archives a command, the rest will follow indirectly
+                this.userdata.god == moi) {
+                archiveCmdTree(this.nid);
+            }
+        });
         return $widget;
     };
 
@@ -576,11 +580,15 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
     // set userdata to 'archived', rely on event handler for this key to do the
     // actual archiving when the server replies to this event
     var archiveCmdTree = function (sysid) {
-        ctrl.send('setuserdata', 'group' + sysid + '.archived', 'true');
+        var archivals = $('#groups').data('archivals');
+        archivals[sysid] = true;
+        ctrl.send('setuserdata', 'groups.archived', JSON.stringify(archivals));
     };
 
     var unarchiveCmdTree = function (sysid) {
-        ctrl.send('setuserdata', 'group' + sysid + '.archived', 'false');
+        var archivals = $('#groups').data('archivals');
+        archivals[sysid] = false;
+        ctrl.send('setuserdata', 'groups.archived', JSON.stringify(archivals));
     };
 
     // map(sysid => cmdobj) to map(groupid => [cmdobj])
@@ -589,10 +597,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
     };
 
     // refresh the <ul id=groups>
-    var rebuildGroupsList = function (groups) {
-        if (groups === undefined) {
-            groups = makeGroups(cmds);
-        }
+    var rebuildGroupsList = function () {
+        var groups = makeGroups(cmds);
         var lis = $.map(groups, function (cmds, gid) {
             var names = $.map(cmds, attrgetter("name")).join(", ");
             var $li = $('<li id=group' + gid + '>' + gid + ': ' + names + '</li>');
@@ -604,19 +610,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
                 }
                 return false;
             });
-            $(ctrl).on('userdata.group' + gid + '.archived', function (_, statejson) {
-                var state = safeJSONparse(statejson);
-                // if no state was stored on the server var state will be null
-                // which evaluates to false which is good because the default
-                // status is false (unarchived)
-                if (state) {
-                    hideCmdTree(gid);
-                } else {
-                    showCmdTree(gid);
-                }
-            });
-            // initialize the UI with current archival status (if any)
-            ctrl.send('getuserdata', 'group' + gid + '.archived')
             return $li.append($btn);
         });
         var $g = $('#groups ul').empty().append(lis);
@@ -628,8 +621,26 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
                 }
             });
         });
+        // initialize the UI with current archival status (if any)
+        ctrl.send('getuserdata', 'groups.archived')
         return $g;
     };
+
+    var initGroupsList = function () {
+        // eg {1: true, 2: false, 3: false};
+        $('#groups').data('archivals', {});
+        $(ctrl).on('userdata.groups.archived', function (_, archivalsjson) {
+            var archivals = safeJSONparse(archivalsjson) || {};
+            $.each(archivals, function (gid, state) {
+                if (state) {
+                    hideCmdTree(gid);
+                } else {
+                    showCmdTree(gid);
+                }
+            });
+        });
+        rebuildGroupsList();
+    }
 
     var chdir = function (dir) {
         // this here is some tricky code dupe
@@ -747,8 +758,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
                 connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr');
             }
         });
-        var groups = makeGroups(cmds);
-        rebuildGroupsList(groups);
+        initGroupsList();
         $('<a href>show/hide archived</a>')
             .click(function () { $('#groups .archived').toggle(); return false; })
             .insertBefore('#groups ul');
