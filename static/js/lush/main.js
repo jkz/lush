@@ -290,15 +290,12 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
     };
 
     var connect = function (srcep, trgtep, stream) {
-        var srcSysId = srcep.getParameter("sysid")();
-        var trgtSysId = trgtep.getParameter("sysid")();
-        $.post('/' + srcSysId + '/connect?noredirect', {
+        var options = {
+            from: srcep.getParameter("sysid")(),
+            to: trgtep.getParameter("sysid")(),
             stream: stream,
-            to: trgtSysId,
-        }).done(function () {
-            connectVisually(srcep, trgtep, stream);
-            rebuildGroupsList();
-        });
+        };
+        ctrl.send('connect', JSON.stringify(options));
     };
 
     var helpAction = function (cmd) {
@@ -425,6 +422,16 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
             });
     };
 
+    var updatePipes = function (cmd) {
+        if (cmd.hasOwnProperty('stdoutto')) {
+            // connect my stdout to cmd.stdoutto's stdin
+            connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout');
+        }
+        if (cmd.hasOwnProperty('stderrto')) {
+            connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr');
+        }
+    };
+
     // create widget with command info and add it to the DOM
     // the argument is a cmd object implementation defined by the cmds array in
     // root.html
@@ -515,6 +522,12 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
                 this.userdata.god == moi) {
                 archiveCmdTree(this.nid);
             }
+            updatePipes(this);
+            // this call must come after updatePipes because figuring out group
+            // relations is done through the jsPlumb connections. not very
+            // pretty imo i wouldnt mind better separation between model and
+            // view but thats how its currently implemented.
+            rebuildGroupsList();
         });
         return $widget;
     };
@@ -690,18 +703,9 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
         ctrl.ws.onerror = function () {
             console.log('Error connecting to ' + ctrluri);
         };
-        $.map(cmds, createCmdWidget);
-        // Second iteration to ensure that connections are only made after all
-        // nodes have configured endpoints
-        $.map(cmds, function (cmd) {
-            if (cmd.hasOwnProperty('stdoutto')) {
-                // connect my stdout to cmd.stdoutto's stdin
-                connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout');
-            }
-            if (cmd.hasOwnProperty('stderrto')) {
-                connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr');
-            }
-        });
+        $.each(cmds, function (_, cmd) { createCmdWidget(cmd); });
+        // second iteration to ensure all widgets exist before connecting them
+        $.each(cmds, function (_, cmd) { updatePipes(cmd); });
         initGroupsList();
         $('<a href>show/hide archived</a>')
             .click(function () { $('#groups .archived').toggle(); return false; })

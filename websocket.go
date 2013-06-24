@@ -212,6 +212,40 @@ func wseventGetuserdata(s *server, key string) error {
 	return err
 }
 
+func wseventConnect(s *server, optionsJSON string) error {
+	var options struct {
+		From, To liblush.CmdId
+		Stream   string
+	}
+	// parse structurally
+	err := json.Unmarshal([]byte(optionsJSON), &options)
+	if err != nil {
+		return fmt.Errorf("malformed JSON: %v", err)
+	}
+	from := s.session.GetCommand(options.From)
+	to := s.session.GetCommand(options.To)
+	if from == nil || to == nil {
+		return errors.New("unknown command in to or from")
+	}
+	var stream liblush.OutStream
+	switch options.Stream {
+	case "stdout":
+		stream = from.Stdout()
+	case "stderr":
+		stream = from.Stderr()
+	default:
+		return errors.New("unknown stream")
+	}
+	stream.AddWriter(to.Stdin())
+	// notify all channels of the update
+	w := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
+	updateinfo := map[string]interface{}{
+		"nid": options.From,
+		options.Stream + "to": options.To,
+	}
+	return json.NewEncoder(w).Encode(updateinfo)
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
@@ -222,6 +256,7 @@ var wsHandlers = map[string]wsHandler{
 	"updatecmd":   wseventUpdatecmd,
 	"setuserdata": wseventSetuserdata,
 	"getuserdata": wseventGetuserdata,
+	"connect":     wseventConnect,
 }
 
 func parseAndHandleWsEvent(s *server, msg []byte) error {

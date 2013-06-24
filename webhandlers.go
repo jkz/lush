@@ -181,30 +181,6 @@ func handlePostSend(ctx *web.Context, idstr string) error {
 	return nil
 }
 
-func handlePostConnect(ctx *web.Context, idstr string) error {
-	s := ctx.User.(*server)
-	c, err := getCmd(s.session, idstr)
-	if err != nil {
-		return err
-	}
-	var stream liblush.OutStream
-	switch ctx.Params["stream"] {
-	case "stdout":
-		stream = c.Stdout()
-	case "stderr":
-		stream = c.Stderr()
-	default:
-		return web.WebError{400, "unknown stream"}
-	}
-	other, err := getCmd(s.session, ctx.Params["to"])
-	if err != nil {
-		return err
-	}
-	stream.AddWriter(other.Stdin())
-	redirect(ctx, cmdloc(c))
-	return nil
-}
-
 func handlePostClose(ctx *web.Context, idstr string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
@@ -370,7 +346,6 @@ func init() {
 		s.web.Get(`/(\d+)/info.json`, handleGetCmdInfo)
 		s.web.Post(`/(\d+)/start`, handlePostStart)
 		s.web.Post(`/(\d+)/send`, handlePostSend)
-		s.web.Post(`/(\d+)/connect`, handlePostConnect)
 		s.web.Post(`/(\d+)/close`, handlePostClose)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
 		s.web.Websocket(`/(\d+)/stream/(\w+).bin`, handleWsStream)
