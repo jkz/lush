@@ -719,15 +719,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
             // create an empty command
             processCmd({});
         });
-        // persistent checkbox configurations
-        var $flags = $('input[type=checkbox]').change(function () {
-            updateState('flag.' + this.id, $(this).is(':checked'));
-        });
-        getState(function (state) {
-            $flags.each(function () {
-                $(this).prop('checked', state['flag.' + this.id]);
-            });
-        });
         $('.sortable').disableSelection().sortable();
         // a new command has been created
         $(ctrl).on("newcmd", function (_, cmdjson) {
