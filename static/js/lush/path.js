@@ -22,13 +22,13 @@
 
 
 define(["jquery"], function ($) {
-    var createPathInput = function ($form, dir) {
+    var createPathInput = function (dir) {
         return $('<li class="ui-state-default">').append([
             // when a path changes submit the entire new path
             $('<input>')
                 .val(dir)
                 .change(function () {
-                    $form.submit();
+                    $(this).closest('form').submit();
                 })
                 .keypress(function () {
                     var w = ((this.value.length + 1) * 8);
@@ -40,9 +40,10 @@ define(["jquery"], function ($) {
                 .keypress(),
             // delete path button
             $('<button>×</button>').click(function () {
+                var $form = $(this).closest('form');
                 $(this).closest('li').remove();
                 // when a path is removed submit the entire new path
-                $form.submit();
+                $form.submit()
                 return false;
             }),
         ]);
@@ -73,7 +74,7 @@ define(["jquery"], function ($) {
             var dirs = JSON.parse(pathjson);
             $('ol', $form)
                 .empty()
-                .append($.map(dirs, curry(createPathInput, $form)));
+                .append($.map(dirs, createPathInput));
         });
         // Request initial PATH from server
         ctrl.send("getpath");
