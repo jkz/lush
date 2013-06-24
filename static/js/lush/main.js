@@ -427,6 +427,14 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
         $(cmd).trigger('update');
     };
 
+    var createStreamPeekerWhenDblClicked = function (ep) {
+        return $(ep.canvas)
+            .css('z-index', 4) // put endpoint above the connector (is at 3)
+            .one('dblclick', function() {
+                addstreampeeker(ep);
+            });
+    };
+
     // create widget with command info and add it to the DOM
     // the argument is a cmd object implementation defined by the cmds array in
     // root.html
@@ -502,13 +510,8 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "jsPlumb", "lush/utils"], functi
             },
         });
         // Doubleclicking a source endpoint creates a streampeeker
-        $.map([cmd.stdoutep, cmd.stderrep], function (ep) {
-            $(ep.canvas)
-                .css('z-index', 4) // put endpoint above the connector (is at 3)
-                .one('dblclick', function() {
-                    addstreampeeker(ep);
-                });
-        });
+        createStreamPeekerWhenDblClicked(cmd.stdoutep);
+        createStreamPeekerWhenDblClicked(cmd.stderrep);
         return $widget;
     };
 
