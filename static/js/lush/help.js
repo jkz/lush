@@ -51,10 +51,10 @@ define(["jquery"], function ($) {
             $help.append($changeflag);
             // not extremely pretty but also extremely wip
             $help.append($('<br>'))
-            $help.append($('<a href="">back</a>').click(function () {
+            $help.append($('<a href="">back</a>').click(function (e) {
+                e.preventDefault();
                 $(cmd).trigger('update');
                 switchModeToView();
-                return false;
             }));
         },
         git: function (cmd, $help, switchModeToView) {
@@ -62,8 +62,8 @@ define(["jquery"], function ($) {
             $help.append($('<br>'))
             $help.append('FOOO')
             $help.append($('<a href="">back</a>').click(function (e) {
+                e.preventDefault();
                 switchModeToView();
-                return false;
             }));
         },
     };

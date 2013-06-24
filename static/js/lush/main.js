@@ -123,6 +123,7 @@ define(["jquery",
     var makeStartButton = function (sysId) {
         return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
             .submit(function (e) {
+                e.preventDefault();
                 $.post(this.action + "?noredirect", $(this).serialize())
                     // substitute the entire form by a glyph indicating status
                     .done(function () {
@@ -130,7 +131,6 @@ define(["jquery",
                     }).fail(function () {
                         $(e.target).html('✗');
                     });
-                return false;
             });
     };
 
@@ -323,11 +323,11 @@ define(["jquery",
             $widget.addClass('editmode');
             jsPlumb.repaint($widget);
         });
-        var $helplink = $('.helplink', $viewm).click(function () {
+        var $helplink = $('.helplink', $viewm).click(function (e) {
+            e.preventDefault();
             $widget.removeClass('viewmode');
             $widget.addClass('helpmode');
             jsPlumb.repaint($widget);
-            return false;
         });
         // dynamic parts of the UI
         $(cmd).on('update', function () {
@@ -366,7 +366,8 @@ define(["jquery",
         // updatecmd, which will invoke a handler to update the cmd object,
         // which will invoke $(cmd).trigger('update'), which will invoke the
         // handler that updates the view for viewmode (<div class=view>).
-        $('form', $editm).submit(function () {
+        $('form', $editm).submit(function (e) {
+            e.preventDefault();
             var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
             argv = removeFalse(argv);
             var o = $(this).serializeObject();
@@ -384,7 +385,6 @@ define(["jquery",
             o.userdata.autoarchive = this.autoarchive.checked;
             ctrl.send("updatecmd", JSON.stringify(o));
             switchModeToView($widget);
-            return false;
         });
         $(cmd).on('update', function () {
             $('[name=cmd]', $editm).val(this.argv[0]);
@@ -616,9 +616,9 @@ define(["jquery",
         var lis = $.map(groups, function (cmds, gid) {
             var names = $.map(cmds, attrgetter("name")).join(", ");
             var $li = $('<li id=group' + gid + '>' + gid + ': ' + names + '</li>');
-            var $btn = $('<button>').click(function () {
+            var $btn = $('<button>').click(function (e) {
+                e.preventDefault();
                 setGroupArchivalStatus(gid, !$li.hasClass('archived'));
-                return false;
             });
             return $li.append($btn);
         });
@@ -695,7 +695,10 @@ define(["jquery",
         $.each(cmds, function (_, cmd) { updatePipes(cmd); });
         initGroupsList();
         $('<a href>show/hide archived</a>')
-            .click(function () { $('#groups .archived').toggle(); return false; })
+            .click(function (e) {
+                e.preventDefault();
+                $('#groups .archived').toggle();
+            })
             .insertBefore('#groups ul');
         jsPlumb.importDefaults({
             ConnectionsDetachable: false,
