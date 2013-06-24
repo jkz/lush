@@ -18,10 +18,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+"use strict";
+
 
 // TERMINAL HANDLING
-
-"use strict";
 
 define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
     // Print text to this terminal. Ensures the text always ends in newline.

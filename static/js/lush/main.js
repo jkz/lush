@@ -98,7 +98,18 @@
 //
 // good luck.
 
-define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/utils"], function ($, Ctrl, terminal, path) {
+define(["jquery",
+        "lush/Ctrl",
+        "lush/terminal",
+        "lush/path",
+        "lush/help",
+        "jsPlumb",
+        "lush/utils"],
+       function ($,
+                 Ctrl,
+                 terminal,
+                 path,
+                 help) {
 
     // websocket connection for control events
     var ctrl;
@@ -290,16 +301,6 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
         ctrl.send('connect', JSON.stringify(options));
     };
 
-    var helpAction = function (cmd) {
-        switch (cmd.argv[0]) {
-        case 'tar':
-            return function (cmd) {
-                window.open('http://unixhelp.ed.ac.uk/CGI/man-cgi?tar', '_blank');
-            };
-        }
-        return null;
-    };
-
     var initViewMode = function (cmd, $widget) {
         var $viewm = $('.view', $widget);
         // static parts of the UI (depend on constant cmd property "nid")
@@ -331,7 +332,7 @@ define(["jquery", "lush/Ctrl", "lush/terminal", "lush/path", "jsPlumb", "lush/ut
                     // no help action? hide the link
                     $link.hide();
                 }
-            })($('.help', $viewm), helpAction(this));
+            })($('.help', $viewm), help(this));
             $('.argv', $viewm).text(this.argv.join(" "));
             if (this.status > 0) {
                 $('.editbtn', $viewm).remove();
