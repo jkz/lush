@@ -40,7 +40,7 @@ define(["jquery"], function ($) {
                 } else {
                     // should always be true
                     if (cmd.argv.length >= 2) {
-                        cmd.argv[1].replace(/x/g, '')
+                        cmd.argv[1] = cmd.argv[1].replace(/x/g, '')
                     } else {
                         console.log('weird: unchecked extract, but no 1st arg');
                         console.log(cmd);
