@@ -407,7 +407,7 @@ define(["jquery",
             $help.empty();
             var action = help(this);
             if (action) {
-                action(this, $help, curry(switchModeToView, $widget));
+                action(this, $help, curry(switchModeToView, $widget), ctrl);
             }
         });
     };

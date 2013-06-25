@@ -25,25 +25,27 @@
 
 define(["jquery"], function ($) {
     var actions = {
-        tar: function (cmd, $help, switchModeToView) {
+        tar: function (cmd, $help, switchModeToView, ctrl) {
+            var args = undefined;
             $help.append($('<a href="http://unixhelp.ed.ac.uk/CGI/man-cgi?tar" target=_blank>online man page</a>'));
             $help.append($('<br>'));
             $help.append('extract: ');
             var $changeflag = $('<input type=checkbox>').change(function () {
+                args = cmd.argv.slice(1);
                 if (this.checked) {
-                    if (cmd.argv.length < 2) {
-                        cmd.argv.push('x');
-                    } else if (cmd.argv[1].indexOf('x') == -1) {
+                    if (args.length == 0) {
+                        args = ['x'];
+                    } else if (args[0].indexOf('x') == -1) {
                         // order is important
-                        cmd.argv[1] = 'x' + cmd.argv[1];
+                        args[0] = 'x' + args[0];
                     }
                 } else {
-                    // should always be true
-                    if (cmd.argv.length >= 2) {
-                        cmd.argv[1] = cmd.argv[1].replace(/x/g, '')
-                    } else {
+                    // should always have an arg
+                    if (args.length == 0) {
                         console.log('weird: unchecked extract, but no 1st arg');
                         console.log(cmd);
+                    } else {
+                        args[0] = args[0].replace(/x/g, '')
                     }
                 }
             });
@@ -53,14 +55,18 @@ define(["jquery"], function ($) {
             $help.append($('<br>'))
             $help.append($('<a href="">back</a>').click(function (e) {
                 e.preventDefault();
-                $(cmd).trigger('update');
+                if (args !== undefined) {
+                    ctrl.send('updatecmd', JSON.stringify({
+                        nid: cmd.nid,
+                        args: args,
+                    }));
+                }
                 switchModeToView();
             }));
         },
-        git: function (cmd, $help, switchModeToView) {
+        git: function (cmd, $help, switchModeToView, ctrl) {
             $help.append($('<a href="https://www.kernel.org/pub/software/scm/git/docs/" target=_blank>online man page</a>'));
             $help.append($('<br>'))
-            $help.append('FOOO')
             $help.append($('<a href="">back</a>').click(function (e) {
                 e.preventDefault();
                 switchModeToView();
