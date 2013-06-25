@@ -25,6 +25,7 @@ package liblush
 
 import (
 	"io"
+	"os"
 	"time"
 )
 
@@ -93,6 +94,7 @@ type Cmd interface {
 	// Opaque data, untouched by the shell
 	UserData() interface{}
 	SetUserData(interface{})
+	Signal(os.Signal) error
 }
 
 type Session interface {

@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/hraban/lush/liblush"
@@ -246,6 +247,23 @@ func wseventConnect(s *server, optionsJSON string) error {
 	return json.NewEncoder(w).Encode(updateinfo)
 }
 
+// kill a running command
+// eg stop;3
+func wseventStop(s *server, idstr string) error {
+	id, _ := liblush.ParseCmdId(idstr)
+	c := s.session.GetCommand(id)
+	if c == nil {
+		return errors.New("no such command: " + idstr)
+	}
+	err := c.Signal(StopSignal)
+	if err != nil {
+		// TODO: what to do with this error?
+		log.Println("Error sending signal:", err)
+	}
+	// status update will be sent to subscribed clients automatically
+	return nil
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
@@ -257,6 +275,7 @@ var wsHandlers = map[string]wsHandler{
 	"setuserdata": wseventSetuserdata,
 	"getuserdata": wseventGetuserdata,
 	"connect":     wseventConnect,
+	"stop":        wseventStop,
 }
 
 func parseAndHandleWsEvent(s *server, msg []byte) error {

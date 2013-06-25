@@ -119,18 +119,27 @@ define(["jquery",
     // sometimes i just dont know who i am anymore...
     var moi = guid();
 
-    // build jquery node containing [start] button that starts cmd in background
+    // build jquery node containing [▶] button that starts cmd in background
     var makeStartButton = function (sysId) {
-        return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>start</button></form>')
+        return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>▶</button></form>')
             .submit(function (e) {
                 e.preventDefault();
+                $(e.target).html('⌚');
+                $(e.target).prop('disabled', true);
                 $.post(this.action + "?noredirect", $(this).serialize())
                     // substitute the entire form by a glyph indicating status
-                    .done(function () {
-                        $(e.target).html('⌚');
-                    }).fail(function () {
+                    .fail(function () {
                         $(e.target).html('✗');
                     });
+            });
+    };
+
+    // build jquery node containing [◼] button that stops the cmd in background
+    var makeStopButton = function (sysId) {
+        return $('<button>◼</button>').click(function (e) {
+                $(e.target).html('⌚');
+                $(e.target).prop('disabled', true);
+                ctrl.send('stop', sysId);
             });
     };
 
@@ -142,7 +151,7 @@ define(["jquery",
             content = makeStartButton(sysId);
             break;
         case 1:
-            content = '⌚';
+            content = makeStopButton(sysId);
             break;
         case 2:
             content = '✓';

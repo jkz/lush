@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -198,6 +199,10 @@ func (c *cmd) UserData() interface{} {
 
 func (c *cmd) SetUserData(data interface{}) {
 	c.user = data
+}
+
+func (c *cmd) Signal(sig os.Signal) error {
+	return c.execCmd.Process.Signal(sig)
 }
 
 type devnull int
