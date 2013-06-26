@@ -178,7 +178,7 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 // store opaque data in a session-local key/value store on server.
 //
 // eg setuserdata;somewindow.pos;{x: 234, y: 222}
-// reply: userdata.somewindow.pos;{x: 234, y: 222}
+// reply: userdata_somewindow.pos;{x: 234, y: 222}
 //
 // yes the name of the event caused by a setuserdata is not just "userdata" but
 // it includes the key of the data set. this is weird, you may even consider
@@ -187,7 +187,7 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 // layered on top of it for custom events.
 //
 // why not make it part of the client -> server event name as well then, as in
-// setuserdata.somewindow.pos, you ask? excellent question! because the server
+// setuserdata_somewindow.pos, you ask? excellent question! because the server
 // actually doesnt want to treat these events differently. the client does.
 // thats why client -> server events are unified, and server -> client events
 // are not.
@@ -208,8 +208,7 @@ func wseventSetuserdata(s *server, argsjoined string) error {
 }
 
 func wseventGetuserdata(s *server, key string) error {
-	msg := []byte("userdata." + key + ";" + s.userdata[key])
-	_, err := s.ctrlclients.Write(msg)
+	_, err := fmt.Fprintf(&s.ctrlclients, "userdata_%s;%s", key, s.userdata[key])
 	return err
 }
 

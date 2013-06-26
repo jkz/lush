@@ -180,7 +180,7 @@ define(["jquery",
     // userdata.position.myhtmlid;{"left": 123, "top": 58008}
     var storePosition = function (node) {
         var posjson = JSON.stringify($(node).offset());
-        ctrl.send("setuserdata", 'position.' + node.id, posjson);
+        ctrl.send("setuserdata", 'position_' + node.id, posjson);
     };
 
     // when the server says this node was moved, actually move the node in the
@@ -189,7 +189,7 @@ define(["jquery",
     // if a second argument is supplied it is called every time the position
     // changes.
     var syncPosition = function (node, extraCallback) {
-        $(ctrl).on('userdata.position.' + node.id, function (e, offsetJSON) {
+        $(ctrl).on('userdata_position.' + node.id, function (e, offsetJSON) {
             var offset = safeJSONparse(offsetJSON);
             if (offset) {
                 $(node).offset(offset);
@@ -198,7 +198,7 @@ define(["jquery",
                 }
             }
         });
-        ctrl.send('getuserdata', 'position.' + node.id);
+        ctrl.send('getuserdata', 'position_' + node.id);
     };
 
     // Stream peeker is like a small dumb terminal window showing a stream's most
@@ -605,7 +605,7 @@ define(["jquery",
             throw "archivals uninitialized";
         }
         archivals[sysid] = state;
-        ctrl.send('setuserdata', 'groups.archived', JSON.stringify(archivals));
+        ctrl.send('setuserdata', 'groups_archived', JSON.stringify(archivals));
     };
 
     // map(sysid => cmdobj) to map(groupid => [cmdobj])
@@ -629,7 +629,7 @@ define(["jquery",
     };
 
     var initGroupsList = function () {
-        $(ctrl).on('userdata.groups.archived', function (_, archivalsjson) {
+        $(ctrl).on('userdata_groups_archived', function (_, archivalsjson) {
             // eg {1: true, 2: false, 3: false};
             var archivals = safeJSONparse(archivalsjson) || {};
             // update local archivals status with that from server
@@ -644,7 +644,7 @@ define(["jquery",
         });
         rebuildGroupsList();
         // initialize the UI with current archival status (if any)
-        ctrl.send('getuserdata', 'groups.archived')
+        ctrl.send('getuserdata', 'groups_archived')
     }
 
     var chdir = function (dir) {
