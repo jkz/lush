@@ -125,6 +125,8 @@ define(["jquery",
             $(e.target).html('⌚');
             $(e.target).prop('disabled', true);
             ctrl.send('start', sysId);
+            // stop bubbling: prevent terminal from losing focus
+            return false;
         });
     };
 
@@ -741,7 +743,6 @@ define(["jquery",
                 var $widget = $('#' + cmd.htmlid);
                 if (cmd.userdata.autostart) {
                     // auto start by simulating click on [▶]
-                    // TODO: (I think) this is the cause for prompt losing focus
                     $('button.start', $widget).click();
                 } else {
                     // If not autostarting, go directly into edit mode
