@@ -6,14 +6,19 @@
 <link rel="shortcut icon" href="/gnome-terminal.png">
 <link rel=stylesheet href=/css/smoothness/jquery-ui-1.10.2.min.css>
 <link rel=stylesheet href=http://code.jquery.com/qunit/qunit-1.11.0.css>
+<script src="http://code.jquery.com/qunit/qunit-1.11.0.js"></script>
+
+<script src="/js/ext/require.js"></script>
+<script src="/js/lush.js"></script>
 
 </head>
 <body>
 <div id="qunit"></div>
-  <div id="qunit-fixture"></div>
-  <script src=http://code.jquery.com/qunit/qunit-1.11.0.js></script>
-<script src="/js/ext/jquery-1.9.1.min.js"></script>
-<script src="/js/base.js"></script>
-<script src="/js/tests.js"></script>
+<div id="qunit-fixture"></div>
+
+<script>
+QUnit.config.autostart = false;
+require(["lush/tests"], QUnit.start);
+</script>
 </body>
 </html>

@@ -20,19 +20,21 @@
 
 "use strict";
 
-test("lcp(): longest common prefix", function () {
-    equal(lcp(["abcd", "abab", "abba"]), "ab");
-    equal(lcp([]), "", "common prefix of 0 strings");
-    equal(lcp(["foo", "bar"]), "");
-    equal(lcp(["", "foo"]), "");
-    equal(lcp(["burt", "burt"]), "burt");
-});
+define(["lush/utils"], function () {
+    test("lcp(): longest common prefix", function () {
+        equal(lcp(["abcd", "abab", "abba"]), "ab");
+        equal(lcp([]), "", "common prefix of 0 strings");
+        equal(lcp(["foo", "bar"]), "");
+        equal(lcp(["", "foo"]), "");
+        equal(lcp(["burt", "burt"]), "burt");
+    });
 
-test("splitn(): split string with limit", function () {
-    deepEqual("a,b,c,d".splitn(",", 3), ['a', 'b', 'c,d']);
-    deepEqual("a,b,c,d".splitn(",", 9), ['a', 'b', 'c', 'd']);
-    deepEqual("a,b,c,d".splitn(",", 1), ['a,b,c,d']);
-    deepEqual("foo".splitn("", 2), ['f', 'oo']);
-    deepEqual("".splitn(",", 1), [""]);
-    deepEqual("".splitn("", 1), []);
+    test("splitn(): split string with limit", function () {
+        deepEqual("a,b,c,d".splitn(",", 3), ['a', 'b', 'c,d']);
+        deepEqual("a,b,c,d".splitn(",", 9), ['a', 'b', 'c', 'd']);
+        deepEqual("a,b,c,d".splitn(",", 1), ['a,b,c,d']);
+        deepEqual("foo".splitn("", 2), ['f', 'oo']);
+        deepEqual("".splitn(",", 1), [""]);
+        deepEqual("".splitn("", 1), []);
+    });
 });
