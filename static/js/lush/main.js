@@ -121,26 +121,20 @@ define(["jquery",
 
     // build jquery node containing [▶] button that starts cmd in background
     var makeStartButton = function (sysId) {
-        return $('<form method=post action="/' + sysId + '/start" class="start-cmd"><button>▶</button></form>')
-            .submit(function (e) {
-                e.preventDefault();
-                $(e.target).html('⌚');
-                $(e.target).prop('disabled', true);
-                $.post(this.action + "?noredirect", $(this).serialize())
-                    // substitute the entire form by a glyph indicating status
-                    .fail(function () {
-                        $(e.target).html('✗');
-                    });
-            });
+        return $('<button class=start>▶</button>').click(function (e) {
+            $(e.target).html('⌚');
+            $(e.target).prop('disabled', true);
+            ctrl.send('start', sysId);
+        });
     };
 
     // build jquery node containing [◼] button that stops the cmd in background
     var makeStopButton = function (sysId) {
-        return $('<button>◼</button>').click(function (e) {
-                $(e.target).html('⌚');
-                $(e.target).prop('disabled', true);
-                ctrl.send('stop', sysId);
-            });
+        return $('<button class=stop>◼</button>').click(function (e) {
+            $(e.target).html('⌚');
+            $(e.target).prop('disabled', true);
+            ctrl.send('stop', sysId);
+        });
     };
 
     // set the status info for this command in the given jquery node's content
@@ -740,8 +734,8 @@ define(["jquery",
                 ctrl.handleStream(cmd.nid, "stderr", curry(termPrintlnCmd, term, cmd.nid));
                 var $widget = $('#' + cmd.htmlid);
                 if (cmd.userdata.autostart) {
-                    // auto start by simulating keypress on [start]
-                    $('form.start-cmd', $widget).submit();
+                    // auto start by simulating click on [▶]
+                    $('button.start', $widget).prop('Focusable', false).click();
                 } else {
                     // If not autostarting, go directly into edit mode
                     $('.editbtn', $widget).click();

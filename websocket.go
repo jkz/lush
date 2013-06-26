@@ -247,6 +247,22 @@ func wseventConnect(s *server, optionsJSON string) error {
 	return json.NewEncoder(w).Encode(updateinfo)
 }
 
+// start a command
+// eg start;3
+func wseventStart(s *server, idstr string) error {
+	id, _ := liblush.ParseCmdId(idstr)
+	c := s.session.GetCommand(id)
+	if c == nil {
+		return errors.New("no such command: " + idstr)
+	}
+	err := c.Start()
+	if err != nil {
+		return fmt.Errorf("Couldn't start command: %v", err)
+	}
+	// status update will be sent to subscribed clients automatically
+	return nil
+}
+
 // kill a running command
 // eg stop;3
 func wseventStop(s *server, idstr string) error {
@@ -275,6 +291,7 @@ var wsHandlers = map[string]wsHandler{
 	"setuserdata": wseventSetuserdata,
 	"getuserdata": wseventGetuserdata,
 	"connect":     wseventConnect,
+	"start":       wseventStart,
 	"stop":        wseventStop,
 }
 

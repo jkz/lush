@@ -144,21 +144,6 @@ func handleGetCmdInfo(ctx *web.Context, idstr string) error {
 	return enc.Encode(info)
 }
 
-func handlePostStart(ctx *web.Context, idstr string) error {
-	id, _ := liblush.ParseCmdId(idstr)
-	s := ctx.User.(*server)
-	c := s.session.GetCommand(id)
-	if c == nil {
-		return web.WebError{404, "no such command: " + idstr}
-	}
-	err := c.Start()
-	if err != nil {
-		return err
-	}
-	redirect(ctx, cmdloc(c))
-	return nil
-}
-
 func handlePostSend(ctx *web.Context, idstr string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
@@ -328,7 +313,6 @@ func init() {
 		s.web.Get(`/`, handleGetRoot)
 		s.web.Get(`/(\d+)/`, handleGetCmd)
 		s.web.Get(`/(\d+)/info.json`, handleGetCmdInfo)
-		s.web.Post(`/(\d+)/start`, handlePostStart)
 		s.web.Post(`/(\d+)/send`, handlePostSend)
 		s.web.Post(`/(\d+)/close`, handlePostClose)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
