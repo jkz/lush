@@ -730,12 +730,19 @@ define(["jquery",
             if (cmd.userdata.god == moi) {
                 // i made this!
                 // capture all stdout and stderr to terminal
-                ctrl.handleStream(cmd.nid, "stdout", curry(termPrintlnCmd, term, cmd.nid));
-                ctrl.handleStream(cmd.nid, "stderr", curry(termPrintlnCmd, term, cmd.nid));
+                var printer = function (_, data) {
+                    termPrintlnCmd(term, cmd.nid, data);
+                };
+                $(cmd).on('stdout.stream', printer);
+                $(cmd).on('stderr.stream', printer);
+                // subscribe to stream data
+                ctrl.send('subscribe', cmd.nid, 'stdout');
+                ctrl.send('subscribe', cmd.nid, 'stderr');
                 var $widget = $('#' + cmd.htmlid);
                 if (cmd.userdata.autostart) {
                     // auto start by simulating click on [▶]
-                    $('button.start', $widget).prop('Focusable', false).click();
+                    // TODO: (I think) this is the cause for prompt losing focus
+                    $('button.start', $widget).click();
                 } else {
                     // If not autostarting, go directly into edit mode
                     $('.editbtn', $widget).click();
@@ -754,6 +761,18 @@ define(["jquery",
         if (window.location.hash) {
             processHash(window.location.hash.slice(1));
         }
+        // proxy the stream event to the command object
+        // comes in as: stream;1;stdout;foo bar
+        // the normal event handling causes the 'stream' event to trigger
+        // that's this one. it transforms the event into a new one:
+        // "stdout.stream" with event data "foo bar" on the cmd object
+        $(ctrl).on('stream', function (_, rawopts) {
+            var opts = rawopts.splitn(';', 3);
+            var sysid = opts[0];
+            var stream = opts[1];
+            var data = opts[2];
+            $(cmds[sysid]).trigger(stream + '.stream', data);
+        });
     });
 
 });
