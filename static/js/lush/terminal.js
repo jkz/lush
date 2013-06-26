@@ -23,7 +23,7 @@
 
 // TERMINAL HANDLING
 
-define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
+define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], function ($, Parser) {
     // Print text to this terminal. Ensures the text always ends in newline.
     $.fn.termPrintln = function (text, finalize) {
         // term.echo will always append newline so strip one off if exists
@@ -43,130 +43,6 @@ define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
             pos: pos,
             msg: msg,
         };
-    };
-
-    // First level of prompt parsing: strip quotes.
-    // Returns parsed argument vector as array on success, error object on failure
-    var parsePromptLvl1 = function (text) {
-        // array of word objects: {text: string, pos: int}
-        var argv = [];
-        // Quote flag state in parsing
-        var QUOTE_NONE = 0;
-        var QUOTE_SINGLE = 1;
-        var QUOTE_DOUBLE = 2;
-        var quote = {
-            type: QUOTE_NONE,
-            // Index of opening quote
-            start: null,
-        }
-        var i = 0;
-        // Incrementally increased until boundary then pushed on argv
-        // not runtime efficient but can easily be improved later by using indices
-        var word = null; // null = no word
-        // Push the current word on the argument list
-        var pushword = function () {
-            if (word !== null) {
-                argv.push(word);
-            }
-            word = null;
-        }
-        // Also a word if left empty (e.g. "")
-        var ensureword = function () {
-            word = word || {text: "", pos: i};
-        }
-        var pushchar = function (c) {
-            if (c === undefined) {
-                c = text[i];
-            }
-            ensureword();
-            word.text += c;
-        }
-        for (i = 0; i < text.length; i++) {
-            var c = text[i];
-            switch (c) {
-            case "'":
-                switch (quote.type) {
-                case QUOTE_NONE:
-                    // Start new single quoted block
-                    quote.type = QUOTE_SINGLE;
-                    quote.start = i;
-                    ensureword();
-                    break;
-                case QUOTE_SINGLE:
-                    // End single quoted block
-                    quote.type = QUOTE_NONE;
-                    break;
-                case QUOTE_DOUBLE:
-                    // Single quote in double quoted block: normal char
-                    pushchar();
-                    break;
-                }
-                break;
-            case '"':
-                switch (quote.type) {
-                case QUOTE_NONE:
-                    // Start new double quoted block
-                    quote.type = QUOTE_DOUBLE;
-                    quote.start = i;
-                    ensureword();
-                    break;
-                case QUOTE_SINGLE:
-                    // Double quotes in single quoted block: normal char
-                    pushchar();
-                    break;
-                case QUOTE_DOUBLE:
-                    // End double quoted block
-                    quote.type = QUOTE_NONE;
-                    break;
-                }
-                break;
-            case '\\':
-                if (i >= text.length - 1) {
-                    return parseerror("backslash at end of input", i);
-                }
-                // Yes, copy the backslash (this is lvl 1)
-                pushchar();
-                i++;
-                pushchar();
-                break;
-            case ' ':
-                if (quote.type) {
-                    // Quoted escape
-                    pushchar('\\');
-                    pushchar();
-                } else {
-                    // treat multiple consecutive spaces as one
-                    while (i < text.length - 1 && text[i+1] == ' ') {
-                        i++;
-                    }
-                    // Word boundary
-                    pushword();
-                }
-                break;
-            // Special characters outside quoting
-            case '*':
-            case '?':
-                if (quote.type) {
-                    pushchar('\\');
-                }
-                // fallthrough
-            default:
-                pushchar();
-                break;
-            }
-        }
-        pushword();
-        if (quote.type != QUOTE_NONE) {
-            var qname = (quote.type == QUOTE_DOUBLE ? "double" : "single");
-            return parseerror("unbalanced " + qname + " quotes", quote.start);
-        }
-        return argv;
-    };
-
-    // Contains an unescaped ? or *
-    var hasGlobChar = function (str) {
-        // equivalent: (?<=\\)[?*]
-        return /^(?:(?!\\[?*]).)*[?*]/.test(str)
     };
 
     var startsWithDot = function (str) {
@@ -193,40 +69,9 @@ define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
         return files;
     };
 
-    // Parse array of level 1 blocks: file globbing
-    var parsePromptLvl2 = function (lvl1argv) {
-        if (!$.isArray(lvl1argv)) {
-            return lvl1argv;
-        }
-        var argv = [];
-        for (var i = 0; i < lvl1argv.length; i++) {
-            var arg = lvl1argv[i];
-            if (hasGlobChar(arg.text)) {
-                var files = glob(arg.text);
-                if (files.length == 0) {
-                    return parseerror("No match for pattern " + arg.text, arg.pos);
-                }
-                argv = argv.concat($.map(files, function (fname) {
-                    return {
-                        pos: arg.pos,
-                        text: promptEscape(fname),
-                    };
-                }));
-            } else {
-                argv.push(arg);
-            }
-        }
-        return argv;
-    };
-
-    var parsePrompt = function (text) {
-        var argv = parsePromptLvl2(parsePromptLvl1(text));
-        return argv;
-    };
-
     // process a line entered at the command prompt
-    var handlePrompt = function (processCmd, text, term) {
-        var argv = parsePrompt(text);
+    var handlePrompt = function (parser, processCmd, text, term) {
+        var argv = parser(text);
         if (!$.isArray(argv)) {
             term.error("Parse error: " + argv.msg);
             term.error("");
@@ -234,7 +79,7 @@ define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
             term.error(" ".repeat(argv.pos) + "^");
             return;
         }
-        argv = $.map($.map(argv, attrgetter("text")), promptUnescape);
+        argv = $.map($.map(argv, attrgetter("text")), parser.unescape);
         if (argv.length == 0) {
             return;
         }
@@ -251,15 +96,6 @@ define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
         processCmd(options);
     };
 
-    // Escape a string such that parsing it will return the original string
-    var promptEscape = function (str) {
-        return str.replace(/([\\?* "'])/g, "\\$1");
-    };
-
-    var promptUnescape = function (str) {
-        return str.replace(/\\(.)/g, "$1");
-    };
-
     // send what is currently on the prompt to the terminal output
     var echoInput = function (term) {
         return term.termPrintln(term.get_prompt() + term.get_command());
@@ -268,8 +104,8 @@ define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
     // Called with array of filenames to populate a partially completed command
     // line word as a file. The "partial" argument is the snippet the user is
     // trying to tab complete
-    var tabcompleteCallback = function (term, partial, files) {
-        files = $.map(files, promptEscape);
+    var tabcompleteCallback = function (term, parser, partial, files) {
+        files = $.map(files, parser.escape);
         if (files.length == 0) {
             return;
         }
@@ -298,9 +134,10 @@ define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
 
     // create a new terminal window and append to HTML body
     return function (processCmd) {
+        var parser = new Parser();
         var $wrap = $(terminalHTML()).appendTo($('body'));
         $wrap.resizable().draggable({handle: $('.termdraghandle', $wrap)})
-        return $('.terminal', $wrap).terminal(curry(handlePrompt, processCmd), {
+        return $('.terminal', $wrap).terminal(curry(handlePrompt, parser, processCmd), {
             greetings: 'Welcome to Luyat shell',
             name: 'lush',
             prompt: '$ ',
@@ -317,9 +154,9 @@ define(["jquery", "lush/utils", "jquery.terminal", "jquery.ui"], function ($) {
                     return;
                 }
                 var partial = argv.pop().text;
-                var pattern = promptUnescape(partial) + "*";
+                var pattern = parser.unescape(partial) + "*";
                 // home grown callback function
-                var callback = curry(tabcompleteCallback, term, partial);
+                var callback = curry(tabcompleteCallback, term, parser, partial);
                 $.get('/files.json', {pattern: pattern}, callback);
             },
         });
