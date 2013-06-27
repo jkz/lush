@@ -31,7 +31,7 @@ define(function () {
 
     // First level of prompt parsing: strip quotes.
     // Returns parsed argument vector as array on success, error object on failure
-    Parser.prototype._parseLvl1 = function (text) {
+    var parseLvl1 = function (text) {
         // array of word objects: {text: string, pos: int}
         var argv = [];
         // Quote flag state in parsing
@@ -168,6 +168,13 @@ define(function () {
             return lvl1argv;
         }
         var argv = [];
+        // please god i just wanna go to bed i really don't give a crap ill
+        // wrap this thing a thousand times if i have to just pass the friggin
+        // test ok
+        var thisfuckingthing = this;
+        var escape = function (x) {
+            return thisfuckingthing.escape(x);
+        };
         for (var i = 0; i < lvl1argv.length; i++) {
             var arg = lvl1argv[i];
             if (hasGlobChar(arg.text)) {
@@ -178,7 +185,7 @@ define(function () {
                 argv = argv.concat($.map(files, function (fname) {
                     return {
                         pos: arg.pos,
-                        text: this.escape(fname),
+                        text: escape(fname),
                     };
                 }));
             } else {

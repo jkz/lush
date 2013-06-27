@@ -71,7 +71,7 @@ define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], 
 
     // process a line entered at the command prompt
     var handlePrompt = function (parser, processCmd, text, term) {
-        var argv = parser(text);
+        var argv = parser.parse(text);
         if (!$.isArray(argv)) {
             term.error("Parse error: " + argv.msg);
             term.error("");
@@ -79,7 +79,10 @@ define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], 
             term.error(" ".repeat(argv.pos) + "^");
             return;
         }
-        argv = $.map($.map(argv, attrgetter("text")), parser.unescape);
+        var unescape = function (x) {
+            return parser.unescape(x);
+        };
+        argv = $.map($.map(argv, attrgetter("text")), unescape);
         if (argv.length == 0) {
             return;
         }
@@ -134,7 +137,7 @@ define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], 
 
     // create a new terminal window and append to HTML body
     return function (processCmd) {
-        var parser = new Parser();
+        var parser = new Parser(glob);
         var $wrap = $(terminalHTML()).appendTo($('body'));
         $wrap.resizable().draggable({handle: $('.termdraghandle', $wrap)})
         return $('.terminal', $wrap).terminal(curry(handlePrompt, parser, processCmd), {
@@ -144,7 +147,7 @@ define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], 
             tabcompletion: true,
             // completion for files only
             completion: function (term) {
-                var argv = parsePrompt(term.get_command());
+                var argv = parser.parse(term.get_command());
                 if (!$.isArray(argv)) {
                     // parse error
                     return;
