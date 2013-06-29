@@ -20,7 +20,7 @@
 
 "use strict";
 
-define(["lush/utils"], function () {
+define(["lush/parser", "lush/utils"], function (Parser) {
     test("lcp(): longest common prefix", function () {
         equal(lcp(["abcd", "abab", "abba"]), "ab");
         equal(lcp([]), "", "common prefix of 0 strings");
@@ -36,5 +36,24 @@ define(["lush/utils"], function () {
         deepEqual("foo".splitn("", 2), ['f', 'oo']);
         deepEqual("".splitn(",", 1), [""]);
         deepEqual("".splitn("", 1), []);
+    });
+    
+    test("parser", function() {
+        var glob = function () { return []; };
+        var parser = new Parser(glob);
+        var res, argv;
+        // simple
+        res = parser.parse("foo bar baz");
+        argv = res.map(attrgetter("text"));
+        deepEqual(argv, ['foo', 'bar', 'baz'], 'simple parsing');
+        // single quotes
+        res = parser.parse("foo 'bar baz'");
+        argv = res.map(attrgetter("text"));
+        deepEqual(argv, ['foo', 'bar baz'], 'single quotes');
+        // double quotes
+        res = parser.parse('foo "bar baz"');
+        argv = res.map(attrgetter("text"));
+        deepEqual(argv, ['foo', 'bar baz'], 'double quotes');
+
     });
 });
