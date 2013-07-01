@@ -312,7 +312,7 @@ define(["jquery",
         jsPlumb.repaint($widget);
     };
 
-    var initViewMode = function (cmd, $widget) {
+    var initViewTab = function (cmd, $widget) {
         var $viewm = $('.tab_view', $widget);
         // static parts of the UI (depend on constant cmd property "nid")
         $('.link', $viewm).attr('href', '/' + cmd.nid + '/');
@@ -351,7 +351,7 @@ define(["jquery",
         });
     };
 
-    var initEditMode = function (cmd, $widget) {
+    var initEditTab = function (cmd, $widget) {
         var $editm = $('.tab_edit', $widget);
         $('[name=nid]', $editm).val(cmd.nid);
         $('[name=cmd]', $editm).autocomplete({source: "/new/names.json"});
@@ -405,7 +405,7 @@ define(["jquery",
     };
 
     // initialize a widget's help view
-    var initHelpMode = function (cmd, $widget) {
+    var initHelpTab = function (cmd, $widget) {
         var $help = $('.tab_help', $widget);
         $(cmd).on('update', function () {
             // clean out help div
@@ -419,10 +419,9 @@ define(["jquery",
 
     // Init the command view (the V in MVC) given the model (the cmd).
     var initView = function (cmd, $widget) {
-        // Command widget has two faces: edit and view mode
-        initViewMode(cmd, $widget);
-        initEditMode(cmd, $widget);
-        initHelpMode(cmd, $widget);
+        initViewTab(cmd, $widget);
+        initEditTab(cmd, $widget);
+        initHelpTab(cmd, $widget);
         // initialize view
         $(cmd).trigger('update');
     };

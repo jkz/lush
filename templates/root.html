@@ -46,7 +46,7 @@
 <div id=cmdwidget_template class='cmdwidget'>
 
   <!-- View mode -->
-  <div class=tab_view>
+  <div class="tab-pane tab_view" data-tabname=view>
     <a class=link><span class=linktext></span><tt class=argv></tt></a>
     <span class=status></span>
     <button class=editbtn>edit</button>
@@ -56,7 +56,7 @@
   </div>
 
   <!-- edit mode -->
-  <div class=tab_edit>
+  <div class="tab-pane tab_edit" data-tabname=edit>
     <form>
       <input type=hidden name=nid>
      name <input name=cmd><br>
@@ -75,7 +75,7 @@
     </form>
   </div>
 
-  <div class=tab_help>
+  <div class="tab-pane tab_help" data-tabname=help>
   </div>
 
 </div>
