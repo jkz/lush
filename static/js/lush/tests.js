@@ -51,7 +51,7 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         };
         var parser = new Parser(oninit);
         // a wild character appeared! add it to the current word
-        parser.onliteral: function (c) {
+        parser.onliteral = function (c) {
             ctx.newarg += c;
         };
         // like onliteral but interpret globbing characters specially
