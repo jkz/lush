@@ -305,11 +305,9 @@ define(["jquery",
         ctrl.send('connect', JSON.stringify(options));
     };
 
-    var switchModeToView = function ($widget) {
-        $widget.removeClass('editmode');
-        $widget.removeClass('helpmode');
-        $widget.addClass('viewmode');
-        jsPlumb.repaint($widget);
+    var switchToViewTab = function ($widget) {
+        // view is always first. hack? who cares.
+        $widget.tabs('option', 'active', 0);
     };
 
     var initViewTab = function (cmd, $widget) {
@@ -323,30 +321,12 @@ define(["jquery",
             term.set_command(cmd.argv.join(' ')).focus();
         });
         $('.bookmark', $viewm).attr('href', '#prompt;' + cmd.argv.join(' '));
-        $('.editbtn', $viewm).click(function () {
-            $widget.removeClass('viewmode');
-            $widget.addClass('editmode');
-            jsPlumb.repaint($widget);
-        });
-        var $helplink = $('.helplink', $viewm).click(function (e) {
-            e.preventDefault();
-            $widget.removeClass('viewmode');
-            $widget.addClass('helpmode');
-            jsPlumb.repaint($widget);
-        });
         // dynamic parts of the UI
         $(cmd).on('update', function () {
             setStatNode(this.nid, this.status, $('.status', $viewm));
-            var action = help(this);
-            if (action) {
-                $helplink.show();
-            } else {
-                // no help action? hide the link
-                $helplink.hide();
-            }
             $('.argv', $viewm).text(this.argv.join(" "));
             if (this.status > 0) {
-                $('.editbtn', $viewm).remove();
+                // todo: disable edit tab?
             }
         });
     };
@@ -358,7 +338,7 @@ define(["jquery",
         $('.cancelbtn', $editm).click(function () {
             // restore form contents from model
             $(cmd).trigger('update');
-            switchModeToView($widget);
+            switchToViewTab($widget);
         });
         var lastarg = 1;
         var addarg = function () {
@@ -370,7 +350,7 @@ define(["jquery",
         // send "updatecmd" message over ctrl stream.  server will reply with
         // updatecmd, which will invoke a handler to update the cmd object,
         // which will invoke $(cmd).trigger('update'), which will invoke the
-        // handler that updates the view for viewmode (<div class=view>).
+        // handler that updates the view for viewmode (<div class=tab_view>).
         $('form', $editm).submit(function (e) {
             e.preventDefault();
             var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
@@ -389,7 +369,7 @@ define(["jquery",
             o.userdata.autostart = this.autostart.checked;
             o.userdata.autoarchive = this.autoarchive.checked;
             ctrl.send("updatecmd", JSON.stringify(o));
-            switchModeToView($widget);
+            switchToViewTab($widget);
         });
         $(cmd).on('update', function () {
             $('[name=cmd]', $editm).val(this.argv[0]);
@@ -412,8 +392,34 @@ define(["jquery",
             $help.empty();
             var action = help(this);
             if (action) {
-                action(this, $help, curry(switchModeToView, $widget), ctrl);
+                action(this, $help, curry(switchToViewTab, $widget), ctrl);
+            } else {
+                // todo: hide help tab?
             }
+        });
+    };
+
+    var initTabsNav = function (cmd, $widget) {
+        var navlinks = $widget.find('.tab-pane').map(function () {
+            var tabname = $(this).data('tabname');
+            // give every tab an ID
+            this.id = cmd.htmlid + '_tab_' + tabname;
+            var $a = $('<a>')
+                .text(tabname)
+                .prop('href', '#' + this.id)
+                .click(function (e) {
+                    e.preventDefault();
+                    // play nice, don't close
+                    // no idea if this actually matters but i like the idea
+                    $(this).closest('.cmdwidget').data('activetab', $(this).text());
+                });
+            return $('<li>').append($a)[0];
+        });
+        $widget.find('.tabsnav').append(navlinks);
+        $widget.tabs({
+            activate: function (e, ui) {
+                jsPlumb.repaint($(e.target));
+            },
         });
     };
 
@@ -422,6 +428,7 @@ define(["jquery",
         initViewTab(cmd, $widget);
         initEditTab(cmd, $widget);
         initHelpTab(cmd, $widget);
+        initTabsNav(cmd, $widget);
         // initialize view
         $(cmd).trigger('update');
     };
@@ -461,7 +468,7 @@ define(["jquery",
         var $widget = $('#cmdwidget_template')
             .clone()
             .attr("id", cmd.htmlid)
-            .addClass("viewmode");
+            .data('activetab', "view");
         initView(cmd, $widget);
         $('#cmds').append($widget);
         syncPosition($widget[0], function () {
@@ -745,7 +752,7 @@ define(["jquery",
                     $('button.start', $widget).click();
                 } else {
                     // If not autostarting, go directly into edit mode
-                    $('.editbtn', $widget).click();
+                    $widget.tabs('option', 'active', 1);
                 }
             }
         });

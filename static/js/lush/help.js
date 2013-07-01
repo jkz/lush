@@ -53,7 +53,7 @@ define(["jquery"], function ($) {
             $help.append($changeflag);
             // not extremely pretty but also extremely wip
             $help.append($('<br>'))
-            $help.append($('<a href="">back</a>').click(function (e) {
+            $help.append($('<button>save</button>').click(function (e) {
                 e.preventDefault();
                 if (args !== undefined) {
                     ctrl.send('updatecmd', JSON.stringify({

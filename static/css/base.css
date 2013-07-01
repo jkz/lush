@@ -35,19 +35,6 @@ div.cmdwidget {
     padding: 0.5em;
 }
 
-/* hide all tabs */
-.cmdwidget .tab-pane {
-    display: none;
-}
-
-/* except the active ones */
-.viewmode .tab_view,
-.editmode .tab_edit,
-.helpmode .tab_help
-{
-    display: block;
-}
-
 div.streampeeker {
     position: absolute;
     background-color: white;
