@@ -40,18 +40,37 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     
     // these tests are part of a wip to define the api of the parser (they are
     // supposed to fail)
-    test("parser", function() {
-        // simple parser callback: store all words in argv
-        var argv;
+    test("parser: argv", function() {
+        // simple parser callback
+        var ctx = {
+            newarg: '',
+            argv: [],
+        };
         var callback = {
-            init: function () { argv = []; },
-            rawStr: function (str) { argv.push(str); },
-            globStr: function (str) { argv.push(str); },
+            // prepare for parsing job
+            oninit: function () {
+                ctx.argv = [];
+                ctx.newarg = '';
+            },
+            // a wild character appeared! add it to the current word
+            onliteral: function (c) {
+                ctx.newarg += c;
+            },
+            // like onliteral but interpret globbing characters specially
+            onglob: function (g) {
+                // for testing the parser we actually don't treat globs
+                ctx.newarg += g;
+            },
+            // all literals found up to here: you are considered a word
+            onboundary: function () {
+                if (!ctx.started) { throw "context not initialized"; }
+                ctx.argv.push(ctx.newarg);
+            },
         };
         var parser = new Parser(callback);
         var t = function (raw, out, name) {
             parser.parse(raw);
-            deepEqual(argv, out, name);
+            deepEqual(ctx.argv, out, name);
         };
         t("foo bar baz", ['foo', 'bar', 'baz'], 'simple parsing');
         t("foo 'bar baz'", ['foo', 'bar baz'], 'single quotes');
@@ -64,6 +83,48 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         t('foo \\" bar', ['foo', '"', 'bar'], 'escaped double quotes');
         t("foo \\' bar", ['foo', "'", 'bar'], 'escaped single quote');
         t("foo \\\\ bar", ['foo', "\\", 'bar'], 'escaped backslash');
+    });
+    
+    // these tests are part of a wip to define the api of the parser (they are
+    // supposed to fail)
+    test("parser: globbing", function() {
+        // parser callback geared towards testing globbing
+        var ctx = {
+            newarg: '',
+            argv: [],
+        };
+        // simple callback: replace literal globbing chars by an underscore.
+        // ensures that all globbing chars in the resulting argv are actually
+        // intended to be globbing chars, which is all we want to test for.
+        var callback = {
+            oninit: function () {
+                ctx.newarg = '';
+                ctx.argv = [];
+            },
+            onliteral: function (c) {
+                if (c == '*' || c == '?') {
+                    c = '_';
+                }
+                ctx.newarg += c;
+            },
+            onglob: function (g) {
+                ctx.newarg += g;
+            },
+            onboundary: function () {
+                ctx.argv.push(ctx.newarg);
+            },
+        };
+        var parser = new Parser(callback);
+        var t = function (raw, out, name) {
+            parser.parse(raw);
+            deepEqual(ctx.argv, out, name);
+        };
+        t('*', ['*'], 'recognize bare globbing char');
+        t('\\*', ['_'], 'ignore escaped globbing char');
+        t('"*"', ['_'], 'ignore quoted globbing char');
+        t('foo*', ['foo*'], 'composite: word + glob');
+        t('foo\\*', ['foo_'], 'composite word + literal');
+        t('foo\\*bar*', ['foo_bar*'], 'composite word + glob + literal');
     });
 
     // these tests are part of a wip to define the api of the prompt (they are
