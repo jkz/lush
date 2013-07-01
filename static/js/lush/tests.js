@@ -130,59 +130,68 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     // these tests are part of a wip to define the api of the prompt (they are
     // supposed to fail)
     test("command-line interaction", function() {
-        // live command object connected to current prompt
-        var cmd;
-        var initNum = 0;
+        // simple prompt testing
+        var ctx = {
+            argv: [],
+            options: [],
+        };
         // called for every fresh prompt line
-        var initFunc = function (callback) {
-            initNum += 1;
-            cmd = {};
-            callback(cmd);
+        var initFunc = function () {
+            ctx.argv = [];
+            ctx.options = [];
         };
+        // it is the prompt's job to translate user input to an array of words
+        // (argv) that is ready to be executed. this includes:
+        // - parse the input
+        // - deal with tab key appropriately (auto complete, show options, etc)
+        // - expand globbing chars
         var cli = new Prompt(initFunc);
-        // array of suggestions (during tab completion)
-        var suggestions;
-        // called by prompt to indicate it wants to suggest something to user
-        cli.onsuggest = function (x) {
-            suggestions = x;
+        // called by prompt when user wants to run a command (hits enter)
+        cli.onrun = function (argv) {
+            ctx.argv = argv;
+        };
+        // called by prompt to indicate multiple options to user (eg multiple
+        // options for tab completion)
+        cli.onshowoptions = function (options) {
+            ctx.options = options;
+        };
+        // called by prompt when user hits tab with current input parsed.
+        // this implementation is purely for testing purposes of course in
+        // reality you want something completely different
+        cli.ontab = function (argv) {
+            // foo -> one option, foofoo
+            // nothing -> no options
+            // * -> argv = all the options
+            switch (argv[0]) {
+            case 'foo':
+                return ['foofoo'];
+            case 'nothing':
+                return [];
+            }
+            return argv;
         };
 
-        // tab completion
+        // process command
         cli.setprompt('ls foo');
+        cli.enter();
+        deepEqual(ctx.argv, ['ls', 'foo'], 'simple prompt parsing + exec');
+
+        // tab completion 1 option
+        cli.setprompt('foo bar');
         cli.tab();
-        deepEqual(suggestions, ['foo1.txt', 'foo2.txt'], 'tab completion');
-        // init function
-        equal(initNum, 1, 'prompt init callback called once');
+        equal(cli.getprompt(), 'foo foofoo ', 'tab completion 1 option: substitute input');
+        deepEqual(ctx.suggestions, [], 'tab completion single result: no options');
 
-        // globbing
-        cli.setprompt('foo*');
-        equal(initNum, 1, 'prompt init callback not called again');
-        cli.enter();
-        deepEqual(cli.argv, ['foo1.txt', 'foo2.txt'], 'suffix *');
+        // tab completion no options
+        cli.setprompt('nothing bar');
+        cli.tab();
+        equal(cli.getprompt(), 'nothing bar', 'tab completion no options: nop on input');
+        deepEqual(ctx.suggestions, [], 'tab completion no options: nop in ui');
 
-        cli.setprompt('foo*txt');
-        equal(initNum, 2, 'prompt init callback called >1');
-        cli.enter();
-        deepEqual(cli.argv, ['foo1.txt', 'foo2.txt'], '* in the middle');
-
-        cli.setprompt('*.txt');
-        equal(initNum, 3, 'prompt init callback called >1');
-        cli.enter();
-        deepEqual(cli.argv, ['foo1.txt', 'foo2.txt'], 'prefix *');
-
-        cli.setprompt('f*o*xt');
-        equal(initNum, 4, 'prompt init callback called >1');
-        cli.enter();
-        deepEqual(cli.argv, ['foo1.txt', 'foo2.txt'], 'multiple *s');
-
-        cli.setprompt('foo?.txt');
-        equal(initNum, 5, 'prompt init callback called >1');
-        cli.enter();
-        deepEqual(cli.argv, ['foo1.txt', 'foo2.txt'], '? in the middle');
-
-        cli.setprompt('"foo*"');
-        equal(initNum, 6, 'prompt init callback called >1');
-        cli.enter();
-        deepEqual(cli.argv, ['foo*'], 'wildcard in quotes');
+        // tab completion: multiple options
+        cli.setprompt('a b c');
+        cli.tab();
+        equal(cli.getprompt(), 'a b c', 'tab completion multiple options: nop on input');
+        deepEqual(ctx.suggestions, ['a', 'b', 'c'], 'tab completion multiple options: show in UI');
     });
 });
