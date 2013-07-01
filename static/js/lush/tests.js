@@ -42,32 +42,27 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     // supposed to fail)
     test("parser: argv", function() {
         // simple parser callback
-        var ctx = {
-            newarg: '',
-            argv: [],
+        var ctx;
+        var oninit = function () {
+            ctx = {
+                newarg: '',
+                argv: [],
+            };
         };
-        var callback = {
-            // prepare for parsing job
-            oninit: function () {
-                ctx.argv = [];
-                ctx.newarg = '';
-            },
-            // a wild character appeared! add it to the current word
-            onliteral: function (c) {
-                ctx.newarg += c;
-            },
-            // like onliteral but interpret globbing characters specially
-            onglob: function (g) {
-                // for testing the parser we actually don't treat globs
-                ctx.newarg += g;
-            },
-            // all literals found up to here: you are considered a word
-            onboundary: function () {
-                if (!ctx.started) { throw "context not initialized"; }
-                ctx.argv.push(ctx.newarg);
-            },
+        var parser = new Parser(oninit);
+        // a wild character appeared! add it to the current word
+        parser.onliteral: function (c) {
+            ctx.newarg += c;
         };
-        var parser = new Parser(callback);
+        // like onliteral but interpret globbing characters specially
+        parser.onglob = function (g) {
+            // for testing the parser we actually don't treat globs
+            ctx.newarg += g;
+        };
+        // all literals found up to here: you are considered a word
+        parser.onboundary = function () {
+            ctx.argv.push(ctx.newarg);
+        };
         var t = function (raw, out, name) {
             parser.parse(raw);
             deepEqual(ctx.argv, out, name);
@@ -89,32 +84,29 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     // supposed to fail)
     test("parser: globbing", function() {
         // parser callback geared towards testing globbing
-        var ctx = {
-            newarg: '',
-            argv: [],
-        };
         // simple callback: replace literal globbing chars by an underscore.
         // ensures that all globbing chars in the resulting argv are actually
         // intended to be globbing chars, which is all we want to test for.
-        var callback = {
-            oninit: function () {
-                ctx.newarg = '';
-                ctx.argv = [];
-            },
-            onliteral: function (c) {
-                if (c == '*' || c == '?') {
-                    c = '_';
-                }
-                ctx.newarg += c;
-            },
-            onglob: function (g) {
-                ctx.newarg += g;
-            },
-            onboundary: function () {
-                ctx.argv.push(ctx.newarg);
-            },
+        var ctx;
+        var oninit = function () {
+            ctx = {
+                newarg: '',
+                argv: [],
+            };
         };
-        var parser = new Parser(callback);
+        var parser = new Parser(oninit);
+        parser.onliteral = function (c) {
+            if (c == '*' || c == '?') {
+                c = '_';
+            }
+            ctx.newarg += c;
+        };
+        parser.onglob = function (g) {
+            ctx.newarg += g;
+        };
+        parser.onboundary = function () {
+            ctx.argv.push(ctx.newarg);
+        };
         var t = function (raw, out, name) {
             parser.parse(raw);
             deepEqual(ctx.argv, out, name);
@@ -131,14 +123,13 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     // supposed to fail)
     test("command-line interaction", function() {
         // simple prompt testing
-        var ctx = {
-            argv: [],
-            options: [],
-        };
+        var ctx;
         // called for every fresh prompt line
         var initFunc = function () {
-            ctx.argv = [];
-            ctx.options = [];
+            ctx = {
+                argv: [],
+                options: [],
+            };
         };
         // it is the prompt's job to translate user input to an array of words
         // (argv) that is ready to be executed. this includes:
@@ -180,7 +171,7 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         cli.setprompt('foo bar');
         cli.tab();
         equal(cli.getprompt(), 'foo foofoo ', 'tab completion 1 option: substitute input');
-        deepEqual(ctx.suggestions, [], 'tab completion single result: no options');
+        deepEqual(ctx.suggestions, [], 'tab completion 1 option: nop in ui');
 
         // tab completion no options
         cli.setprompt('nothing bar');
