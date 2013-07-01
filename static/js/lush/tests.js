@@ -60,6 +60,10 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         t('foo "bar"\'\'b""""az', ['foo', 'barbaz'], 'concatenated quotes');
         t('"\'"', ["'"], 'quoted single quote');
         t("'\"'", ['"'], 'quoted double quote');
+        t('foo bar\\ baz', ['foo', 'bar baz'], 'escaped space');
+        t('foo \\" bar', ['foo', '"', 'bar'], 'escaped double quotes');
+        t("foo \\' bar", ['foo', "'", 'bar'], 'escaped single quote');
+        t("foo \\\\ bar", ['foo', "\\", 'bar'], 'escaped backslash');
     });
 
     // these tests are part of a wip to define the api of the prompt (they are
