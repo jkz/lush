@@ -26,12 +26,10 @@
 define(["jquery"], function ($) {
     var actions = {
         tar: function (cmd, $help, switchModeToView, ctrl) {
-            var args = undefined;
             $help.append($('<a href="http://unixhelp.ed.ac.uk/CGI/man-cgi?tar" target=_blank>online man page</a>'));
             $help.append($('<br>'));
-            $help.append('extract: ');
             var $changeflag = $('<input type=checkbox>').change(function () {
-                args = cmd.argv.slice(1);
+                var args = cmd.argv.slice(1);
                 if (this.checked) {
                     if (args.length == 0) {
                         args = ['x'];
@@ -48,21 +46,13 @@ define(["jquery"], function ($) {
                         args[0] = args[0].replace(/x/g, '')
                     }
                 }
+                ctrl.send('updatecmd', JSON.stringify({
+                    nid: cmd.nid,
+                    args: args,
+                }));
             });
             $changeflag[0].checked = (cmd.argv.length >= 2 && cmd.argv[1].indexOf('x') != -1);
-            $help.append($changeflag);
-            // not extremely pretty but also extremely wip
-            $help.append($('<br>'))
-            $help.append($('<button>save</button>').click(function (e) {
-                e.preventDefault();
-                if (args !== undefined) {
-                    ctrl.send('updatecmd', JSON.stringify({
-                        nid: cmd.nid,
-                        args: args,
-                    }));
-                }
-                switchModeToView();
-            }));
+            $help.append($('<label>extract: </label>').append($changeflag));
         },
         git: function (cmd, $help, switchModeToView, ctrl) {
             $help.append($('<a href="https://www.kernel.org/pub/software/scm/git/docs/" target=_blank>online man page</a>'));
