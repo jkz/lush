@@ -320,11 +320,11 @@ define(["jquery",
         $('.repeat', $viewm).click(function () {
             term.set_command(cmd.argv.join(' ')).focus();
         });
-        $('.bookmark', $viewm).attr('href', '#prompt;' + cmd.argv.join(' '));
         // dynamic parts of the UI
         $(cmd).on('update', function () {
             setStatNode(this.nid, this.status, $('.status', $viewm));
             $('.argv', $viewm).text(this.argv.join(" "));
+            $('.bookmark', $viewm).attr('href', '#prompt;' + cmd.argv.join(' '));
             if (this.status > 0) {
                 // todo: disable edit tab?
             }
