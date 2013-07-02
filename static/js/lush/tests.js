@@ -38,8 +38,6 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         deepEqual("".splitn("", 1), []);
     });
     
-    // these tests are part of a wip to define the api of the parser (they are
-    // supposed to fail)
     test("parser: argv", function() {
         // simple parser callback
         var ctx;
@@ -80,8 +78,6 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         t("foo \\\\ bar", ['foo', "\\", 'bar'], 'escaped backslash');
     });
     
-    // these tests are part of a wip to define the api of the parser (they are
-    // supposed to fail)
     test("parser: globbing", function() {
         // parser callback geared towards testing globbing
         // simple callback: replace literal globbing chars by an underscore.
@@ -117,6 +113,48 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         t('foo*', ['foo*'], 'composite: word + glob');
         t('foo\\*', ['foo_'], 'composite word + literal');
         t('foo\\*bar*', ['foo_bar*'], 'composite word + glob + literal');
+    });
+    
+    // brainstorm for future parser api
+    test("parser: next gen globbing", function() {
+        var ctx;
+        var oninit = function () {
+            ctx = {
+                newarg: '',
+                argv: [],
+            };
+        };
+        var parser = new Parser(oninit);
+        // a wild character appeared! add it to the current word
+        parser.onliteral = function (c) {
+            ctx.newarg += c;
+        };
+        // got a *
+        parser.onglobStar = function (idx) {
+            ctx.gotstar = idx;
+        };
+        // got a ?
+        parser.onglobQuestionmark = function (idx) {
+            ctx.gotquestionmark = idx;
+        };
+        parser.onglobChoice = function (choices, idx) {
+            ctx.gotchoice = choices;
+        };
+        var t = function (raw, out, name) {
+            parser.parse(raw);
+            deepEqual(ctx.argv, out, name);
+        };
+        parser.parse('*');
+        strictEqual(ctx.gotstar, 0, 'indexed wildcard: * (0)');
+        parser.parse('foo*bar');
+        strictEqual(ctx.gotstar, 3, 'indexed wildcard: * (3)');
+        parser.parse('?');
+        strictEqual(ctx.gotquestionmark, 0, 'indexed wildcard: ?');
+        parser.parse('?*');
+        strictEqual(ctx.gotquestionmark, 0, 'indexed wildcards: ?');
+        strictEqual(ctx.gotstar, 1, 'indexed wildcards: *');
+        parser.parse('[abc]');
+        deepEqual(ctx.gotchoice, ['a', 'b', 'c'], 'wildcard choice: [abc]');
     });
 
     // these tests are part of a wip to define the api of the prompt (they are
