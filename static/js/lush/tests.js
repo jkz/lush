@@ -39,15 +39,16 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     });
     
     test("parser: argv", function() {
-        // simple parser callback
+        // parsing context
         var ctx;
-        var oninit = function () {
+        var parser = new Parser();
+        // parse a new sentence
+        parser.oninit = function () {
             ctx = {
                 newarg: '',
                 argv: [],
             };
         };
-        var parser = new Parser(oninit);
         // a wild character appeared! add it to the current word
         parser.onliteral = function (c) {
             ctx.newarg += c;
@@ -79,18 +80,17 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     });
     
     test("parser: globbing", function() {
-        // parser callback geared towards testing globbing
-        // simple callback: replace literal globbing chars by an underscore.
+        // simple parser: replace literal globbing chars by an underscore.
         // ensures that all globbing chars in the resulting argv are actually
         // intended to be globbing chars, which is all we want to test for.
         var ctx;
-        var oninit = function () {
+        var parser = new Parser();
+        parser.oninit = function () {
             ctx = {
                 newarg: '',
                 argv: [],
             };
         };
-        var parser = new Parser(oninit);
         parser.onliteral = function (c) {
             if (c == '*' || c == '?') {
                 c = '_';
@@ -118,13 +118,13 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     // brainstorm for future parser api
     test("parser: next gen globbing", function() {
         var ctx;
-        var oninit = function () {
+        var parser = new Parser();
+        parser.oninit = function () {
             ctx = {
                 newarg: '',
                 argv: [],
             };
         };
-        var parser = new Parser(oninit);
         // a wild character appeared! add it to the current word
         parser.onliteral = function (c) {
             ctx.newarg += c;
@@ -162,19 +162,19 @@ define(["lush/parser", "lush/utils"], function (Parser) {
     test("command-line interaction", function() {
         // simple prompt testing
         var ctx;
-        // called for every fresh prompt line
-        var initFunc = function () {
-            ctx = {
-                argv: [],
-                options: [],
-            };
-        };
         // it is the prompt's job to translate user input to an array of words
         // (argv) that is ready to be executed. this includes:
         // - parse the input
         // - deal with tab key appropriately (auto complete, show options, etc)
         // - expand globbing chars
-        var cli = new Prompt(initFunc);
+        var cli = new Prompt();
+        // called for every fresh prompt line
+        cli.oninit = function () {
+            ctx = {
+                argv: [],
+                options: [],
+            };
+        };
         // called by prompt when user wants to run a command (hits enter)
         cli.onrun = function (argv) {
             ctx.argv = argv;
