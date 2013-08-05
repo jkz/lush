@@ -20,7 +20,7 @@
 
 "use strict";
 
-define(["lush/parser", "lush/utils"], function (Parser) {
+define(["lush/Parser2", "lush/utils"], function (Parser) {
     test("lcp(): longest common prefix", function () {
         equal(lcp(["abcd", "abab", "abba"]), "ab");
         equal(lcp([]), "", "common prefix of 0 strings");
@@ -53,14 +53,10 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         parser.onliteral = function (c) {
             ctx.newarg += c;
         };
-        // like onliteral but interpret globbing characters specially
-        parser.onglob = function (g) {
-            // for testing the parser we actually don't treat globs
-            ctx.newarg += g;
-        };
         // all literals found up to here: you are considered a word
         parser.onboundary = function () {
             ctx.argv.push(ctx.newarg);
+            ctx.newarg = '';
         };
         var t = function (raw, out, name) {
             parser.parse(raw);
@@ -97,8 +93,11 @@ define(["lush/parser", "lush/utils"], function (Parser) {
             }
             ctx.newarg += c;
         };
-        parser.onglob = function (g) {
-            ctx.newarg += g;
+        parser.onglobQuestionmark = function () {
+            ctx.newarg += '?';
+        };
+        parser.onglobStar = function () {
+            ctx.newarg += '*';
         };
         parser.onboundary = function () {
             ctx.argv.push(ctx.newarg);
@@ -115,8 +114,8 @@ define(["lush/parser", "lush/utils"], function (Parser) {
         t('foo\\*bar*', ['foo_bar*'], 'composite word + glob + literal');
     });
     
-    // brainstorm for future parser api
-    test("parser: next gen globbing", function() {
+    // test the indexing of globbing character positions
+    test("parser: globbing char indexing", function() {
         var ctx;
         var parser = new Parser();
         parser.oninit = function () {
