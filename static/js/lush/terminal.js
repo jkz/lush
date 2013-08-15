@@ -23,7 +23,7 @@
 
 // TERMINAL HANDLING
 
-define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], function ($, Parser) {
+define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"], function ($, Parser) {
     // Print text to this terminal. Ensures the text always ends in newline.
     $.fn.termPrintln = function (text, finalize) {
         // term.echo will always append newline so strip one off if exists
@@ -64,39 +64,10 @@ define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], 
             showhidden = startsWithDot(pattern);
         }
         if (!showhidden) {
+            // hide files starting with a dot
             files = $.grep(files, startsWithDot, true);
         }
         return files;
-    };
-
-    // process a line entered at the command prompt
-    var handlePrompt = function (parser, processCmd, text, term) {
-        var argv = parser.parse(text);
-        if (!$.isArray(argv)) {
-            term.error("Parse error: " + argv.msg);
-            term.error("");
-            term.error(text);
-            term.error(" ".repeat(argv.pos) + "^");
-            return;
-        }
-        var unescape = function (x) {
-            return parser.unescape(x);
-        };
-        argv = $.map($.map(argv, attrgetter("text")), unescape);
-        if (argv.length == 0) {
-            return;
-        }
-        var options = {
-            name: argv.join(' '),
-            cmd: argv[0],
-            args: argv.slice(1),
-            userdata: {
-                creator: 'prompt',
-                autostart: true,
-                autoarchive: true
-            }
-        };
-        processCmd(options);
     };
 
     // send what is currently on the prompt to the terminal output
@@ -135,17 +106,112 @@ define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], 
             "</div></div>";
     };
 
+    // manage context of a command line interface. purely conceptual, no UI.
+    // processCmd arg is a function, called by the cli to actually invoke a
+    // command (after parsing etc).
+    var Cli = function (processCmd) {
+        var cli = this;
+        cli.processCmd = processCmd;
+        cli.parser = new Parser();
+        cli.parser.oninit = function () {
+            // updated after each call to setprompt()
+            cli.argv = [];
+            // building the next argument
+            cli.newarg = '';
+            // true when newarg contains a globbing char
+            cli.hasglob = false;
+        };
+        cli.parser.onliteral = function (c) {
+            // internal representation is escaped
+            if (c == '*' || c == '?' || c == '\\') {
+                c = '\\' + c;
+            }
+            cli.newarg += c;
+        };
+        cli.parser.onglobQuestionmark = function () {
+            cli.hasglob = true;
+            cli.newarg += '?';
+        };
+        cli.parser.onglobStar = function () {
+            cli.hasglob = true;
+            cli.newarg += '*';
+        };
+        cli.parser.onboundary = function () {
+            if (cli.hasglob) {
+                var matches = glob(cli.newarg);
+                // TODO: error if matches is empty
+                cli.argv.push.apply(cli.argv, matches);
+            } else {
+                // undo internal escape representation
+                var unescaped = cli.newarg.replace(/\\(.)/g, "$1");
+                cli.argv.push(unescaped);
+            }
+            cli.newarg = '';
+        };
+    };
+
+    // the user updated the prompt: call this method to notify the cli object
+    Cli.prototype.setprompt = function (txt) {
+        this.parser.parse(txt);
+    };
+
+    // try to report an error to the user
+    Cli.prototype._error = function (errmsg) {
+        if (this.onerror) {
+            this.onerror(errmsg);
+        } else {
+            console.log("Terminal error: " + errmsg);
+        }
+    };
+
+    // commit the current prompt ([enter] button)
+    Cli.prototype.commit = function (txt) {
+        // need to re-parse because jQuery terminal triggers the "clear command
+        // line" event on [enter] before the "handle command" event.
+        this.parser.parse(txt);
+        if (!$.isArray(this.argv)) {
+            this._error("Parse error: " + this.argv.msg);
+            this._error("");
+            this._error(text);
+            this._error(" ".repeat(this.argv.pos) + "^");
+            return;
+        }
+        if (this.argv.length == 0) {
+            return;
+        }
+        var options = {
+            name: txt,
+            cmd: this.argv[0],
+            args: this.argv.slice(1),
+            userdata: {
+                creator: 'prompt',
+                autostart: true,
+                autoarchive: true
+            }
+        };
+        this.processCmd(options);
+    };
+
     // create a new terminal window and append to HTML body
     return function (processCmd) {
-        var parser = new Parser(glob);
+        var cli = new Cli(processCmd);
         var $wrap = $(terminalHTML()).appendTo($('body'));
         $wrap.resizable().draggable({handle: $('.termdraghandle', $wrap)})
-        return $('.terminal', $wrap).terminal(curry(handlePrompt, parser, processCmd), {
+        var $term = $wrap.find('.terminal').terminal(function (x) {
+                cli.commit(x);
+            }, {
             greetings: 'Welcome to Luyat shell',
             name: 'lush',
             prompt: '$ ',
             tabcompletion: true,
-            // completion for files only
+            onCommandChange: function (txt) {
+                try {
+                    cli.setprompt(txt);
+                } catch (e) {
+                    // ignore errors while typing command
+                }
+            },
+            // completion for files only (broken)
             completion: function (term) {
                 var argv = parser.parse(term.get_command());
                 if (!$.isArray(argv)) {
@@ -163,5 +229,7 @@ define(["jquery", "lush/Parser", "lush/utils", "jquery.terminal", "jquery.ui"], 
                 $.get('/files.json', {pattern: pattern}, callback);
             },
         });
+        cli.onerror = $term.error;
+        return $term;
     };
 });
