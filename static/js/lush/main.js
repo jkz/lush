@@ -99,6 +99,7 @@
 
 define(["jquery",
         "lush/Ctrl",
+        "lush/LocalCommand",
         "lush/terminal",
         "lush/path",
         "lush/help",
@@ -106,6 +107,7 @@ define(["jquery",
         "lush/utils"],
        function ($,
                  Ctrl,
+                 Command,
                  terminal,
                  path,
                  help) {
@@ -701,6 +703,11 @@ define(["jquery",
         ctrl.ws.onerror = function () {
             console.log('Error connecting to ' + ctrluri);
         };
+        $.each(cmds_init, function (nid, cmdinit) {
+            // don't init, build the widgets first
+            var cmd = new Command(nid);
+            cmds[nid] = cmd;
+        });
         $.each(cmds, function (_, cmd) { createCmdWidget(cmd); });
         // second iteration to ensure all widgets exist before connecting them
         $.each(cmds, function (_, cmd) { updatePipes(cmd); });
@@ -779,6 +786,11 @@ define(["jquery",
             var stream = opts[1];
             var data = opts[2];
             $(cmds[sysid]).trigger(stream + '.stream', data);
+        });
+        // now that all widgets have been built (and most importantly: update
+        // handlers have been set) populate the cmd objects to init the widgets
+        $.each(cmds_init, function (nid, cmdinit) {
+            cmds[nid].update(cmdinit);
         });
     });
 

@@ -98,7 +98,9 @@
 <script>
 // object containing running command metadata: key is system id, value is cmd
 // object
-var cmds = {
+var cmds = {};
+
+var cmds_init = {
 {{range .}}
 {{.Id}}: {{.Metadata}},
 {{end}}
