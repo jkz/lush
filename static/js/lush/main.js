@@ -323,7 +323,7 @@ define(["jquery",
             term.set_command(cmd.argv.join(' ')).focus();
         });
         // dynamic parts of the UI
-        $(cmd).on('update', function () {
+        $(cmd).on('wasupdated', function () {
             setStatNode(this.nid, this.status, $('.status', $viewm));
             $('.argv', $viewm).text(this.argv.join(" "));
             $('.bookmark', $viewm).attr('href', '#prompt;' + cmd.argv.join(' '));
@@ -339,7 +339,7 @@ define(["jquery",
         $('[name=cmd]', $editm).autocomplete({source: "/new/names.json"});
         $('.cancelbtn', $editm).click(function () {
             // restore form contents from model
-            $(cmd).trigger('update');
+            $(cmd).trigger('wasupdated');
             switchToViewTab($widget);
         });
         var lastarg = 1;
@@ -351,8 +351,9 @@ define(["jquery",
         $('[name=arg1]', $editm).one('keydown', addarg);
         // send "updatecmd" message over ctrl stream.  server will reply with
         // updatecmd, which will invoke a handler to update the cmd object,
-        // which will invoke $(cmd).trigger('update'), which will invoke the
-        // handler that updates the view for viewmode (<div class=tab_view>).
+        // which will invoke $(cmd).trigger('wasupdated'), which will invoke
+        // the handler that updates the view for viewmode (<div
+        // class=tab_view>).
         $('form', $editm).submit(function (e) {
             e.preventDefault();
             var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
@@ -373,7 +374,7 @@ define(["jquery",
             ctrl.send("updatecmd", JSON.stringify(o));
             switchToViewTab($widget);
         });
-        $(cmd).on('update', function () {
+        $(cmd).on('wasupdated', function () {
             $('[name=cmd]', $editm).val(this.argv[0]);
             this.argv.slice(1).forEach(function (arg, idx) {
                 // keydown triggers the "create new arg input" handler
@@ -389,7 +390,7 @@ define(["jquery",
     // initialize a widget's help view
     var initHelpTab = function (cmd, $widget) {
         var $help = $('.tab_help', $widget);
-        $(cmd).on('update', function () {
+        $(cmd).on('wasupdated', function () {
             // clean out help div
             $help.empty();
             var action = help(this);
@@ -431,8 +432,6 @@ define(["jquery",
         initEditTab(cmd, $widget);
         initHelpTab(cmd, $widget);
         initTabsNav(cmd, $widget);
-        // initialize view
-        $(cmd).trigger('update');
     };
 
     var createStreamPeekerWhenDblClicked = function (ep) {
@@ -463,8 +462,8 @@ define(["jquery",
     // eachother. this function creates the endpoints and stores their reference in
     // the cmd argument object as .stdinep, .stdoutep and .stderrep.
     //
-    // Hooks view updaters to a custom jQuery event 'update'. I.e. after
-    // changing the cmd run $(cmd).trigger('update') to update the UI.
+    // Hooks view updaters to a custom jQuery event 'wasupdated'. I.e. after
+    // changing the cmd run $(cmd).trigger('wasupdated') to update the UI.
     var createCmdWidget = function (cmd) {
         // Fresh command widget in view mode
         var $widget = $('#cmdwidget_template')
@@ -530,7 +529,7 @@ define(["jquery",
         cmd.isRoot = function () {
             return cmd.stdinep.connections.length == 0;
         }
-        $(cmd).on('update', function () {
+        $(cmd).on('wasupdated', function () {
             // only archive group leaders
             if (this.userdata.autoarchive &&
                 this.status == 2 &&
@@ -738,9 +737,11 @@ define(["jquery",
         $('.sortable').disableSelection().sortable();
         // a new command has been created
         $(ctrl).on("newcmd", function (_, cmdjson) {
-            var cmd = JSON.parse(cmdjson);
+            var cmdinit = JSON.parse(cmdjson);
+            var cmd = new Command(cmdinit.nid);
             cmds[cmd.nid] = cmd;
             createCmdWidget(cmd);
+            cmd.update(cmdinit);
             rebuildGroupsList();
             if (cmd.userdata.god == moi) {
                 // i made this!
@@ -767,8 +768,7 @@ define(["jquery",
         $(ctrl).on("updatecmd", function (_, updatejson) {
             var update = JSON.parse(updatejson);
             var cmd = cmds[update.nid];
-            cmd = $.extend(cmd, update);
-            $(cmd).trigger('update');
+            cmd.update(update);
         });
         path($('form#path'), ctrl);
         term = terminal(processCmd);

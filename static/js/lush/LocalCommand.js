@@ -37,10 +37,10 @@ define(["jquery"], function ($) {
     };
 
     // update the properties of this command with those from the argument
-    // object. calls the 'update' jquery event after command is updated.
+    // object. calls the 'wasupdated' jquery event after command is updated.
     LocalCommand.prototype.update = function (updata) {
         $.extend(this, updata);
-        $(this).trigger('update');
+        $(this).trigger('wasupdated');
     };
 
     return LocalCommand;
