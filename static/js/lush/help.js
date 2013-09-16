@@ -47,10 +47,9 @@ define(["jquery"], function ($) {
                         args[0] = args[0].replace(/x/g, '')
                     }
                 }
-                ctrl.send('updatecmd', JSON.stringify({
-                    nid: cmd.nid,
+                cmd.update({
                     args: args,
-                }));
+                });
             });
             $changeflag[0].checked = (cmd.args.length > 0 && cmd.args[0].indexOf('x') != -1);
             $help.append($('<label>extract: </label>').append($changeflag));

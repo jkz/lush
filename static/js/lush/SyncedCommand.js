@@ -21,25 +21,24 @@
 "use strict";
 
 
-// command object that keeps everything local, no server needed
+// command object synchronized with server
 
 define(["jquery"], function ($) {
 
-    var LocalCommand = function (id) {
-        this.nid = id;
-        this.htmlid = "cmd" + id;
-        this.name = "";
-        this.cmd = '';
-        this.args = [];
-        this.status = 0;
-        this.stdoutScrollback = 0;
-        this.stderrScrollback = 0;
-        this.userdata = {};
+    var SyncedCommand = function (ctrl, init) {
+        this.ctrl = ctrl;
+        $.extend(this, init);
     };
 
     // update the properties of this command with those from the argument
     // object. calls the 'wasupdated' jquery event after command is updated.
-    LocalCommand.prototype.wasupdated = function (updata) {
+    // this function is exposed for the handler of the websocket 'updatecmd'
+    // event handler to call. it would be cleaner to register a handler for
+    // that in the constructor of this object, but that would mean a new
+    // handler for every command object that decodes the updata json just to
+    // see if the nid matches. I didn't profile it but I can already feel the
+    // O(n) pain.
+    SyncedCommand.prototype.wasupdated = function (updata) {
         if (updata.nid !== this.nid) {
             throw "updating with foreign command data";
         }
@@ -47,23 +46,24 @@ define(["jquery"], function ($) {
         $(this).trigger('wasupdated');
     };
 
-    LocalCommand.prototype.update = function (updata) {
+    // request an update
+    SyncedCommand.prototype.update = function (updata) {
         if (updata.nid !== undefined) {
             throw "updating nid not allowed!";
         }
         updata.nid = this.nid;
-        this.wasupdated(updata);
-    }
+        this.ctrl.send('updatecmd', JSON.stringify(updata));
+    };
 
-    LocalCommand.prototype.getArgv = function () {
+    SyncedCommand.prototype.getArgv = function () {
         var argv = [this.cmd];
         argv.push.apply(argv, this.args);
         return argv;
     };
 
-    LocalCommand.prototype.start = function () {
-        throw "cannot start a local command";
+    SyncedCommand.prototype.start = function () {
+        this.ctrl.send('start', this.nid);
     };
 
-    return LocalCommand;
+    return SyncedCommand;
 });

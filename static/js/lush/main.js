@@ -99,7 +99,7 @@
 
 define(["jquery",
         "lush/Ctrl",
-        "lush/LocalCommand",
+        "lush/SyncedCommand",
         "lush/terminal",
         "lush/path",
         "lush/help",
@@ -122,11 +122,11 @@ define(["jquery",
     var moi = guid();
 
     // build jquery node containing [▶] button that starts cmd in background
-    var makeStartButton = function (sysId) {
+    var makeStartButton = function (cmd) {
         return $('<button class=start>▶</button>').click(function (e) {
             $(e.target).html('⌚');
             $(e.target).prop('disabled', true);
-            ctrl.send('start', sysId);
+            cmd.start();
             // stop bubbling: prevent terminal from losing focus
             return false;
         });
@@ -137,20 +137,20 @@ define(["jquery",
         return $('<button class=stop>◼</button>').click(function (e) {
             $(e.target).html('⌚');
             $(e.target).prop('disabled', true);
-            ctrl.send('stop', sysId);
+            ctrl.send('stop', cmd.nid);
         });
     };
 
     // set the status info for this command in the given jquery node's content
-    var setStatNode = function (sysId, stat, $node) {
+    var setStatNode = function (cmd, $node) {
         var content;
-        switch(stat) {
+        switch (cmd.status) {
         case 0:
-            content = makeStartButton(sysId);
+            content = makeStartButton(cmd);
             break;
         case 1:
-            content = makeStopButton(sysId);
-            break;
+            content = makeStopButton(cmd);
+            break
         case 2:
             content = '✓';
             break;
@@ -324,7 +324,7 @@ define(["jquery",
         });
         // dynamic parts of the UI
         $(cmd).on('wasupdated', function () {
-            setStatNode(this.nid, this.status, $('.status', $viewm));
+            setStatNode(this, $('.status', $viewm));
             var argvtxt = cmd.getArgv().join(' ');
             $('.argv', $viewm).text(argvtxt);
             $('.bookmark', $viewm).attr('href', '#prompt;' + argvtxt);
@@ -336,7 +336,6 @@ define(["jquery",
 
     var initEditTab = function (cmd, $widget) {
         var $editm = $('.tab_edit', $widget);
-        $('[name=nid]', $editm).val(cmd.nid);
         $('[name=cmd]', $editm).autocomplete({source: "/new/names.json"});
         $('.cancelbtn', $editm).click(function () {
             // restore form contents from model
@@ -350,6 +349,7 @@ define(["jquery",
                     .one('keydown', addarg));
         };
         $('[name=arg1]', $editm).one('keydown', addarg);
+        // request the command to be updated. behind the scenes this happens:
         // send "updatecmd" message over ctrl stream.  server will reply with
         // updatecmd, which will invoke a handler to update the cmd object,
         // which will invoke $(cmd).trigger('wasupdated'), which will invoke
@@ -376,7 +376,7 @@ define(["jquery",
             o.userdata = $(this).data();
             o.userdata.autostart = this.autostart.checked;
             o.userdata.autoarchive = this.autoarchive.checked;
-            ctrl.send("updatecmd", JSON.stringify(o));
+            cmd.update(o);
             switchToViewTab($widget);
         });
         $(cmd).on('wasupdated', function () {
@@ -707,10 +707,9 @@ define(["jquery",
         ctrl.ws.onerror = function () {
             console.log('Error connecting to ' + ctrluri);
         };
-        $.each(cmds_init, function (nid, cmdinit) {
-            // don't init, build the widgets first
-            var cmd = new Command(nid);
-            cmds[nid] = cmd;
+        $.each(cmds_init, function (_, cmdinit) {
+            var cmd = new Command(ctrl, cmdinit);
+            cmds[cmdinit.nid] = cmd;
         });
         $.each(cmds, function (_, cmd) { createCmdWidget(cmd); });
         // second iteration to ensure all widgets exist before connecting them
@@ -743,9 +742,10 @@ define(["jquery",
         // a new command has been created
         $(ctrl).on("newcmd", function (_, cmdjson) {
             var cmdinit = JSON.parse(cmdjson);
-            var cmd = new Command(cmdinit.nid);
+            var cmd = new Command(ctrl, cmdinit);
             cmds[cmd.nid] = cmd;
             createCmdWidget(cmd);
+            delete cmdinit.nid;
             cmd.update(cmdinit);
             rebuildGroupsList();
             if (cmd.userdata.god == moi) {
@@ -761,8 +761,7 @@ define(["jquery",
                 ctrl.send('subscribe', cmd.nid, 'stderr');
                 var $widget = $('#' + cmd.htmlid);
                 if (cmd.userdata.autostart) {
-                    // auto start by simulating click on [▶]
-                    $('button.start', $widget).click();
+                    cmd.start();
                 } else {
                     // If not autostarting, go directly into edit mode
                     $widget.tabs('option', 'active', 1);
@@ -770,10 +769,10 @@ define(["jquery",
             }
         });
         // command has been updated
-        $(ctrl).on("updatecmd", function (_, updatejson) {
-            var update = JSON.parse(updatejson);
-            var cmd = cmds[update.nid];
-            cmd.update(update);
+        $(ctrl).on("updatecmd", function (_, updatajson) {
+            var updata = JSON.parse(updatajson);
+            var cmd = cmds[updata.nid];
+            cmd.wasupdated(updata);
         });
         path($('form#path'), ctrl);
         term = terminal(processCmd);
@@ -795,7 +794,7 @@ define(["jquery",
         // now that all widgets have been built (and most importantly: update
         // handlers have been set) populate the cmd objects to init the widgets
         $.each(cmds_init, function (nid, cmdinit) {
-            cmds[nid].update(cmdinit);
+            cmds[nid].wasupdated(cmdinit);
         });
     });
 
