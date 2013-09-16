@@ -129,8 +129,9 @@ func wseventGetpath(s *server, _ string) error {
 // eg updatecmd;{"nid":3,"name":"echo"}
 func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 	var options cmdOptions
+	jsonbytes := []byte(cmdmetaJSON)
 	// parse structurally
-	err := json.Unmarshal([]byte(cmdmetaJSON), &options)
+	err := json.Unmarshal(jsonbytes, &options)
 	if err != nil {
 		return fmt.Errorf("malformed JSON: %v", err)
 	}
@@ -140,7 +141,7 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 	}
 	// parse as raw map to lookup which keys were specified
 	var cm map[string]interface{}
-	json.Unmarshal([]byte(cmdmetaJSON), &cm)
+	json.Unmarshal(jsonbytes, &cm)
 	// update every key that was specified in the update object
 	if cm["stdoutScrollback"] != nil {
 		c.Stdout().Scrollback().Resize(options.StdoutScrollback)
@@ -171,7 +172,7 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 	}
 	// broadcast command update to all connected websocket clients
 	w := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
-	err = json.NewEncoder(w).Encode(metacmd{c}.Metadata())
+	_, err = w.Write(jsonbytes)
 	return err
 }
 

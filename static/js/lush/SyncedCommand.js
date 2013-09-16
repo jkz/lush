@@ -42,15 +42,22 @@ define(["jquery"], function ($) {
         if (updata.nid !== this.nid) {
             throw "updating with foreign command data";
         }
+        var updatedby;
+        if (updata.userdata) {
+            updatedby = updata.userdata.updatedby;
+            delete updata.userdata.updatedby;
+        }
         $.extend(this, updata);
-        $(this).trigger('wasupdated');
+        $(this).trigger('wasupdated', [updata, updatedby]);
     };
 
-    // request an update
-    SyncedCommand.prototype.update = function (updata) {
+    // request an update. the second argument will be passed verbatim to the
+    // wasupdated event handler as the second custom (third) argument.
+    SyncedCommand.prototype.update = function (updata, by) {
         if (updata.nid !== undefined) {
             throw "updating nid not allowed!";
         }
+        updata.userdata = $.extend(updata.userdata, {updatedby: by});
         updata.nid = this.nid;
         this.ctrl.send('updatecmd', JSON.stringify(updata));
     };

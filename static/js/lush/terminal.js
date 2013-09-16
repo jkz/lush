@@ -38,6 +38,15 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         return this.echo(text, finalize);
     };
 
+    // prefix all special chars in arg by backslash
+    var pescape = function (txt) {
+        return txt.replace(/([\\?*\s"'])/g, "\\$1");
+    };
+
+    var punescape = function (txt) {
+        return txt.replace(/\\(.)/g, "$1");
+    };
+
     var parseerror = function (msg, pos) {
         return {
             pos: pos,
@@ -79,7 +88,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
     // line word as a file. The "partial" argument is the snippet the user is
     // trying to tab complete
     var tabcompleteCallback = function (term, parser, partial, files) {
-        files = $.map(files, parser.escape);
+        files = $.map(files, pescape);
         if (files.length == 0) {
             return;
         }
@@ -123,10 +132,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         };
         cli.parser.onliteral = function (c) {
             // internal representation is escaped
-            if (c == '*' || c == '?' || c == '\\') {
-                c = '\\' + c;
-            }
-            cli.newarg += c;
+            cli.newarg += pescape(c);
         };
         cli.parser.onglobQuestionmark = function () {
             cli.hasglob = true;
@@ -143,18 +149,17 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
                 cli.argv.push.apply(cli.argv, matches);
             } else {
                 // undo internal escape representation
-                var unescaped = cli.newarg.replace(/\\(.)/g, "$1");
-                cli.argv.push(unescaped);
+                cli.argv.push(punescape(cli.newarg));
             }
             cli.newarg = '';
         };
-        cli._guid = guid();
+        cli.guid = guid();
         cli._prepareCmd();
     };
 
     // the user updated the prompt: call this method to notify the cli object
     Cli.prototype.setprompt = function (txt) {
-        if (this._cmd === undefined) {
+        if (!this._cmd) {
             return;
         }
         this.parser.parse(txt);
@@ -162,7 +167,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             name: txt,
             cmd: this.argv[0],
             args: this.argv.slice(1),
-        });
+        }, this.guid);
     };
 
     // try to report an error to the user
@@ -176,9 +181,10 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
 
     // commit the current prompt ([enter] button)
     Cli.prototype.commit = function (txt) {
+        if (!this._cmd) {
+            throw "cmd not ready";
+        }
         var cmd = this._cmd;
-        this._cmd = undefined;
-        // hope that this finishes before the next commit()
         this._prepareCmd();
         // need to re-parse because jQuery terminal triggers the "clear command
         // line" event on [enter] before the "handle command" event.
@@ -192,7 +198,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             args: this.argv.slice(1),
             userdata: $.extend({}, cmd.userdata, {
                 autoarchive: true,
-                starter: this._guid,
+                starter: this.guid,
             })
         });
         cmd.start();
@@ -206,11 +212,12 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             // command.
             $(cmd).on('wasupdated', function () {
                 // if started externally
-                if (this.status > 0 && this.userdata.starter != cli._guid) {
+                if (this.status > 0 && this.userdata.starter != cli.guid) {
                     cli._cmd = undefined;
                     cli._prepareCmd();
                 }
-            });
+            })
+            $(cli).trigger('prepared', cmd);
         });
         $(this).trigger('ready');
     };
@@ -246,13 +253,34 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
                     return;
                 }
                 var partial = argv.pop().text;
-                var pattern = parser.unescape(partial) + "*";
+                var pattern = punescape(partial) + "*";
                 // home grown callback function
                 var callback = curry(tabcompleteCallback, term, parser, partial);
                 $.get('/files.json', {pattern: pattern}, callback);
             },
         });
         cli.onerror = $term.error;
+        // a cmd object (and widget) has been prepared for this cli
+        $(cli).on('prepared', function (_, cmd) {
+            // when the associated command is updated from outside
+            $(cmd).on('wasupdated', function (e, updata, by) {
+                if (by == cli.guid || !updata) {
+                    // ignore empty updates and updates from myself
+                    return;
+                }
+                if (updata.cmd !== undefined || updata.args !== undefined) {
+                    var txt = $.map(this.getArgv(), pescape).join(' ');
+                    // hack to prevent the onCommandChange handler from sending
+                    // this change back to the command object. justified
+                    // because the real solution is a better jQuery.terminal
+                    // API imo.
+                    var tempcli = cli;
+                    cli = undefined;
+                    $term.set_command(txt);
+                    cli = tempcli;
+                }
+            });
+        });
         return $term;
     };
 });
