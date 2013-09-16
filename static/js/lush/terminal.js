@@ -148,11 +148,21 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             }
             cli.newarg = '';
         };
+        cli._guid = guid();
+        cli._prepareCmd();
     };
 
     // the user updated the prompt: call this method to notify the cli object
     Cli.prototype.setprompt = function (txt) {
+        if (this._cmd === undefined) {
+            return;
+        }
         this.parser.parse(txt);
+        this._cmd.update({
+            name: txt,
+            cmd: this.argv[0],
+            args: this.argv.slice(1),
+        });
     };
 
     // try to report an error to the user
@@ -166,30 +176,43 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
 
     // commit the current prompt ([enter] button)
     Cli.prototype.commit = function (txt) {
+        var cmd = this._cmd;
+        this._cmd = undefined;
+        // hope that this finishes before the next commit()
+        this._prepareCmd();
         // need to re-parse because jQuery terminal triggers the "clear command
         // line" event on [enter] before the "handle command" event.
         this.parser.parse(txt);
-        if (!$.isArray(this.argv)) {
-            this._error("Parse error: " + this.argv.msg);
-            this._error("");
-            this._error(text);
-            this._error(" ".repeat(this.argv.pos) + "^");
-            return;
-        }
         if (this.argv.length == 0) {
             return;
         }
-        var options = {
+        cmd.update({
             name: txt,
             cmd: this.argv[0],
             args: this.argv.slice(1),
-            userdata: {
-                creator: 'prompt',
-                autostart: true,
-                autoarchive: true
-            }
-        };
-        this.processCmd(options);
+            userdata: $.extend({}, cmd.userdata, {
+                autoarchive: true,
+                starter: this._guid,
+            })
+        });
+        cmd.start();
+    }
+
+    Cli.prototype._prepareCmd = function () {
+        var cli = this;
+        this.processCmd({userdata: {creator: 'prompt'}}, function (cmd) {
+            cli._cmd = cmd;
+            // when the command is started, the cli will need a new placeholder
+            // command.
+            $(cmd).on('wasupdated', function () {
+                // if started externally
+                if (this.status > 0 && this.userdata.starter != cli._guid) {
+                    cli._cmd = undefined;
+                    cli._prepareCmd();
+                }
+            });
+        });
+        $(this).trigger('ready');
     };
 
     // create a new terminal window and append to HTML body
