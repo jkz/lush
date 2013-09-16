@@ -29,7 +29,8 @@ define(["jquery"], function ($) {
         this.nid = id;
         this.htmlid = "cmd" + id;
         this.name = "";
-        this.argv = [];
+        this.cmd = '';
+        this.args = [];
         this.status = 0;
         this.stdoutScrollback = 0;
         this.stderrScrollback = 0;
@@ -41,6 +42,12 @@ define(["jquery"], function ($) {
     LocalCommand.prototype.update = function (updata) {
         $.extend(this, updata);
         $(this).trigger('wasupdated');
+    };
+
+    LocalCommand.prototype.getArgv = function () {
+        var argv = [this.cmd];
+        argv.push.apply(argv, this.args);
+        return argv;
     };
 
     return LocalCommand;

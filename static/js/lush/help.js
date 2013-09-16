@@ -29,7 +29,8 @@ define(["jquery"], function ($) {
             $help.append($('<a href="http://unixhelp.ed.ac.uk/CGI/man-cgi?tar" target=_blank>online man page</a>'));
             $help.append($('<br>'));
             var $changeflag = $('<input type=checkbox>').change(function () {
-                var args = cmd.argv.slice(1);
+                // copy array to leave cmd object intact
+                var args = cmd.args.slice(0);
                 if (this.checked) {
                     if (args.length == 0) {
                         args = ['x'];
@@ -51,7 +52,7 @@ define(["jquery"], function ($) {
                     args: args,
                 }));
             });
-            $changeflag[0].checked = (cmd.argv.length >= 2 && cmd.argv[1].indexOf('x') != -1);
+            $changeflag[0].checked = (cmd.args.length > 0 && cmd.args[0].indexOf('x') != -1);
             $help.append($('<label>extract: </label>').append($changeflag));
         },
         git: function (cmd, $help, switchModeToView, ctrl) {
@@ -65,6 +66,6 @@ define(["jquery"], function ($) {
     };
 
     return function (cmd) {
-        return actions[cmd.argv[0]] || null;
+        return actions[cmd.cmd] || null;
     };
 })

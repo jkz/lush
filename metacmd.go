@@ -34,7 +34,8 @@ type cmdmetadata struct {
 	Id               liblush.CmdId `json:"nid"`
 	HtmlId           string        `json:"htmlid"`
 	Name             string        `json:"name"`
-	Argv             []string      `json:"argv"`
+	Cmd              string        `json:"cmd"`
+	Args             []string      `json:"args"`
 	Status           int           `json:"status"`
 	StdouttoId       liblush.CmdId `json:"stdoutto,omitempty"`
 	StderrtoId       liblush.CmdId `json:"stderrto,omitempty"`
@@ -82,7 +83,10 @@ func (mc metacmd) Metadata() (data cmdmetadata) {
 	data.Id = mc.Id()
 	data.HtmlId = fmt.Sprint("cmd", mc.Id())
 	data.Name = mc.Name()
-	data.Argv = mc.Argv()
+	if argv := mc.Argv(); len(argv) > 0 {
+		data.Cmd = argv[0]
+		data.Args = argv[1:]
+	}
 	data.UserData = mc.UserData()
 	data.StdoutScrollback = mc.Stdout().Scrollback().Size()
 	data.StderrScrollback = mc.Stderr().Scrollback().Size()

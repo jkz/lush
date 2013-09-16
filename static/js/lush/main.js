@@ -320,13 +320,14 @@ define(["jquery",
         // when clicked will prepare this command for repeating (argv ->
         // prompt, focus prompt)
         $('.repeat', $viewm).click(function () {
-            term.set_command(cmd.argv.join(' ')).focus();
+            term.set_command(cmd.getArgv().join(' ')).focus();
         });
         // dynamic parts of the UI
         $(cmd).on('wasupdated', function () {
             setStatNode(this.nid, this.status, $('.status', $viewm));
-            $('.argv', $viewm).text(this.argv.join(" "));
-            $('.bookmark', $viewm).attr('href', '#prompt;' + cmd.argv.join(' '));
+            var argvtxt = cmd.getArgv().join(' ');
+            $('.argv', $viewm).text(argvtxt);
+            $('.bookmark', $viewm).attr('href', '#prompt;' + argvtxt);
             if (this.status > 0) {
                 // todo: disable edit tab?
             }
@@ -356,8 +357,6 @@ define(["jquery",
         // class=tab_view>).
         $('form', $editm).submit(function (e) {
             e.preventDefault();
-            var argv = $.map($('input[name=cmd], input[name^=arg]', this), attrgetter('value'));
-            argv = removeFalse(argv);
             var o = $(this).serializeObject();
             // cast numeric inputs to JS ints
             $.each(o, function (key, val) {
@@ -365,9 +364,15 @@ define(["jquery",
                     o[key] = parseInt(val);
                 }
             });
+            var $args = $(this).find('input[name^=arg]');
+            var args = $.map($args, attrgetter('value'));
+            args = removeFalse(args);
+            o.args = args;
             // set command name to argv
-            o.name = argv.join(' ');
-            o.args = argv.slice(1);
+            o.name = o.cmd;
+            for (var i = 0; i < args.length; i++) {
+                o.name += ' ' + args[i];
+            }
             o.userdata = $(this).data();
             o.userdata.autostart = this.autostart.checked;
             o.userdata.autoarchive = this.autoarchive.checked;
@@ -375,8 +380,8 @@ define(["jquery",
             switchToViewTab($widget);
         });
         $(cmd).on('wasupdated', function () {
-            $('[name=cmd]', $editm).val(this.argv[0]);
-            this.argv.slice(1).forEach(function (arg, idx) {
+            $('[name=cmd]', $editm).val(this.cmd);
+            this.args.forEach(function (arg, idx) {
                 // keydown triggers the "create new arg input" handler
                 $('[name=arg' + (idx + 1) + ']', $editm).val(arg).keydown();
             });
