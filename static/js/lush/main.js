@@ -678,7 +678,9 @@ define(["jquery",
         return term.termPrintln(data, finalize);
     };
 
-    var processCmd = function (options) {
+    // ask the server to create a new command. if second argument is passed, it
+    // is called with the new command as the argument once the server responds
+    var processCmd = function (options, callback) {
         if (options.cmd == "cd") {
             chdir(options.args[0]);
         } else {
@@ -687,7 +689,21 @@ define(["jquery",
                 options.userdata = {};
             }
             options.userdata.god = moi;
-            ctrl.send("new", JSON.stringify(options));
+            if (callback !== undefined) {
+                var cbid = 'newcmdcallback.' + guid();
+                options.userdata.callback = cbid;
+                $(window).on(cbid, function (_, cmd) {
+                    // namespaced jquery event, can be triggered spuriously
+                    if (cmd.userdata.callback == cbid) {
+                        callback(cmd);
+                    }
+                });
+                // clear the callback after one second
+                setTimeout(function () {
+                    $(window).off(cbid);
+                }, 1000);
+                ctrl.send("new", JSON.stringify(options));
+            }
         }
     };
 
@@ -766,6 +782,8 @@ define(["jquery",
                     // If not autostarting, go directly into edit mode
                     $widget.tabs('option', 'active', 1);
                 }
+                // trigger all callbacks waiting for a newcmd event
+                $(window).trigger('newcmdcallback', cmd);
             }
         });
         // command has been updated
