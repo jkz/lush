@@ -43,7 +43,7 @@ requirejs.config({
     "baseUrl": "/js/ext",
     "paths": {
       "lush": "../lush",
-      "jquery": "jquery-2.0.3",
+      "jquery": "jquery-2.0.3.min",
       "jquery.ui": "jquery-ui-1.10.2.min",
       "jquery.terminal": "jquery.terminal-0.7.6.min",
       "jsPlumb": "jquery.jsPlumb-1.3.16-all-min",
