@@ -690,18 +690,28 @@ define(["jquery",
             }
             options.userdata.god = moi;
             if (callback !== undefined) {
+                // subscribe to the "newcmdcallback" event in a unique
+                // namespace. every new command will trigger the
+                // "newcmdcallback" event (without namespace), which will
+                // trigger all callbacks, including this one.
                 var cbid = 'newcmdcallback.' + guid();
                 options.userdata.callback = cbid;
                 $(window).on(cbid, function (_, cmd) {
-                    // namespaced jquery event, can be triggered spuriously
+                    // namespaced jquery event, can be triggered spuriously.
+                    // make sure that this command corresponds to this
+                    // callback.
                     if (cmd.userdata.callback == cbid) {
                         callback(cmd);
                     }
                 });
-                // clear the callback after one second
+                // clear the callback after ten seconds. this means that the
+                // server has ten seconds to generate a newcmd event, which
+                // will trigger the newcmdcallback event. after that, the
+                // callback is silently deleted. this is not great because the
+                // callback has no way of knowing whether it timed out or not.
                 setTimeout(function () {
                     $(window).off(cbid);
-                }, 1000);
+                }, 10000);
                 ctrl.send("new", JSON.stringify(options));
             }
         }
