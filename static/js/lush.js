@@ -54,7 +54,7 @@ requirejs.config({
         "jsPlumb": ["jquery"],
         "jquery.ui": ["jquery"],
     },
-    "waitSeconds": 60, // brasiiiiiil, nananananaholyshiiiiiit...
+    "waitSeconds": 100000, // i have the patience of a monk
 });
 
 
