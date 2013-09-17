@@ -43,7 +43,7 @@ define(["jquery"], function ($) {
     // handler for every command object that decodes the updata json just to
     // see if the nid matches. I didn't profile it but I can already feel the
     // O(n) pain.
-    SyncedCommand.prototype.wasupdated = function (updata) {
+    SyncedCommand.prototype.processUpdate = function (updata) {
         if (updata.nid !== this.nid) {
             throw "updating with foreign command data";
         }

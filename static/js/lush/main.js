@@ -790,7 +790,7 @@ define(["jquery",
         $(ctrl).on("updatecmd", function (_, updatajson) {
             var updata = JSON.parse(updatajson);
             var cmd = cmds[updata.nid];
-            cmd.wasupdated(updata);
+            cmd.processUpdate(updata);
         });
         path($('form#path'), ctrl);
         term = terminal(processCmd);
@@ -812,7 +812,7 @@ define(["jquery",
         // now that all widgets have been built (and most importantly: update
         // handlers have been set) populate the cmd objects to init the widgets
         $.each(cmds_init, function (nid, cmdinit) {
-            cmds[nid].wasupdated(cmdinit);
+            cmds[nid].processUpdate(cmdinit);
         });
     });
 
