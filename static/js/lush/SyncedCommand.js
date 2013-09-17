@@ -21,7 +21,12 @@
 "use strict";
 
 
-// command object synchronized with server
+// command object synchronized with server. the properties of this object are
+// not spec'ed but the y should be. instead they are implementation defined, by
+// the serialization of a server-side command object to JSON. still, they
+// should be treated as if that is the spec, the client is not supposed to
+// start adding all kinds of new properties (use the userdata property for
+// custom client data).
 
 define(["jquery"], function ($) {
 
@@ -46,17 +51,36 @@ define(["jquery"], function ($) {
         if (updata.userdata) {
             updatedby = updata.userdata.updatedby;
             delete updata.userdata.updatedby;
+            // follow semantics of .update() method; object properties are
+            // extended, not replaced.
+            $.extend(this.userdata, updata.userdata);
+            delete updata.userdata;
         }
         $.extend(this, updata);
         $(this).trigger('wasupdated', [updata, updatedby]);
     };
 
-    // request an update. the second argument will be passed verbatim to the
+    // request an update. the first argument is an object containing the
+    // properties that should be updated and their new values. because the
+    // command object is not opaque (its signature is defined) the properties
+    // are handled semantically: numbers, strings and arrays are replaced,
+    // object properties (i.e. the userdata prop) are extended. to clear an
+    // object property, set it to null. this will set the object to {}. that
+    // convention makes the semantics of this method odd, but code using it is
+    // more intuitive (extending the object is what you want 99% of the time).
+    //
+    // the second argument will be passed verbatim to the
     // wasupdated event handler as the second custom (third) argument.
     SyncedCommand.prototype.update = function (updata, by) {
         if (updata.nid !== undefined) {
             throw "updating nid not allowed!";
         }
+        if (updata.userdata === null) {
+            updata.userdata = {}
+        } else {
+            updata.userdata = $.extend({}, this.userdata, updata.userdata);
+        }
+        // store the updatedby key in the command userdata
         updata.userdata = $.extend(updata.userdata, {updatedby: by});
         updata.nid = this.nid;
         this.ctrl.send('updatecmd', JSON.stringify(updata));

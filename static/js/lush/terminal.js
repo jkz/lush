@@ -196,10 +196,10 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             name: txt,
             cmd: this.argv[0],
             args: this.argv.slice(1),
-            userdata: $.extend({}, cmd.userdata, {
+            userdata: {
                 autoarchive: true,
                 starter: this.guid,
-            })
+            }
         });
         cmd.start();
     }
