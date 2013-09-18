@@ -788,8 +788,8 @@ define(["jquery",
                 setTimeout(function () {
                     $(window).off(cbid);
                 }, 10000);
-                ctrl.send("new", JSON.stringify(options));
             }
+            ctrl.send("new", JSON.stringify(options));
         }
     };
 
