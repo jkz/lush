@@ -820,6 +820,7 @@ define(["jquery",
             var cmd = cmds[nid];
             cmd.processRelease();
             delete cmds[nid];
+            rebuildGroupsList();
         });
         path($('form#path'), ctrl);
         term = terminal(processCmd);
