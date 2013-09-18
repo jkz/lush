@@ -99,7 +99,7 @@
 
 define(["jquery",
         "lush/Ctrl",
-        "lush/SyncedCommand",
+        "lush/Command",
         "lush/terminal",
         "lush/path",
         "lush/help",

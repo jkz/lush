@@ -30,7 +30,7 @@
 
 define(["jquery"], function ($) {
 
-    var SyncedCommand = function (ctrl, init) {
+    var Command = function (ctrl, init) {
         this.ctrl = ctrl;
         $.extend(this, init);
     };
@@ -43,7 +43,7 @@ define(["jquery"], function ($) {
     // handler for every command object that decodes the updata json just to
     // see if the nid matches. I didn't profile it but I can already feel the
     // O(n) pain.
-    SyncedCommand.prototype.processUpdate = function (updata) {
+    Command.prototype.processUpdate = function (updata) {
         if (updata.nid !== this.nid) {
             throw "updating with foreign command data";
         }
@@ -71,7 +71,7 @@ define(["jquery"], function ($) {
     //
     // the second argument will be passed verbatim to the
     // wasupdated event handler as the second custom (third) argument.
-    SyncedCommand.prototype.update = function (updata, by) {
+    Command.prototype.update = function (updata, by) {
         if (updata.nid !== undefined) {
             throw "updating nid not allowed!";
         }
@@ -86,27 +86,27 @@ define(["jquery"], function ($) {
         this.ctrl.send('updatecmd', JSON.stringify(updata));
     };
 
-    SyncedCommand.prototype.getArgv = function () {
+    Command.prototype.getArgv = function () {
         var argv = [this.cmd];
         argv.push.apply(argv, this.args);
         return argv;
     };
 
-    SyncedCommand.prototype.start = function () {
+    Command.prototype.start = function () {
         this.ctrl.send('start', this.nid);
     };
 
-    SyncedCommand.prototype.release = function () {
+    Command.prototype.release = function () {
         this.ctrl.send('release', this.nid);
     };
 
     // called by the control stream when the server indicated that this command
     // was released. generates the jquery 'wasreleased' event on this command
     // object.
-    SyncedCommand.prototype.processRelease = function () {
+    Command.prototype.processRelease = function () {
         $(this).trigger('wasreleased')
                .unbind(); // unbind all jquery event handlers
     };
 
-    return SyncedCommand;
+    return Command;
 });
