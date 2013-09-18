@@ -33,6 +33,10 @@ define(["jquery"], function ($) {
     var Command = function (ctrl, init) {
         this.ctrl = ctrl;
         $.extend(this, init);
+        // (depth-first) recursion of archival event
+        $(this).on('archival', function (_, archived) {
+            $(this.children()).trigger('archival', archived); // :D
+        });
     };
 
     // update the properties of this command with those from the argument
@@ -89,6 +93,9 @@ define(["jquery"], function ($) {
                 $(cmd).trigger('childAdded', [mod.to, stream]);
             }
         });
+        if (updata.userdata && updata.userdata.archived !== undefined) {
+            $(this).trigger('archival', updata.userdata.archived);
+        }
     };
 
     // request an update. the first argument is an object containing the

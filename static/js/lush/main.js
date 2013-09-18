@@ -145,11 +145,25 @@
 //
 //     - archival: triggered when this command is being (un)archived. can be
 //     caused by a server event, by the user minimizing the widget, or by a
-//     parent widget being minimized. should not be propagated. it is triggered
-//     when the server updates cmd.userdata.archived (i.e. by a 'wasupdated'
-//     handler). the parameter is a boolean that is true for archiving, false
-//     for unarchiving.
+//     parent widget being minimized. should not be propagated by registered
+//     handlers (is propagated by the Command object). it is triggered when the
+//     server updates cmd.userdata.archived (i.e. by a 'wasupdated' handler).
+//     the parameter is a boolean that is true for archiving, false for
+//     unarchiving.
 //
+//     - parentRemoved: this command is now a root. the argument is the old
+//     parent.
+//
+//     - parentAdded: the argument is the new parent. note that commands can
+//     only have one parent.
+//
+//     = childAdded: an output pipe of this command is now connected to another
+//     command. the first parameter is the child, the second is the name of the
+//     stream.
+//
+//     - childRemoved: an output pipe is disconnected from a command. the first
+//     parameter is the command that was disconnected, the second is the name
+//     of the stream.
 //
 // good luck.
 
@@ -605,7 +619,6 @@ define(["jquery",
             return cmd.stdinep.connections.length == 0;
         }
         $(cmd).on('archival', function (_, archived) {
-            $(cmd.children()).trigger('archival', archived); // :D
             // if this is a group root, archive the entire group. no need for
             // a conditional; if it's not this jquery selector is empty and
             // thus the entire thing is a NOP.
@@ -629,9 +642,6 @@ define(["jquery",
                 setCommandArchivalState(this, true);
             }
             updatePipes(this);
-            if (updata.userdata && updata.userdata.archived !== undefined) {
-                $(this).trigger('archival', updata.userdata.archived);
-            }
         });
         $(cmd).on('wasreleased', function () {
             [cmd.stdinep, cmd.stdoutep, cmd.stderrep]
