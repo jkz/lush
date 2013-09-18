@@ -89,6 +89,10 @@ div.streampeeker {
     content: "◳";
 }
 
+#groups li.child {
+    display: none;
+}
+
 /* hide template nodes intended for cloning */
 [id$="_template"] {
     display: none;

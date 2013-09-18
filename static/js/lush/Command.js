@@ -55,8 +55,40 @@ define(["jquery"], function ($) {
             // extended, not replaced.
             $.extend(this.userdata, updata.userdata);
         }
+        // return a cmd object if argument is not undefined
+        var getCmd = function (nid) {
+            if (nid !== undefined) {
+                return cmds[nid];
+            }
+        };
+        // map(streamname => map({from, to} => [Command | null]))
+        var childMod = {};
+        if (updata.stdoutto !== this.stdoutto) {
+            childMod.stdout = {
+                from: getCmd(this.stdoutto),
+                to: getCmd(updata.stdoutto),
+            };
+        }
+        if (updata.stderrto !== this.stderrto) {
+            childMod.stderr = {
+                from: getCmd(this.stderrto),
+                to: getCmd(updata.stderrto),
+            };
+        }
         $.extend(this, updata);
         $(this).trigger('wasupdated', [updata, updatedby]);
+        // trigger child/parent add/remove events
+        var cmd = this;
+        $.map(childMod, function (mod, stream) {
+            if (mod.from !== undefined) {
+                $(mod.from).trigger('parentRemoved', [cmd, stream]);
+                $(cmd).trigger('childRemoved', [mod.from, stream]);
+            }
+            if (mod.to !== undefined) {
+                $(mod.to).trigger('parentAdded', [cmd, stream]);
+                $(cmd).trigger('childAdded', [mod.to, stream]);
+            }
+        });
     };
 
     // request an update. the first argument is an object containing the
@@ -107,14 +139,25 @@ define(["jquery"], function ($) {
                .unbind(); // unbind all jquery event handlers
     };
 
+    // The child of this command on the given stream or undefined if none
+    Command.prototype.child = function (stream) {
+        var toid = this[stream + 'to'];
+        if (toid !== undefined) {
+            return cmds[toid];
+        }
+    };
+
     // all commands that this command is a parent of.
     Command.prototype.children = function () {
         var children = [];
-        if (this.stdoutto) {
-            children.push(cmds[this.stdoutto]);
+        var c;
+        c = this.child('stdout');
+        if (c !== undefined) {
+            children.push(c);
         }
-        if (this.stderrto) {
-            children.push(cmds[this.stderrto]);
+        c = this.child('stderr');
+        if (c !== undefined) {
+            children.push(c);
         }
         return children;
     }

@@ -135,7 +135,7 @@
 //     only the keys that have been updated, and their new values. this saves
 //     the poor client the trouble of refreshing a view that didn't change.
 //
-//     - cmd_released: triggered when resources associated with a command have
+//     - wasreleased: triggered when resources associated with a command have
 //     been released by the server and the client wants to clean up the
 //     command. any resources that will not be garbage collected automatically
 //     should be freed here.
@@ -629,11 +629,6 @@ define(["jquery",
                 setCommandArchivalState(this, true);
             }
             updatePipes(this);
-            // this call must come after updatePipes because figuring out group
-            // relations is done through the jsPlumb connections. not very
-            // pretty imo i wouldnt mind better separation between model and
-            // view but thats how its currently implemented.
-            rebuildGroupsList();
             if (updata.userdata && updata.userdata.archived !== undefined) {
                 $(this).trigger('archival', updata.userdata.archived);
             }
@@ -676,31 +671,60 @@ define(["jquery",
         jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'block'));
     };
 
-    // map(sysid => cmdobj) to map(groupid => [cmdobj])
-    var makeGroups = function (cmds) {
-        return groupby(cmds, function (cmd) { return cmd.getGroupId(); });
+    // build a <li> for the groups list for this command
+    var createGroupsLi = function (cmd) {
+        // TODO: this is not a good id(ea)
+        var $li = $('<li id=group' + cmd.nid + '><span class=name></span></li>')
+            .data('gid', cmd.nid);
+        if (cmd.isRoot()) {
+            $li.find('.name').text(cmd.nid + ': ' + groupname(cmd));
+        } else {
+            $li.addClass('child');
+        }
+        $(cmd).on('wasupdated', function (_, updata) {
+            // if my name changes, so does the name of my group
+            if (updata.name !== undefined) {
+                // Set the text of this li to the name of whatever group I
+                // belong to
+                var gid = this.getGroupId();
+                $('#group' + gid + ' .name')
+                    .text(gid + ': ' + groupname(cmds[gid]));
+            }
+            if (updata.userdata && updata.userdata.archived) {
+                $li.addClass('archived');
+            }
+        });
+        $(cmd).on('parentAdded', function () {
+            // I am now a child, hide my li
+            $('#group' + this.nid).addClass('child');
+        });
+        $(cmd).on('parentRemoved', function () {
+            // I'm back!
+            $('#group' + this.nid).removeClass('child');
+        });
+        $(cmd).on('wasreleased', function () {
+            $('#group' + this.nid).remove();
+        });
+        $li.append($('<button>').click(function (e) {
+            e.preventDefault();
+            // dont close, allows the vm to coalesce these handlers. I
+            // actually don't know if js vms do this but it seems logical,
+            // since it's not a closure.. given all the fuss about v8 I'd
+            // expect at least that compiler to recognize this.
+            // surprisingly enough this is not easy to google.
+            var $li = $(this).closest('li');
+            var cmd = cmds[$li.data('gid')];
+            var currentState = $li.hasClass('archived');
+            setCommandArchivalState(cmd, !currentState);
+        }));
+        return $li;
     };
 
-    // refresh the <div id=groups>
-    var rebuildGroupsList = function () {
-        var groups = makeGroups(cmds);
-        var lis = $.map(groups, function (members, gid) {
-            gid = +gid; // int
-            var names = $.map(members, attrgetter("name")).join(", ");
-            var litxt = gid + ': ' + names;
-            var liattrs = ' id=group' + gid;
-            if (cmds[gid].userdata.archived) {
-                liattrs += ' class=archived';
-            }
-            var $li = $('<li' + liattrs + '>' + litxt + '</li>');
-            var $btn = $('<button>').click(function (e) {
-                e.preventDefault();
-                var currentState = $li.hasClass('archived');
-                setCommandArchivalState(cmds[gid], !currentState);
-            });
-            return $li.append($btn);
-        });
-        return $('#groups ul').empty().append(lis);
+    // build the <div id=groups>
+    var buildGroupsList = function () {
+        // make a $li for every command, hide it if it's not root
+        var lis = $.map(cmds, createGroupsLi);
+        return $('#groups ul').append(lis);
     };
 
     var chdir = function (dir) {
@@ -782,7 +806,7 @@ define(["jquery",
         $.each(cmds, function (_, cmd) { createCmdWidget(cmd); });
         // second iteration to ensure all widgets exist before connecting them
         $.each(cmds, function (_, cmd) { updatePipes(cmd); });
-        rebuildGroupsList();
+        buildGroupsList();
         $('<a href>show/hide archived</a>')
             .click(function (e) {
                 e.preventDefault();
@@ -814,8 +838,8 @@ define(["jquery",
             cmds[cmd.nid] = cmd;
             createCmdWidget(cmd);
             delete cmdinit.nid;
+            $('#groups ul').append(createGroupsLi(cmd));
             cmd.update(cmdinit);
-            rebuildGroupsList();
             if (cmd.userdata.god == moi) {
                 // i made this!
                 // capture all stdout and stderr to terminal
@@ -849,7 +873,6 @@ define(["jquery",
             var cmd = cmds[nid];
             cmd.processRelease();
             delete cmds[nid];
-            rebuildGroupsList();
         });
         path($('form#path'), ctrl);
         term = terminal(processCmd);
