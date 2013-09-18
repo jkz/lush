@@ -54,7 +54,6 @@ define(["jquery"], function ($) {
             // follow semantics of .update() method; object properties are
             // extended, not replaced.
             $.extend(this.userdata, updata.userdata);
-            delete updata.userdata;
         }
         $.extend(this, updata);
         $(this).trigger('wasupdated', [updata, updatedby]);
@@ -107,6 +106,18 @@ define(["jquery"], function ($) {
         $(this).trigger('wasreleased')
                .unbind(); // unbind all jquery event handlers
     };
+
+    // all commands that this command is a parent of.
+    Command.prototype.children = function () {
+        var children = [];
+        if (this.stdoutto) {
+            children.push(cmds[this.stdoutto]);
+        }
+        if (this.stderrto) {
+            children.push(cmds[this.stderrto]);
+        }
+        return children;
+    }
 
     return Command;
 });

@@ -95,6 +95,62 @@
 // easily scales to > 1 clients; when you get an answer you handle it, even if
 // you didn't ask a question.
 //
+//
+// EVENTS
+//
+// sooo im not really in the mood for writing documentation atm but this event
+// pubsub thing (I think its pubsub but tbh the only thing I know about pubsub
+// is what it stands for anyway judging from that I think this is pubsub :P) is
+// getting out of hand i really need to write this down somewhere.
+//
+// soooooo.... ah yes there are loads of events flying around: websocket events
+// and jquery events. this part is about the latter.
+//
+// window
+//
+//     there is one event that is triggered on the window object, it's the
+//     newcmdcallback. i don't feel like explaining it here but you can search
+//     the code for window.*on (and skip this sentence haha) and that should
+//     explain it
+//
+// ctrl
+//
+//     all incoming websocket events are translated by the control object
+//     (often (hopefully always) referred to by a var named ctrl) into jquery
+//     events on itself. this part is pretty obvious and you can see how it
+//     works by checking out Control.js and searching for ctrl.*on in other
+//     parts of the code.
+//
+// cmd
+//
+//     this one is interesting: there is a whole range of implementation
+//     defined events that are triggered on the command object. ill try to spec
+//     them here but ill probably overlook a few.
+//
+//     - wasupdated: this one is triggered whenever the command object has
+//     been updated. subscribe to this event if you want to stay in sync with
+//     the command. what exactly has been updated can be extracted from the
+//     first parameter (i.e. the second arg, bc its a jquery event so the
+//     first arg is the jquery event object). that is an object containing
+//     only the keys that have been updated, and their new values. this saves
+//     the poor client the trouble of refreshing a view that didn't change.
+//
+//     - cmd_released: triggered when resources associated with a command have
+//     been released by the server and the client wants to clean up the
+//     command. any resources that will not be garbage collected automatically
+//     should be freed here.
+//
+//     - stdout.stream / stderr.stream: looks like this one is called when the
+//     running command is generating data on the relevant streams.
+//
+//     - archival: triggered when this command is being (un)archived. can be
+//     caused by a server event, by the user minimizing the widget, or by a
+//     parent widget being minimized. should not be propagated. it is triggered
+//     when the server updates cmd.userdata.archived (i.e. by a 'wasupdated'
+//     handler). the parameter is a boolean that is true for archiving, false
+//     for unarchiving.
+//
+//
 // good luck.
 
 define(["jquery",
@@ -466,6 +522,11 @@ define(["jquery",
         }
     };
 
+    // update the state of archival on this command.
+    var setCommandArchivalState = function (cmd, state) {
+        cmd.update({userdata: {archived: state}});
+    }
+
     // create widget with command info and add it to the DOM
     // the argument is a cmd object implementation defined by the cmds array in
     // root.html
@@ -543,14 +604,29 @@ define(["jquery",
         cmd.isRoot = function () {
             return cmd.stdinep.connections.length == 0;
         }
-        $(cmd).on('wasupdated', function () {
+        $(cmd).on('archival', function (_, archived) {
+            $(cmd.children()).trigger('archival', archived); // :D
+            // if this is a group root, archive the entire group. no need for
+            // a conditional; if it's not this jquery selector is empty and
+            // thus the entire thing is a NOP.
+            var $group = $('#group' + cmd.nid);
+            if (archived) {
+                hideCmd(this);
+                $group.addClass('archived');
+            } else {
+                showCmd(this);
+                $group.removeClass('archived');
+            }
+        });
+        $(cmd).on('wasupdated', function (_, updata) {
             // only archive group leaders
             if (this.userdata.autoarchive &&
-                this.status == 2 &&
+                updata.status == 2 &&
                 this.isRoot() &&
                 // only god archives a command, the rest will follow indirectly
-                this.userdata.god == moi) {
-                setGroupArchivalStatus(this.nid, true);
+                this.userdata.god == moi)
+            {
+                setCommandArchivalState(this, true);
             }
             updatePipes(this);
             // this call must come after updatePipes because figuring out group
@@ -558,6 +634,9 @@ define(["jquery",
             // pretty imo i wouldnt mind better separation between model and
             // view but thats how its currently implemented.
             rebuildGroupsList();
+            if (updata.userdata && updata.userdata.archived !== undefined) {
+                $(this).trigger('archival', updata.userdata.archived);
+            }
         });
         $(cmd).on('wasreleased', function () {
             [cmd.stdinep, cmd.stdoutep, cmd.stderrep]
@@ -566,23 +645,6 @@ define(["jquery",
             $widget.remove();
         });
         return $widget;
-    };
-
-    // Recursively apply fun to all cmds that this cmd is a source of and then
-    // apply fun to this cmd itself
-    var mapCmdTree = function (sysid, f) {
-        var cmd = cmds[sysid];
-        // for every connected stdout and stderr stream:
-        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
-            if (conn.getParameter("isStreampeek")) {
-                return;
-            }
-            // stdin endpoint that this stream is connected to
-            var trgtep = conn.endpoints[1];
-            // recurse into those before continuing
-            mapCmdTree(trgtep.getParameter("sysid")(), f);
-        });
-        f(cmd);
     };
 
     // hide command widget, including meta widgets (streampeek)
@@ -614,67 +676,32 @@ define(["jquery",
         jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'block'));
     };
 
-    // purely visual
-    var hideCmdTree = function (sysid) {
-        mapCmdTree(sysid, hideCmd);
-        $('#group' + sysid).addClass('archived');
-    };
-
-    // purely visual
-    var showCmdTree = function (sysid) {
-        mapCmdTree(sysid, showCmd);
-        $('#group' + sysid).removeClass('archived');
-    };
-
-    // set userdata to '(un)archived', rely on event handler for this key to do
-    // the actual archiving when the server replies to this event
-    var setGroupArchivalStatus = function (sysid, state) {
-        var archivals = $('#groups').data('archivals');
-        if (archivals === undefined) {
-            throw "archivals uninitialized";
-        }
-        archivals[sysid] = state;
-        ctrl.send('setuserdata', 'groups_archived', JSON.stringify(archivals));
-    };
-
     // map(sysid => cmdobj) to map(groupid => [cmdobj])
     var makeGroups = function (cmds) {
         return groupby(cmds, function (cmd) { return cmd.getGroupId(); });
     };
 
-    // refresh the <ul id=groups>
+    // refresh the <div id=groups>
     var rebuildGroupsList = function () {
         var groups = makeGroups(cmds);
-        var lis = $.map(groups, function (cmds, gid) {
-            var names = $.map(cmds, attrgetter("name")).join(", ");
-            var $li = $('<li id=group' + gid + '>' + gid + ': ' + names + '</li>');
+        var lis = $.map(groups, function (members, gid) {
+            gid = +gid; // int
+            var names = $.map(members, attrgetter("name")).join(", ");
+            var litxt = gid + ': ' + names;
+            var liattrs = ' id=group' + gid;
+            if (cmds[gid].userdata.archived) {
+                liattrs += ' class=archived';
+            }
+            var $li = $('<li' + liattrs + '>' + litxt + '</li>');
             var $btn = $('<button>').click(function (e) {
                 e.preventDefault();
-                setGroupArchivalStatus(gid, !$li.hasClass('archived'));
+                var currentState = $li.hasClass('archived');
+                setCommandArchivalState(cmds[gid], !currentState);
             });
             return $li.append($btn);
         });
         return $('#groups ul').empty().append(lis);
     };
-
-    var initGroupsList = function () {
-        $(ctrl).on('userdata_groups_archived', function (_, archivalsjson) {
-            // eg {1: true, 2: false, 3: false};
-            var archivals = safeJSONparse(archivalsjson) || {};
-            // update local archivals status with that from server
-            $('#groups').data('archivals', archivals);
-            $.each(archivals, function (gid, state) {
-                if (state) {
-                    hideCmdTree(gid);
-                } else {
-                    showCmdTree(gid);
-                }
-            });
-        });
-        rebuildGroupsList();
-        // initialize the UI with current archival status (if any)
-        ctrl.send('getuserdata', 'groups_archived')
-    }
 
     var chdir = function (dir) {
         // this here is some tricky code dupe
@@ -755,7 +782,7 @@ define(["jquery",
         $.each(cmds, function (_, cmd) { createCmdWidget(cmd); });
         // second iteration to ensure all widgets exist before connecting them
         $.each(cmds, function (_, cmd) { updatePipes(cmd); });
-        initGroupsList();
+        rebuildGroupsList();
         $('<a href>show/hide archived</a>')
             .click(function (e) {
                 e.preventDefault();
