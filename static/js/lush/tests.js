@@ -222,4 +222,48 @@ define(["lush/Parser2", "lush/utils"], function (Parser) {
         equal(cli.getprompt(), 'a b c', 'tab completion multiple options: nop on input');
         deepEqual(ctx.suggestions, ['a', 'b', 'c'], 'tab completion multiple options: show in UI');
     });
+
+    test("groupname: pipe notation", function () {
+        var C = function (name) {
+            this.name = name;
+        }
+        C.prototype.child = function (name) {
+            return this[name];
+        }
+        // eventual structure:
+        //
+        // c -- co  -- coo -- cooo
+        // |            |
+        // ce          cooe
+        // |
+        // cee
+        //
+        var c = new C('c');
+        equal(groupname(c), 'c', 'single command')
+        var co = new C('co');
+        c.stdout = co;
+        equal(groupname(c), 'c | co', 'one pipe')
+        var ce = new C('ce');
+        c.stderr = ce;
+        equal(groupname(c), 'c | co 2| ce', 'stdout & stderr');
+        var coo = new C('coo');
+        co.stdout = coo;
+        // test simpler pipe first
+        c.stderr = undefined;
+        equal(groupname(c), 'c | co | coo', 'long stdout only pipe');
+        // restore
+        c.stderr = ce;
+        equal(groupname(c), 'c | (co | coo) 2| ce', 'nested stdout pipe')
+        var cooo = new C('cooo');
+        coo.stdout = cooo;
+        equal(groupname(c), 'c | (co | coo | cooo) 2| ce', 'nested long pipe')
+        var cooe = new C('cooe');
+        coo.stderr = cooe;
+        equal(groupname(c), 'c | (co | coo | cooo 2| cooe) 2| ce',
+                'nested stdout & stderr')
+        var cee = new C('cee');
+        ce.stderr = cee;
+        equal(groupname(c), 'c | (co | coo | cooo 2| cooe) 2| ce 2| cee',
+            'chained stderr')
+    });
 });

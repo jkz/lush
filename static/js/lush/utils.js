@@ -196,3 +196,20 @@ var monitorstream = function (sysid, stream, callback) {
     };
     return ws;
 };
+
+// the name of a group (bash style: parent | child)
+var groupname = function (cmd, _inner) {
+    var name = cmd.name;
+    var c1 = cmd.child('stdout');
+    var c2 = cmd.child('stderr');
+    if (c1) {
+        name += ' | ' + groupname(c1, c2);
+    }
+    if (c2) {
+        name += ' 2| ' + groupname(c2);
+    }
+    if (_inner && (c1 || c2)) {
+        name = '(' + name + ')';
+    }
+    return name;
+};
