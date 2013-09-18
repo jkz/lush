@@ -560,7 +560,9 @@ define(["jquery",
             rebuildGroupsList();
         });
         $(cmd).on('wasreleased', function () {
-            // TODO: remove jsPlumb connections
+            [cmd.stdinep, cmd.stdoutep, cmd.stderrep]
+                .forEach(jsPlumb.deleteEndpoint);
+            // TODO: delete streampeekers
             $widget.remove();
         });
         return $widget;
