@@ -67,13 +67,17 @@ define(["jquery"], function ($) {
         };
         // map(streamname => map({from, to} => [Command | null]))
         var childMod = {};
-        if (updata.stdoutto !== this.stdoutto) {
+        if (updata.stdoutto !== undefined
+            && updata.stdoutto !== this.stdoutto)
+        {
             childMod.stdout = {
                 from: getCmd(this.stdoutto),
                 to: getCmd(updata.stdoutto),
             };
         }
-        if (updata.stderrto !== this.stderrto) {
+        if (updata.stderrto !== undefined
+            && updata.stderrto !== this.stderrto)
+        {
             childMod.stderr = {
                 from: getCmd(this.stderrto),
                 to: getCmd(updata.stderrto),
