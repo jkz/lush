@@ -102,6 +102,7 @@ type Session interface {
 	NewCommand(name string, arg ...string) Cmd
 	GetCommand(id CmdId) Cmd
 	GetCommandIds() []CmdId
+	ReleaseCommand(id CmdId) error
 	// Environment that will be passed to child processes. NOT the environment
 	// variables of this shell process. Eg setting Path will not affect where
 	// this session looks for binaries. It will, however, affect how child

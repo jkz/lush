@@ -36,6 +36,11 @@ div.cmdwidget {
     font-size: 10pt;
 }
 
+div.cmdwidget button.close {
+    font-size: 9pt;
+    float: right;
+}
+
 div.streampeeker {
     position: absolute;
     background-color: white;

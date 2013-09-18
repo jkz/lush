@@ -96,5 +96,17 @@ define(["jquery"], function ($) {
         this.ctrl.send('start', this.nid);
     };
 
+    SyncedCommand.prototype.release = function () {
+        this.ctrl.send('release', this.nid);
+    };
+
+    // called by the control stream when the server indicated that this command
+    // was released. generates the jquery 'wasreleased' event on this command
+    // object.
+    SyncedCommand.prototype.processRelease = function () {
+        $(this).trigger('wasreleased')
+               .unbind(); // unbind all jquery event handlers
+    };
+
     return SyncedCommand;
 });

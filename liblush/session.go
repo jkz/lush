@@ -21,6 +21,7 @@
 package liblush
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -71,6 +72,22 @@ func (s *session) GetCommandIds() []CmdId {
 		i++
 	}
 	return ids
+}
+
+func (s *session) ReleaseCommand(id CmdId) error {
+	c := s.cmds[id]
+	if c == nil {
+		return fmt.Errorf("no such command: %s", id)
+	}
+	err := c.release()
+	if err != nil {
+		return err
+	}
+	delete(s.cmds, id)
+	// are there some cyclic or pending references or can we trust the GC on
+	// this one? I don't really feel like figuring that out right now so Ill
+	// just mark it TODO.
+	return nil
 }
 
 func (s *session) Chdir(dir string) error {

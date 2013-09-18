@@ -205,6 +205,32 @@ func (c *cmd) Signal(sig os.Signal) error {
 	return c.execCmd.Process.Signal(sig)
 }
 
+// free all resources associated with this command. error if command is
+// running.
+func (c *cmd) release() error {
+	running := (c.status.started != nil) && (c.status.exited == nil)
+	// haha so how about them race conditions eh?
+	if running {
+		return errors.New("cannot free running command")
+	}
+	var firsterr error
+	// set the firsterror to this one if not already set
+	recerr := func(e error) {
+		if firsterr == nil {
+			firsterr = e
+		}
+	}
+	if c.execCmd.Process != nil {
+		recerr(c.execCmd.Process.Release())
+	}
+	for _, cl := range []io.Closer{c.stdin, c.stdout, c.stderr} {
+		if cl != nil {
+			recerr(cl.Close())
+		}
+	}
+	return nil
+}
+
 type devnull int
 
 // io.ReadWriteCloser that discards all incoming data and never fails

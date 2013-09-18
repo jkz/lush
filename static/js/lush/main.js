@@ -431,12 +431,21 @@ define(["jquery",
         });
     };
 
+    var initCloseButton = function (cmd, $widget) {
+        $widget.find('.close').one('click', function () {
+            // TODO: are you sure? Y/N
+            cmd.release();
+            $(this).prop('disabled', true);
+        });
+    };
+
     // Init the command view (the V in MVC) given the model (the cmd).
     var initView = function (cmd, $widget) {
         initViewTab(cmd, $widget);
         initEditTab(cmd, $widget);
         initHelpTab(cmd, $widget);
         initTabsNav(cmd, $widget);
+        initCloseButton(cmd, $widget);
     };
 
     var createStreamPeekerWhenDblClicked = function (ep) {
@@ -549,6 +558,10 @@ define(["jquery",
             // pretty imo i wouldnt mind better separation between model and
             // view but thats how its currently implemented.
             rebuildGroupsList();
+        });
+        $(cmd).on('wasreleased', function () {
+            // TODO: remove jsPlumb connections
+            $widget.remove();
         });
         return $widget;
     };
@@ -801,6 +814,12 @@ define(["jquery",
             var updata = JSON.parse(updatajson);
             var cmd = cmds[updata.nid];
             cmd.processUpdate(updata);
+        });
+        $(ctrl).on("cmd_released", function (_, idstr) {
+            var nid = +idstr;
+            var cmd = cmds[nid];
+            cmd.processRelease();
+            delete cmds[nid];
         });
         path($('form#path'), ctrl);
         term = terminal(processCmd);

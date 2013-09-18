@@ -18,6 +18,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+// Handlers for websocket events.
+
+// Let me just take a moment right here to say that I really, really miss
+// decorators and macros in Go. Especially not having either.
+
 package main
 
 import (
@@ -280,6 +285,25 @@ func wseventStop(s *server, idstr string) error {
 	return nil
 }
 
+// free resources associated with a command. eg:
+//
+//     release;3
+//
+// will generate a cmd_released;<id> event. eg:
+//
+//     cmd_released;3
+//
+// can not be executed while command is running.
+func wseventRelease(s *server, idstr string) error {
+	id, _ := liblush.ParseCmdId(idstr)
+	err := s.session.ReleaseCommand(id)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(&s.ctrlclients, "cmd_released;%s", idstr)
+	return err
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
@@ -293,6 +317,7 @@ var wsHandlers = map[string]wsHandler{
 	"connect":     wseventConnect,
 	"start":       wseventStart,
 	"stop":        wseventStop,
+	"release":     wseventRelease,
 }
 
 func parseAndHandleWsEvent(s *server, msg []byte) error {
