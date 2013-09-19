@@ -123,47 +123,10 @@
 //
 // cmd
 //
-//     this one is interesting: there is a whole range of implementation
-//     defined events that are triggered on the command object. ill try to spec
-//     them here but ill probably overlook a few.
+//     the command object also generates jquery events of its own. they are
+//     used by Viewers to subscribe to updates of the Model. these are detailed
+//     in the documentation of the Command class.
 //
-//     - wasupdated: this one is triggered whenever the command object has
-//     been updated. subscribe to this event if you want to stay in sync with
-//     the command. what exactly has been updated can be extracted from the
-//     first parameter (i.e. the second arg, bc its a jquery event so the
-//     first arg is the jquery event object). that is an object containing
-//     only the keys that have been updated, and their new values. this saves
-//     the poor client the trouble of refreshing a view that didn't change.
-//
-//     - wasreleased: triggered when resources associated with a command have
-//     been released by the server and the client wants to clean up the
-//     command. any resources that will not be garbage collected automatically
-//     should be freed here.
-//
-//     - stdout.stream / stderr.stream: called when the running command is
-//     generating data on the relevant streams.
-//
-//     - archival: triggered when this command is being (un)archived. can be
-//     caused by a server event, by the user minimizing the widget, or by a
-//     parent widget being minimized. should not be propagated by registered
-//     handlers (is propagated by the Command object). it is triggered when the
-//     server updates cmd.userdata.archived (i.e. by a 'wasupdated' handler).
-//     the parameter is a boolean that is true for archiving, false for
-//     unarchiving.
-//
-//     - parentRemoved: this command is now a root. the argument is the old
-//     parent.
-//
-//     - parentAdded: the argument is the new parent. note that commands can
-//     only have one parent.
-//
-//     - childAdded: an output pipe of this command is now connected to another
-//     command. the first parameter is the child, the second is the name of the
-//     stream.
-//
-//     - childRemoved: an output pipe is disconnected from a command. the first
-//     parameter is the command that was disconnected, the second is the name
-//     of the stream.
 //
 // good luck.
 
