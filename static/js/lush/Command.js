@@ -150,6 +150,13 @@ define(["jquery"], function ($) {
                .unbind(); // unbind all jquery event handlers
     };
 
+    // Called by control stream object (ctrl) when the command generated data
+    // on one of its output streams (stdout / stderr). Generates a jQuery
+    // event in the 'stream' namespace, name is equal to the stream
+    Command.prototype.processStream = function (stream, data) {
+        $(this).trigger(stream + '.stream', [data]);
+    }
+
     // The child of this command on the given stream or undefined if none
     Command.prototype.child = function (stream) {
         var toid = this[stream + 'to'];

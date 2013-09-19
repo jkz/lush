@@ -140,8 +140,8 @@
 //     command. any resources that will not be garbage collected automatically
 //     should be freed here.
 //
-//     - stdout.stream / stderr.stream: looks like this one is called when the
-//     running command is generating data on the relevant streams.
+//     - stdout.stream / stderr.stream: called when the running command is
+//     generating data on the relevant streams.
 //
 //     - archival: triggered when this command is being (un)archived. can be
 //     caused by a server event, by the user minimizing the widget, or by a
@@ -157,7 +157,7 @@
 //     - parentAdded: the argument is the new parent. note that commands can
 //     only have one parent.
 //
-//     = childAdded: an output pipe of this command is now connected to another
+//     - childAdded: an output pipe of this command is now connected to another
 //     command. the first parameter is the child, the second is the name of the
 //     stream.
 //
@@ -856,6 +856,7 @@ define(["jquery",
                 var printer = function (_, data) {
                     termPrintlnCmd(term, cmd.nid, data);
                 };
+                // TODO: should only print when not piped to other cmd
                 $(cmd).on('stdout.stream', printer);
                 $(cmd).on('stderr.stream', printer);
                 // subscribe to stream data
@@ -892,14 +893,14 @@ define(["jquery",
         // proxy the stream event to the command object
         // comes in as: stream;1;stdout;foo bar
         // the normal event handling causes the 'stream' event to trigger
-        // that's this one. it transforms the event into a new one:
-        // "stdout.stream" with event data "foo bar" on the cmd object
+        // that's this one. this handler will proxy that event to the command
+        // object's processStream method.
         $(ctrl).on('stream', function (_, rawopts) {
             var opts = rawopts.splitn(';', 3);
             var sysid = opts[0];
             var stream = opts[1];
             var data = opts[2];
-            $(cmds[sysid]).trigger(stream + '.stream', data);
+            cmds[sysid].processStream(stream, data);
         });
         // now that all widgets have been built (and most importantly: update
         // handlers have been set) populate the cmd objects to init the widgets
