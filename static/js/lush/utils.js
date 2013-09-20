@@ -246,7 +246,7 @@ var storePositionOnServer = function (node, ctrl) {
 // if a third argument is supplied it is called every time the position
 // changes. it is passed the node as the first argument.
 var syncPositionWithServer = function (node, ctrl, extraCallback) {
-    $(ctrl).on('userdata_position.' + node.id, function (e, offsetJSON) {
+    $(ctrl).on('userdata_position_' + node.id, function (e, offsetJSON) {
         var offset = safeJSONparse(offsetJSON);
         if (offset) {
             $(node).offset(offset);

@@ -240,7 +240,6 @@ define(["jquery",
         jsPlumb.draggable(this.node, {
             stop: function () { storePositionOnServer(this, ctrl); },
         });
-        // jsPlumb stuff
         $widget.resizable({
             resize: function () {
                 jsPlumb.repaint($(this));
