@@ -22,6 +22,10 @@
 
 * { -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; }
 
+body {
+    margin-top: 20em;
+}
+
 .start-cmd {
     display: inline;
 }
@@ -60,10 +64,10 @@ div.streampeeker {
 /* terminal window */
 .terminalwrap1 {
     position: absolute;
-    right: 1em;
-    top: 1em;
-    width: 450px;
-    height: 200px;
+    left: 0;
+    top: 0;
+    right: 0;
+    height: 19em;
 }
 .terminalwrap2 {
     position: relative;

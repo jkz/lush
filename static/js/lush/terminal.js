@@ -106,15 +106,6 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         $.each(files, function (_, x) { term.termPrintln(x); });
     };
 
-    var terminalHTML = function () {
-        return "<div class=terminalwrap1><div class=terminalwrap2>" +
-                "<div class='termdraghandle ui-state-default ui-state-active'>" +
-                    "<span class='ui-icon ui-icon-arrow-4'></span>" +
-                "</div>" +
-                "<div class=terminal ></div>" +
-            "</div></div>";
-    };
-
     // manage context of a command line interface. purely conceptual, no UI.
     // processCmd arg is a function, called by the cli to actually invoke a
     // command (after parsing etc).
@@ -242,12 +233,10 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         });
     };
 
-    // create a new terminal window and append to HTML body
+    // set up the terminal window
     return function (processCmd) {
         var cli = new Cli(processCmd);
-        var $wrap = $(terminalHTML()).appendTo($('body'));
-        $wrap.resizable().draggable({handle: $('.termdraghandle', $wrap)})
-        var $term = $wrap.find('.terminal').terminal(function (x) {
+        var $term = $('.terminal').terminal(function (x) {
                 cli.commit(x);
             }, {
             greetings: 'Welcome to Luyat shell',
