@@ -208,7 +208,15 @@ define(["jquery",
     var buildGroupsList = function () {
         // make a $li for every command, hide it if it's not root
         var lis = $.map(cmds, createGroupsLi);
-        return $('#groups ul').append(lis);
+        $('#groups ul').append(lis);
+        $('#delete_archived').click(function (e) {
+            e.preventDefault();
+            $('#groups .archived').each(function () {
+                var gid = $(this).data('gid');
+                var cmd = cmds[gid];
+                cmd.release();
+            });
+        });
     };
 
     var chdir = function (dir) {
