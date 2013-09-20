@@ -277,6 +277,13 @@ define(["jquery",
         }
     };
 
+    var insertWidgetIntoDom = function (widget) {
+        // wrap in a group div
+        $('<div class=cmdgroup id=cmdgroup' + widget.cmd.nid + '>')
+            .append(widget.node)
+            .appendTo('#cmds');
+    };
+
     $(document).ready(function () {
         // Control stream (Websocket)
         ctrl = new Ctrl();
@@ -287,7 +294,11 @@ define(["jquery",
             var cmd = new Command(ctrl, cmdinit, moi);
             cmds[cmdinit.nid] = cmd;
         });
-        $.each(cmds, function (_, cmd) { new Widget(cmd, ctrl) });
+        $.each(cmds, function (_, cmd) {
+            var widget = new Widget(this);
+            insertWidgetIntoDom(widget);
+            widget.initJsPlumb(ctrl);
+        });
         // second iteration to ensure all widgets exist before connecting them
         $.each(cmds, function (_, cmd) { cmd.updatePipes(); });
         buildGroupsList();
@@ -320,7 +331,9 @@ define(["jquery",
             var cmdinit = JSON.parse(cmdjson);
             var cmd = new Command(this, cmdinit, moi);
             cmds[cmd.nid] = cmd;
-            new Widget(cmd, this);
+            var widget = new Widget(cmd);
+            insertWidgetIntoDom(widget);
+            widget.initJsPlumb(this);
             delete cmdinit.nid;
             $('#groups ul').append(createGroupsLi(cmd));
             cmd.update(cmdinit);

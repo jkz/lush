@@ -226,21 +226,53 @@ define(["jquery",
     //
     // Hooks view updaters to a custom jQuery event 'wasupdated'. I.e. after
     // changing the cmd run $(cmd).trigger('wasupdated') to update the UI.
-    var Widget = function (cmd, ctrl) {
+    var Widget = function (cmd) {
+        var widget = this;
         // Fresh command widget in view mode
-        var $widget = $('#cmdwidget_template')
+        this.node = $('#cmdwidget_template')
             .clone()
             .attr("id", cmd.htmlid)
-            .data('activetab', "view");
-        this.node = $widget[0];
+            .data('activetab', "view")[0];
         this.cmd = cmd;
-        this.insertInDOM();
-        this._initView(cmd, $widget);
+        this._initView(cmd);
+        $(cmd).on('archival', function (_, archived) {
+            // if this is a group root, archive the entire group. no need for
+            // a conditional; if it's not this jquery selector is empty and
+            // thus the entire thing is a NOP.
+            var $group = $('#group' + cmd.nid);
+            if (archived) {
+                hideCmd(this);
+                $group.addClass('archived');
+            } else {
+                showCmd(this);
+                $group.removeClass('archived');
+            }
+        });
+        $(cmd).on('wasupdated', function (_, updata) {
+            // only archive group leaders
+            if (this.userdata.autoarchive &&
+                updata.status == 2 &&
+                this.isRoot() &&
+                // only god archives a command, the rest will follow indirectly
+                this.imadethis())
+            {
+                setCommandArchivalState(this, true);
+            }
+        });
+        $(cmd).on('wasreleased', function () {
+            $(widget.node).remove();
+            delete widget.node;
+            delete widget.cmd;
+        });
+    };
+
+    Widget.prototype.initJsPlumb = function (ctrl) {
+        var cmd = this.cmd;
         syncPositionWithServer(this.node, ctrl, jsPlumb.repaint);
         jsPlumb.draggable(this.node, {
             stop: function () { storePositionOnServer(this, ctrl); },
         });
-        $widget.resizable({
+        $(this.node).resizable({
             resize: function () {
                 jsPlumb.repaint($(this));
             }
@@ -299,44 +331,14 @@ define(["jquery",
                 connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr');
             }
         };
-        $(cmd).on('archival', function (_, archived) {
-            // if this is a group root, archive the entire group. no need for
-            // a conditional; if it's not this jquery selector is empty and
-            // thus the entire thing is a NOP.
-            var $group = $('#group' + cmd.nid);
-            if (archived) {
-                hideCmd(this);
-                $group.addClass('archived');
-            } else {
-                showCmd(this);
-                $group.removeClass('archived');
-            }
-        });
-        $(cmd).on('wasupdated', function (_, updata) {
-            // only archive group leaders
-            if (this.userdata.autoarchive &&
-                updata.status == 2 &&
-                this.isRoot() &&
-                // only god archives a command, the rest will follow indirectly
-                this.imadethis())
-            {
-                setCommandArchivalState(this, true);
-            }
+        $(cmd).on('wasupdated', function () {
             this.updatePipes();
         });
-        var widget = this;
         $(cmd).on('wasreleased', function () {
-            widget.release();
+            [this.stdinep, this.stdoutep, this.stderrep]
+                .forEach(jsPlumb.deleteEndpoint);
+            // TODO: delete streampeekers
         });
-    };
-
-    Widget.prototype.release = function () {
-        [this.stdinep, this.stdoutep, this.stderrep]
-            .forEach(jsPlumb.deleteEndpoint);
-        $(this.node).remove();
-        // TODO: delete streampeekers
-        delete this.node;
-        delete this.cmd;
     };
 
     Widget.prototype._switchToViewTab = function () {
