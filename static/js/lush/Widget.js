@@ -255,7 +255,9 @@ define(["jquery",
         $(this.node).on('tabsactivate', function () {
             jsPlumb.repaint($(this));
         });
-        syncPositionWithServer(this.node, ctrl, jsPlumb.repaint);
+        syncPositionWithServer(this.node, ctrl, function (node) {
+            jsPlumb.repaint($(node));
+        });
         jsPlumb.draggable(this.node, {
             stop: function () { storePositionOnServer(this, ctrl); },
         });
