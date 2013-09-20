@@ -87,6 +87,11 @@ define(["jquery"], function ($) {
         return this._moi && this._moi == this.userdata.god;
     }
 
+    // update the state of archival on the server
+    Command.prototype.setArchivalState = function (state) {
+        this.update({userdata: {archived: state}});
+    }
+
     // update the properties of this command with those from the argument
     // object. calls the 'wasupdated' jquery event after command is updated.
     // this function is exposed for the handler of the websocket 'updatecmd'
@@ -145,6 +150,18 @@ define(["jquery"], function ($) {
                 $(cmd).trigger('childAdded', [mod.to, stream]);
             }
         });
+        // If the status just updated to "successfully completed", and I am
+        // god, and root, inform the server I wish to be archived.
+        if (this.userdata.autoarchive &&
+            updata.status == 2 &&
+            this.isRoot() &&
+            // only god archives a command, the rest will follow indirectly
+            this.imadethis())
+        {
+            this.setArchivalState(true);
+        }
+        // if the server tells me that I've been (de)archived, generate an
+        // "archival" jQuery event
         if (updata.userdata && updata.userdata.archived !== undefined) {
             $(this).trigger('archival', updata.userdata.archived);
         }

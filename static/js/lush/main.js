@@ -199,7 +199,7 @@ define(["jquery",
             var $li = $(this).closest('li');
             var cmd = cmds[$li.data('gid')];
             var currentState = $li.hasClass('archived');
-            setCommandArchivalState(cmd, !currentState);
+            cmd.setArchivalState(!currentState);
         }));
         return $li;
     };

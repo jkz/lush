@@ -182,11 +182,6 @@ define(["jquery",
             });
     };
 
-    // update the state of archival on this command.
-    var setCommandArchivalState = function (cmd, state) {
-        cmd.update({userdata: {archived: state}});
-    }
-
     // hide command widget, including meta widgets (streampeek)
     var hideCmd = function (cmd) {
         $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
@@ -246,17 +241,6 @@ define(["jquery",
             } else {
                 showCmd(this);
                 $group.removeClass('archived');
-            }
-        });
-        $(cmd).on('wasupdated', function (_, updata) {
-            // only archive group leaders
-            if (this.userdata.autoarchive &&
-                updata.status == 2 &&
-                this.isRoot() &&
-                // only god archives a command, the rest will follow indirectly
-                this.imadethis())
-            {
-                setCommandArchivalState(this, true);
             }
         });
         $(cmd).on('wasreleased', function () {
