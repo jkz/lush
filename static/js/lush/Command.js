@@ -217,6 +217,11 @@ define(["jquery"], function ($) {
     Command.prototype.processRelease = function () {
         $(this).trigger('wasreleased')
                .unbind(); // unbind all jquery event handlers
+        delete this.cmd;
+        delete this.args;
+        delete this.userdata;
+        delete this._moi;
+        delete this.ctrl;
     };
 
     // Called by control stream object (ctrl) when the command generated data
