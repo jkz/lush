@@ -243,7 +243,7 @@ define(["jquery",
         // jsPlumb stuff
         $widget.resizable({
             resize: function () {
-                jsPlumb.repaint(this);
+                jsPlumb.repaint($(this));
             }
         });
         cmd.stdinep = jsPlumb.addEndpoint(this.node, {
