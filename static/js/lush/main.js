@@ -28,6 +28,7 @@
 //
 // COMMAND OBJECTS
 //
+// TODO: This is obsolete. check out Command.js
 // commands are represented in the global array "cmds" as objects (usually
 // called "cmd" when assigned to a variable). there is no spec on the
 // properties in a cmd object (frowny face) but you can get the idea from a
@@ -133,17 +134,17 @@
 define(["jquery",
         "lush/Ctrl",
         "lush/Command",
+        "lush/Widget",
         "lush/terminal",
         "lush/path",
-        "lush/help",
         "jsPlumb",
         "lush/utils"],
        function ($,
                  Ctrl,
                  Command,
+                 Widget,
                  terminal,
-                 path,
-                 help) {
+                 path) {
 
     // websocket connection for control events
     var ctrl;
@@ -153,496 +154,6 @@ define(["jquery",
 
     // sometimes i just dont know who i am anymore...
     var moi = guid();
-
-    // build jquery node containing [▶] button that starts cmd in background
-    var makeStartButton = function (cmd) {
-        return $('<button class=start>▶</button>').click(function (e) {
-            $(e.target).html('⌚');
-            $(e.target).prop('disabled', true);
-            cmd.start();
-            // stop bubbling: prevent terminal from losing focus
-            return false;
-        });
-    };
-
-    // build jquery node containing [◼] button that stops the cmd in background
-    var makeStopButton = function (sysId) {
-        return $('<button class=stop>◼</button>').click(function (e) {
-            $(e.target).html('⌚');
-            $(e.target).prop('disabled', true);
-            ctrl.send('stop', cmd.nid);
-        });
-    };
-
-    // set the status info for this command in the given jquery node's content
-    var setStatNode = function (cmd, $node) {
-        var content;
-        switch (cmd.status) {
-        case 0:
-            content = makeStartButton(cmd);
-            break;
-        case 1:
-            content = makeStopButton(cmd);
-            break
-        case 2:
-            content = '✓';
-            break;
-        case 3:
-            content = '✗';
-            break;
-        }
-        return $node.empty().append(content);
-    };
-
-    // deferred object fetching most recent stream data for streampeeker
-    var getRecentStream = function (sysId, stream) {
-        return $.get('/' + sysId + '/stream/' + stream + '.bin?numbytes=100');
-    };
-
-    // store position of this DOM node on the server as userdata.
-    //
-    // call this whenever a synced node moved. can't do that automatically
-    // because there was some whining about cross browser ladida idk just hook
-    // this in the postMove handlers manually.
-    //
-    // assuming a <div id=myhtmlid> at x=123 and y=58008
-    //
-    // generated event:
-    //
-    // setuserdata;position.myhtmlid;{"left": 123, "top": 58008}
-    //
-    // causes the server to broadcast a userdata event to all connected
-    // websocket clients (including this one!), as it is wont to do:
-    //
-    // userdata.position.myhtmlid;{"left": 123, "top": 58008}
-    var storePosition = function (node) {
-        var posjson = JSON.stringify($(node).offset());
-        ctrl.send("setuserdata", 'position_' + node.id, posjson);
-    };
-
-    // when the server says this node was moved, actually move the node in the
-    // UI. also asks the server what the current position is to initialize the
-    // position correctly.
-    // if a second argument is supplied it is called every time the position
-    // changes.
-    var syncPosition = function (node, extraCallback) {
-        $(ctrl).on('userdata_position.' + node.id, function (e, offsetJSON) {
-            var offset = safeJSONparse(offsetJSON);
-            if (offset) {
-                $(node).offset(offset);
-                if (extraCallback) {
-                    extraCallback.call(node);
-                }
-            }
-        });
-        ctrl.send('getuserdata', 'position_' + node.id);
-    };
-
-    // Stream peeker is like a small dumb terminal window showing a stream's most
-    // recent output
-    var addstreampeeker = function (srcep) {
-        var cmdSysId = srcep.getParameter("sysid")();
-        var stream = srcep.getParameter("stream")();
-        var id = 'streampeeker-' + cmdSysId + '-' + stream;
-        // open / collapse button
-        var $ocbutton = $('<button>');
-        // preview box
-        var $preview = $('<pre class=monitor-stream>').data('stream', stream);
-        var $sp = $('<div class=streampeeker id=' + id + '><pre>')
-            .resizable()
-            .append($ocbutton)
-            .append($preview)
-            .appendTo('body');
-        // Closure that fills the stream peeker with stdout data every second until
-        // it is closed
-        var refresher;
-        var dontrefresh = function () {};
-        var dorefresh = function () {
-            getRecentStream(cmdSysId, stream).done(function (data) {
-                repeatExec
-                if ($sp.hasClass('open')) {
-                    $preview.text(data);
-                    jsPlumb.repaint($sp);
-                    // continue refreshing
-                    window.setTimeout(refresher, 1000);
-                }
-            });
-        };
-        // functions that open / collapse the streampeeker
-        var openf, collapsef;
-        openf = function () {
-            $sp.removeClass('collapsed');
-            $sp.addClass('open');
-            $ocbutton.text('▬');
-            $sp.resizable({
-                resize: function (e, ui) {
-                    jsPlumb.repaint(ui.helper);
-                }})
-            jsPlumb.repaint($sp);
-            refresher = dorefresh;
-            refresher();
-            $ocbutton.one('click', collapsef);
-        };
-        collapsef = function () {
-            $sp.removeClass('open');
-            $sp.addClass('collapsed');
-            $preview.empty();
-            $ocbutton.text('◳');
-            $sp.resizable('destroy');
-            jsPlumb.repaint($sp);
-            refresher = dontrefresh;
-            $ocbutton.one('click', openf);
-        };
-        collapsef();
-        jsPlumb.draggable($sp, {
-            stop: function () { storePosition(this); },
-        });
-        var myep = jsPlumb.addEndpoint(id, {
-            anchor: 'TopCenter',
-            isTarget: true,
-            endpoint: 'Rectangle',
-        });
-        // connect to the source endpoint (create a new endpoint on the source dynamically)
-        var connection = jsPlumb.connect({
-            source: srcep.getElement(),
-            target: myep,
-            anchors: [stream2anchor(stream), myep],
-            parameters: { isStreampeek: true },
-        });
-        syncPosition($sp[0], function () {
-            jsPlumb.repaint($(this));
-        });
-        return $sp;
-    };
-
-    var stream2anchor = function (stream) {
-        return {stderr: "RightMiddle", stdout: "BottomCenter"}[stream]
-    };
-
-    var anchor2stream = function (anchor) {
-        return {RightMiddle: "stderr", BottomCenter: "stdout"}[anchor];
-    };
-
-    // the two first arguments are the source and target endpoints to connect
-    var connectVisually = function (srcep, trgtep, stream) {
-        jsPlumb.connect({
-            source: srcep,
-            target: trgtep,
-        });
-    };
-
-    var connect = function (srcep, trgtep, stream) {
-        var options = {
-            from: srcep.getParameter("sysid")(),
-            to: trgtep.getParameter("sysid")(),
-            stream: stream,
-        };
-        ctrl.send('connect', JSON.stringify(options));
-    };
-
-    var switchToViewTab = function ($widget) {
-        // view is always first. hack? who cares.
-        $widget.tabs('option', 'active', 0);
-    };
-
-    var initViewTab = function (cmd, $widget) {
-        var $viewm = $('.tab_view', $widget);
-        // static parts of the UI (depend on constant cmd property "nid")
-        $('.link', $viewm).attr('href', '/' + cmd.nid + '/');
-        $('.linktext', $viewm).text(cmd.nid + ': ');
-        // when clicked will prepare this command for repeating (argv ->
-        // prompt, focus prompt)
-        $('.repeat', $viewm).click(function () {
-            term.set_command(cmd.getArgv().join(' ')).focus();
-        });
-        // dynamic parts of the UI
-        $(cmd).on('wasupdated', function () {
-            setStatNode(this, $('.status', $viewm));
-            var argvtxt = cmd.getArgv().join(' ');
-            $('.argv', $viewm).text(argvtxt);
-            $('.bookmark', $viewm).attr('href', '#prompt;' + argvtxt);
-            if (this.status > 0) {
-                // todo: disable edit tab?
-            }
-        });
-    };
-
-    var initEditTab = function (cmd, $widget) {
-        var $editm = $('.tab_edit', $widget);
-        $('[name=cmd]', $editm).autocomplete({source: "/new/names.json"});
-        $('.cancelbtn', $editm).click(function () {
-            // restore form contents from model
-            $(cmd).trigger('wasupdated');
-            switchToViewTab($widget);
-        });
-        var lastarg = 1;
-        var addarg = function () {
-            $('[name=arg' + lastarg + ']', $editm).after(
-                $('<input size=10 name=arg' + (++lastarg) + '>')
-                    .one('keydown', addarg));
-        };
-        $('[name=arg1]', $editm).one('keydown', addarg);
-        // request the command to be updated. behind the scenes this happens:
-        // send "updatecmd" message over ctrl stream.  server will reply with
-        // updatecmd, which will invoke a handler to update the cmd object,
-        // which will invoke $(cmd).trigger('wasupdated'), which will invoke
-        // the handler that updates the view for viewmode (<div
-        // class=tab_view>).
-        $('form', $editm).submit(function (e) {
-            e.preventDefault();
-            var o = $(this).serializeObject();
-            // cast numeric inputs to JS ints
-            $.each(o, function (key, val) {
-                if (/^\d+$/.test(val)) {
-                    o[key] = parseInt(val);
-                }
-            });
-            var $args = $(this).find('input[name^=arg]');
-            var args = $.map($args, attrgetter('value'));
-            args = removeFalse(args);
-            o.args = args;
-            // set command name to argv
-            o.name = o.cmd;
-            for (var i = 0; i < args.length; i++) {
-                o.name += ' ' + args[i];
-            }
-            o.userdata = $(this).data();
-            o.userdata.autostart = this.autostart.checked;
-            o.userdata.autoarchive = this.autoarchive.checked;
-            cmd.update(o);
-            switchToViewTab($widget);
-        });
-        $(cmd).on('wasupdated', function () {
-            $('[name=cmd]', $editm).val(this.cmd);
-            this.args.forEach(function (arg, idx) {
-                // keydown triggers the "create new arg input" handler
-                $('[name=arg' + (idx + 1) + ']', $editm).val(arg).keydown();
-            });
-            $('[name=stdoutScrollback]', $editm).val(cmd.stdoutScrollback)
-            $('[name=stderrScrollback]', $editm).val(cmd.stderrScrollback)
-            $('[name=autostart]', $editm)[0].checked = this.userdata.autostart;
-            $('[name=autoarchive]', $editm)[0].checked = this.userdata.autoarchive;
-        });
-    };
-
-    // initialize a widget's help view
-    var initHelpTab = function (cmd, $widget) {
-        var $help = $('.tab_help', $widget);
-        $(cmd).on('wasupdated', function () {
-            // clean out help div
-            $help.empty();
-            var action = help(this);
-            if (action) {
-                action(this, $help, curry(switchToViewTab, $widget), ctrl);
-            } else {
-                // todo: hide help tab?
-            }
-        });
-    };
-
-    var initTabsNav = function (cmd, $widget) {
-        var navlinks = $widget.find('.tab-pane').map(function () {
-            var tabname = $(this).data('tabname');
-            // give every tab an ID
-            this.id = cmd.htmlid + '_tab_' + tabname;
-            var $a = $('<a>')
-                .text(tabname)
-                .prop('href', '#' + this.id)
-                .click(function (e) {
-                    e.preventDefault();
-                    // play nice, don't close
-                    // no idea if this actually matters but i like the idea
-                    $(this).closest('.cmdwidget').data('activetab', $(this).text());
-                });
-            return $('<li>').append($a)[0];
-        });
-        $widget.find('.tabsnav').append(navlinks);
-        $widget.tabs({
-            activate: function (e, ui) {
-                jsPlumb.repaint($(e.target));
-            },
-        });
-    };
-
-    var initCloseButton = function (cmd, $widget) {
-        $widget.find('.close').one('click', function () {
-            // TODO: are you sure? Y/N
-            cmd.release();
-            $(this).prop('disabled', true);
-        });
-    };
-
-    // Init the command view (the V in MVC) given the model (the cmd).
-    var initView = function (cmd, $widget) {
-        initViewTab(cmd, $widget);
-        initEditTab(cmd, $widget);
-        initHelpTab(cmd, $widget);
-        initTabsNav(cmd, $widget);
-        initCloseButton(cmd, $widget);
-    };
-
-    var createStreamPeekerWhenDblClicked = function (ep) {
-        return $(ep.canvas)
-            .css('z-index', 4) // put endpoint above the connector (is at 3)
-            .one('dblclick', function() {
-                addstreampeeker(ep);
-            });
-    };
-
-    var updatePipes = function (cmd) {
-        if (cmd.hasOwnProperty('stdoutto')) {
-            // connect my stdout to cmd.stdoutto's stdin
-            connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout');
-        }
-        if (cmd.hasOwnProperty('stderrto')) {
-            connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr');
-        }
-    };
-
-    // update the state of archival on this command.
-    var setCommandArchivalState = function (cmd, state) {
-        cmd.update({userdata: {archived: state}});
-    }
-
-    // create widget with command info and add it to the DOM
-    // the argument is a cmd object implementation defined by the cmds array in
-    // root.html
-    //
-    // jsPlumb endpoints:
-    // widgets have three endpoints: stdin, stdout and stderr. these endoints are
-    // jsPlumb.Endpoint objects and their reference is needed to connect them to
-    // eachother. this function creates the endpoints and stores their reference in
-    // the cmd argument object as .stdinep, .stdoutep and .stderrep.
-    //
-    // Hooks view updaters to a custom jQuery event 'wasupdated'. I.e. after
-    // changing the cmd run $(cmd).trigger('wasupdated') to update the UI.
-    var createCmdWidget = function (cmd) {
-        // Fresh command widget in view mode
-        var $widget = $('#cmdwidget_template')
-            .clone()
-            .attr("id", cmd.htmlid)
-            .data('activetab', "view");
-        initView(cmd, $widget);
-        $('#cmds').append($widget);
-        syncPosition($widget[0], function () {
-            jsPlumb.repaint($(this));
-        });
-        // jsPlumb stuff
-        $widget.resizable({
-            resize: function () {
-                jsPlumb.repaint($(this));
-            }
-        });
-        jsPlumb.draggable($widget, {
-            stop: function () { storePosition(this); },
-        });
-        cmd.stdinep = jsPlumb.addEndpoint($widget, {
-            anchor: 'TopCenter',
-            isTarget: true,
-            parameters: {
-                sysid: constantly(cmd.nid),
-            },
-        });
-        // function that returns:
-        //
-        // - the group id of the "source command" (cmd that this div's source
-        //   endpoint is connected to), if any
-        //
-        // - the system id of this command otherwise
-        cmd.getGroupId = function () {
-            if (cmd.stdinep.connections.length > 0) {
-                var conn = cmd.stdinep.connections[0];
-                return conn.getParameter("groupid")();
-            }
-            return cmd.nid;
-        };
-        cmd.stdoutep = jsPlumb.addEndpoint($widget, {
-            anchor: 'BottomCenter',
-            isSource: true,
-            parameters: {
-                stream: constantly("stdout"),
-                sysid: constantly(cmd.nid),
-                groupid: cmd.getGroupId,
-            },
-        });
-        cmd.stderrep = jsPlumb.addEndpoint($widget, {
-            anchor: 'RightMiddle',
-            isSource: true,
-            parameters: {
-                stream: constantly("stderr"),
-                sysid: constantly(cmd.nid),
-                groupid: cmd.getGroupId,
-            },
-        });
-        // Doubleclicking a source endpoint creates a streampeeker
-        createStreamPeekerWhenDblClicked(cmd.stdoutep);
-        createStreamPeekerWhenDblClicked(cmd.stderrep);
-        // true iff this command does not take its stdin from another command
-        cmd.isRoot = function () {
-            return cmd.stdinep.connections.length == 0;
-        }
-        $(cmd).on('archival', function (_, archived) {
-            // if this is a group root, archive the entire group. no need for
-            // a conditional; if it's not this jquery selector is empty and
-            // thus the entire thing is a NOP.
-            var $group = $('#group' + cmd.nid);
-            if (archived) {
-                hideCmd(this);
-                $group.addClass('archived');
-            } else {
-                showCmd(this);
-                $group.removeClass('archived');
-            }
-        });
-        $(cmd).on('wasupdated', function (_, updata) {
-            // only archive group leaders
-            if (this.userdata.autoarchive &&
-                updata.status == 2 &&
-                this.isRoot() &&
-                // only god archives a command, the rest will follow indirectly
-                this.userdata.god == moi)
-            {
-                setCommandArchivalState(this, true);
-            }
-            updatePipes(this);
-        });
-        $(cmd).on('wasreleased', function () {
-            [cmd.stdinep, cmd.stdoutep, cmd.stderrep]
-                .forEach(jsPlumb.deleteEndpoint);
-            // TODO: delete streampeekers
-            $widget.remove();
-        });
-        return $widget;
-    };
-
-    // hide command widget, including meta widgets (streampeek)
-    var hideCmd = function (cmd) {
-        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
-            conn.setVisible(false);
-            conn.endpoints[1].setVisible(false);
-            if (conn.getParameter('isStreampeek')) {
-                jsPlumb.repaint(conn.target.css('display', 'none'));
-            }
-        });
-        $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
-            ep.setVisible(false);
-        });
-        jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'none'));
-    };
-
-    var showCmd = function (cmd) {
-        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
-            conn.setVisible(true);
-            conn.endpoints[1].setVisible(true);
-            if (conn.getParameter('isStreampeek')) {
-                jsPlumb.repaint(conn.target.css('display', 'block'));
-            }
-        });
-        $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
-            ep.setVisible(true);
-        });
-        jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'block'));
-    };
 
     // build a <li> for the groups list for this command
     var createGroupsLi = function (cmd) {
@@ -773,12 +284,12 @@ define(["jquery",
             console.log('Error connecting to ' + ctrluri);
         };
         $.each(cmds_init, function (_, cmdinit) {
-            var cmd = new Command(ctrl, cmdinit);
+            var cmd = new Command(ctrl, cmdinit, moi);
             cmds[cmdinit.nid] = cmd;
         });
-        $.each(cmds, function (_, cmd) { createCmdWidget(cmd); });
+        $.each(cmds, function (_, cmd) { new Widget(cmd, ctrl) });
         // second iteration to ensure all widgets exist before connecting them
-        $.each(cmds, function (_, cmd) { updatePipes(cmd); });
+        $.each(cmds, function (_, cmd) { cmd.updatePipes(); });
         buildGroupsList();
         $('<a href>show/hide archived</a>')
             .click(function (e) {
@@ -807,13 +318,13 @@ define(["jquery",
         // a new command has been created
         $(ctrl).on("newcmd", function (_, cmdjson) {
             var cmdinit = JSON.parse(cmdjson);
-            var cmd = new Command(ctrl, cmdinit);
+            var cmd = new Command(this, cmdinit, moi);
             cmds[cmd.nid] = cmd;
-            createCmdWidget(cmd);
+            new Widget(cmd, this);
             delete cmdinit.nid;
             $('#groups ul').append(createGroupsLi(cmd));
             cmd.update(cmdinit);
-            if (cmd.userdata.god == moi) {
+            if (cmd.imadethis()) {
                 // i made this!
                 // capture all stdout and stderr to terminal
                 var printer = function (_, data) {
@@ -823,8 +334,8 @@ define(["jquery",
                 $(cmd).on('stdout.stream', printer);
                 $(cmd).on('stderr.stream', printer);
                 // subscribe to stream data
-                ctrl.send('subscribe', cmd.nid, 'stdout');
-                ctrl.send('subscribe', cmd.nid, 'stderr');
+                this.send('subscribe', cmd.nid, 'stdout');
+                this.send('subscribe', cmd.nid, 'stderr');
                 var $widget = $('#' + cmd.htmlid);
                 if (cmd.userdata.autostart) {
                     cmd.start();

@@ -69,14 +69,23 @@
 
 define(["jquery"], function ($) {
 
-    var Command = function (ctrl, init) {
+    // third arg is a uuid identifying this session
+    var Command = function (ctrl, init, moi) {
+        if (ctrl === undefined || init === undefined || moi === undefined) {
+            throw new "Command constructor requires three parameters";
+        }
         this.ctrl = ctrl;
+        this._moi = moi;
         $.extend(this, init);
         // (depth-first) recursion of archival event
         $(this).on('archival', function (_, archived) {
             $(this.children()).trigger('archival', archived); // :D
         });
     };
+
+    Command.prototype.imadethis = function () {
+        return this._moi && this._moi == this.userdata.god;
+    }
 
     // update the properties of this command with those from the argument
     // object. calls the 'wasupdated' jquery event after command is updated.
@@ -175,6 +184,10 @@ define(["jquery"], function ($) {
 
     Command.prototype.start = function () {
         this.ctrl.send('start', this.nid);
+    };
+
+    Command.prototype.stop = function () {
+        this.ctrl.send('stop', this.nid);
     };
 
     Command.prototype.release = function () {

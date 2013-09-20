@@ -213,3 +213,47 @@ var groupname = function (cmd, _inner) {
     }
     return name;
 };
+
+// store position of this DOM node on the server as userdata.
+//
+// call this whenever a synced node moved. can't do that automatically because
+// there was some whining about cross browser ladida idk just hook this in the
+// postMove handlers manually.
+//
+// assuming a <div id=myhtmlid> at x=123 and y=58008
+//
+// generated event:
+//
+// setuserdata;position_myhtmlid;{"left": 123, "top": 58008}
+//
+// causes the server to broadcast a userdata event to all connected websocket
+// clients (including this one!), as it is wont to do:
+//
+// userdata.position.myhtmlid;{"left": 123, "top": 58008}
+var storePositionOnServer = function (node, ctrl) {
+    var posjson = JSON.stringify($(node).offset());
+    ctrl.send("setuserdata", 'position_' + node.id, posjson);
+};
+
+// when the server says this DOM node was moved, actually move the node in the
+// UI.  also asks the server what the current position is to initialize the
+// position correctly.
+//
+// first argument is a DOM node (must have an id attribute set).
+//
+// second argument is a websocket control stream instance
+//
+// if a third argument is supplied it is called every time the position
+// changes. it is passed the node as the first argument.
+var syncPositionWithServer = function (node, ctrl, extraCallback) {
+    $(ctrl).on('userdata_position.' + node.id, function (e, offsetJSON) {
+        var offset = safeJSONparse(offsetJSON);
+        if (offset) {
+            $(node).offset(offset);
+            if (extraCallback) {
+                extraCallback(node);
+            }
+        }
+    });
+    ctrl.send('getuserdata', 'position_' + node.id);
+};
