@@ -336,7 +336,7 @@ define(["jquery",
             widget.initJsPlumb(this);
             delete cmdinit.nid;
             $('#groups ul').append(createGroupsLi(cmd));
-            cmd.update(cmdinit);
+            cmd.update(cmdinit, 'init');
             if (cmd.imadethis()) {
                 // i made this!
                 // capture all stdout and stderr to terminal

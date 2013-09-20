@@ -120,6 +120,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
     // command (after parsing etc).
     var Cli = function (processCmd) {
         var cli = this;
+        this._rawtxt = "";
         cli.processCmd = processCmd;
         cli.parser = new Parser();
         cli.parser.oninit = function () {
@@ -154,20 +155,25 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             cli.newarg = '';
         };
         cli.guid = guid();
-        cli._prepareCmd();
     };
 
     // the user updated the prompt: call this method to notify the cli object
     Cli.prototype.setprompt = function (txt) {
-        if (!this._cmd) {
+        if (txt == this._rawtxt) {
+            // nothing changed; ignore
             return;
         }
-        this.parser.parse(txt);
-        this._cmd.update({
-            name: txt,
-            cmd: this.argv[0],
-            args: this.argv.slice(1),
-        }, this.guid);
+        this._rawtxt = txt;
+        if (this._cmd === undefined) {
+            this._prepareCmd();
+        } else if (this.cmd !== null) {
+            this.parser.parse(txt);
+            this._cmd.update({
+                name: txt,
+                cmd: this.argv[0],
+                args: this.argv.slice(1),
+            }, this.guid);
+        }
     };
 
     // try to report an error to the user
@@ -185,6 +191,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             throw "cmd not ready";
         }
         var cmd = this._cmd;
+        this._cmd = undefined;
         this._prepareCmd();
         // need to re-parse because jQuery terminal triggers the "clear command
         // line" event on [enter] before the "handle command" event.
@@ -200,30 +207,39 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
                 autoarchive: true,
                 starter: this.guid,
             }
-        });
+        }, this.guid);
         cmd.start();
     }
 
     Cli.prototype._prepareCmd = function () {
+        if (this._cmd === null) {
+            throw "command is already being prepared for cli";
+        } else if (this.cmd !== undefined) {
+            throw "there is already a command associated with this cli";
+        }
         var cli = this;
-        this.processCmd({userdata: {creator: 'prompt'}}, function (cmd) {
+        this.processCmd({creator: 'prompt'}, function (cmd) {
             cli._cmd = cmd;
             // when the command is started, the cli will need a new placeholder
             // command.
-            $(cmd).on('wasupdated', function (e) {
-                // if started externally
-                if (this.status == 1 && this.userdata.starter != cli.guid) {
+            $(cmd).on('wasupdated.terminal', function (e) {
+                // if currently bound command is started externally
+                if (this.status == 1 &&
+                    this.userdata.starter != cli.guid &&
+                    cli._cmd == this)
+                {
+                    // unbind me from the cli
                     cli._cmd = undefined;
+                    // prepare a new one
                     cli._prepareCmd();
                 }
-                // either way, once started, this event handler is useless
+                // once started, every terminal event handler is useless
                 if (this.status > 0) {
-                    $(this).unbind(e);
+                    $(this).unbind('.terminal');
                 }
             });
-            $(cli).trigger('prepared', cmd);
+            $(cli).trigger('prepared', [cmd]);
         });
-        $(this).trigger('ready');
     };
 
     // create a new terminal window and append to HTML body
@@ -267,9 +283,9 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         // a cmd object (and widget) has been prepared for this cli
         $(cli).on('prepared', function (_, cmd) {
             // when the associated command is updated from outside
-            $(cmd).on('wasupdated', function (e, updata, by) {
-                if (by == cli.guid || !updata) {
-                    // ignore empty updates and updates from myself
+            $(cmd).on('wasupdated.terminal', function (e, updata, by) {
+                if (by == cli.guid || !updata || by == 'init') {
+                    // ignore init, empty updates and updates from myself
                     return;
                 }
                 if (updata.cmd !== undefined || updata.args !== undefined) {
