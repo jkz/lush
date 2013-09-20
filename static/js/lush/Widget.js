@@ -252,6 +252,9 @@ define(["jquery",
 
     Widget.prototype.initJsPlumb = function (ctrl) {
         var cmd = this.cmd;
+        $(this.node).on('tabsactivate', function () {
+            jsPlumb.repaint($(this));
+        });
         syncPositionWithServer(this.node, ctrl, jsPlumb.repaint);
         jsPlumb.draggable(this.node, {
             stop: function () { storePositionOnServer(this, ctrl); },
