@@ -210,13 +210,17 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             cli._cmd = cmd;
             // when the command is started, the cli will need a new placeholder
             // command.
-            $(cmd).on('wasupdated', function () {
+            $(cmd).on('wasupdated', function (e) {
                 // if started externally
-                if (this.status > 0 && this.userdata.starter != cli.guid) {
+                if (this.status == 1 && this.userdata.starter != cli.guid) {
                     cli._cmd = undefined;
                     cli._prepareCmd();
                 }
-            })
+                // either way, once started, this event handler is useless
+                if (this.status > 0) {
+                    $(this).unbind(e);
+                }
+            });
             $(cli).trigger('prepared', cmd);
         });
         $(this).trigger('ready');
