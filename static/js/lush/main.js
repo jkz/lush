@@ -291,9 +291,12 @@ define(["jquery",
 
     var insertWidgetIntoDom = function (widget) {
         // wrap in a group div
-        $('<div class=cmdgroup id=cmdgroup' + widget.cmd.nid + '>')
+        $('<div class=group id=group' + widget.cmd.nid + '>')
             .append(widget.node)
             .appendTo('#cmds');
+        $(widget.cmd).on('wasreleased', function () {
+            $('#group' + this.nid).remove();
+        });
     };
 
     $(document).ready(function () {
