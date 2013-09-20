@@ -85,15 +85,15 @@ div.streampeeker {
     height: 100%;
 }
 
-#groups button:after {
+#history button:after {
     content: "▬";
 }
 
-#groups .archived button:after {
+#history .archived button:after {
     content: "◳";
 }
 
-#groups li.child {
+#history li.child {
     display: none;
 }
 

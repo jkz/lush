@@ -155,8 +155,8 @@ define(["jquery",
     // sometimes i just dont know who i am anymore...
     var moi = guid();
 
-    // build a <li> for the groups list for this command
-    var createGroupsLi = function (cmd) {
+    // build a <li> for the history list for this command
+    var createHistoryLi = function (cmd) {
         // TODO: this is not a good id(ea)
         var $li = $('<li id=group' + cmd.nid + '><span class=name></span></li>')
             .data('gid', cmd.nid);
@@ -204,14 +204,18 @@ define(["jquery",
         return $li;
     };
 
-    // build the <div id=groups>
-    var buildGroupsList = function () {
+    // build the <div id=history>
+    var buildHistoryList = function () {
         // make a $li for every command, hide it if it's not root
-        var lis = $.map(cmds, createGroupsLi);
-        $('#groups ul').append(lis);
+        var lis = $.map(cmds, createHistoryLi);
+        $('#history ul').append(lis);
+        $('#toggle_archived').click(function (e) {
+            e.preventDefault();
+            $('#history .archived').toggle();
+        });
         $('#delete_archived').click(function (e) {
             e.preventDefault();
-            $('#groups .archived').each(function () {
+            $('#history .archived').each(function () {
                 var gid = $(this).data('gid');
                 var cmd = cmds[gid];
                 cmd.release();
@@ -309,13 +313,7 @@ define(["jquery",
         });
         // second iteration to ensure all widgets exist before connecting them
         $.each(cmds, function (_, cmd) { cmd.updatePipes(); });
-        buildGroupsList();
-        $('<a href>show/hide archived</a>')
-            .click(function (e) {
-                e.preventDefault();
-                $('#groups .archived').toggle();
-            })
-            .insertBefore('#groups ul');
+        buildHistoryList();
         jsPlumb.importDefaults({
             ConnectionsDetachable: false,
             // Put all connectors at z-index 3 and endpoints at 4
@@ -343,7 +341,7 @@ define(["jquery",
             insertWidgetIntoDom(widget);
             widget.initJsPlumb(this);
             delete cmdinit.nid;
-            $('#groups ul').append(createGroupsLi(cmd));
+            $('#history ul').append(createHistoryLi(cmd));
             cmd.update(cmdinit, 'init');
             if (cmd.imadethis()) {
                 // i made this!
