@@ -129,3 +129,29 @@ div.streampeeker {
 .ui-tabs .ui-tabs-nav li a {
     padding: .1em .2em;
 }
+
+/* "loading page, please wait..." */
+#loading {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    text-align: center;
+    background-color: rgba(100, 100, 100, 0.85);
+    z-index: 100;
+}
+
+#loading div {
+    height: 100%;
+    width: 100%;
+}
+
+#loading p {
+    display: table-cell;
+    vertical-align: middle;
+    font-size: 3em;
+    font-family: sans-serif;
+    font-weight: bold;
+    color: #500;
+}

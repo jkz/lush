@@ -403,6 +403,7 @@ define(["jquery",
         $.each(cmds_init, function (nid, cmdinit) {
             cmds[nid].processUpdate(cmdinit);
         });
+        $('#loading').remove();
     });
 
 });
