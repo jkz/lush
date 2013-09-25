@@ -305,7 +305,7 @@ define(["jquery",
         });
         $(cmd).on('childRemoved', function (_, child, stream) {
             // TODO
-            throw "disconnecting streams not implemented in UI";
+            //throw "disconnecting streams not implemented in UI";
         });
         $(cmd).on('wasreleased', function () {
             [this.stdinep, this.stdoutep, this.stderrep]
