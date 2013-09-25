@@ -320,6 +320,7 @@ define(["jquery",
         // some UI parts are not initialized, just hooked into wasupdated
         // handlers.
         // TODO: NOT MY PROBLEM -- or so I wish :( that should change
+        init.userdata.updatedby = 'init';
         cmd.processUpdate(init);
         return cmd;
     };
