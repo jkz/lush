@@ -240,6 +240,15 @@ define(["jquery",
             delete widget.node;
             delete widget.cmd;
         });
+        $(cmd).on('parentAdded', function (_, daddy) {
+            // I have a new parent, make my group node a child of its group
+            $(widget.groupnode).appendTo('#group' + daddy.nid);
+        });
+        $(cmd).on('parentRemoved', function () {
+            // command is now root: insert its group node back in the top list
+            // (NOP if already root)
+            $(widget.groupnode).appendTo('#cmds');
+        });
     };
 
     Widget.prototype._initJsPlumb = function (ctrl) {
