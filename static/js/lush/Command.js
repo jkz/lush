@@ -80,10 +80,6 @@ define(["jquery"], function ($) {
         this.ctrl = ctrl;
         this._moi = moi;
         $.extend(this, init);
-        // (depth-first) recursion of archival event
-        $(this).on('archival', function (_, archived) {
-            $(this.children()).trigger('archival', archived); // :D
-        });
         this.gid = this.nid;
         $(this).on('parentAdded', function (_, dad) {
             this.gid = dad.gid;
@@ -171,6 +167,9 @@ define(["jquery"], function ($) {
         // if the server tells me that I've been (de)archived, generate an
         // "archival" jQuery event
         if (updata.userdata && updata.userdata.archived !== undefined) {
+            if (!this.isRoot()) {
+                throw "Received archival event on non-root node " + this.nid;
+            }
             $(this).trigger('archival', updata.userdata.archived);
         }
     };

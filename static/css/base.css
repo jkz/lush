@@ -30,6 +30,10 @@ body {
     display: inline;
 }
 
+.groupwidget.archived {
+    display: none;
+}
+
 div.cmdwidget {
     position: absolute;
     background-color: white;

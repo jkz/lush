@@ -199,15 +199,6 @@ define(["jquery",
             });
     };
 
-    // hide all visuals related to this command
-    var hideCmd = function (cmd) {
-        $('#group' + cmd.nid).css('display', 'none');
-    };
-
-    var showCmd = function (cmd) {
-        $('#group' + cmd.nid).css('display', 'none');
-    };
-
     // create widget with command info and add it to the DOM.
     //
     // jsPlumb endpoints: widgets have three endpoints: stdin, stdout and
@@ -237,16 +228,10 @@ define(["jquery",
         this._insertInDOM();
         this._initJsPlumb(ctrl);
         $(cmd).on('archival', function (_, archived) {
-            // if this is a group root, archive the entire group. no need for
-            // a conditional; if it's not this jquery selector is empty and
-            // thus the entire thing is a NOP.
-            var $group = $('#group' + cmd.nid);
             if (archived) {
-                hideCmd(this);
-                $group.addClass('archived');
+                $('#group' + cmd.nid).addClass('archived');
             } else {
-                showCmd(this);
-                $group.removeClass('archived');
+                $('#group' + cmd.nid).removeClass('archived');
             }
         });
         $(cmd).on('wasreleased', function () {

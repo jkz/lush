@@ -157,8 +157,7 @@ define(["jquery",
 
     // build a <li> for the history list for this command
     var createHistoryLi = function (cmd) {
-        // TODO: this is not a good id(ea)
-        var $li = $('<li id=group' + cmd.nid + '><span class=name></span></li>')
+        var $li = $('<li id=history_group' + cmd.nid + '><span class=name></span></li>')
             .data('gid', cmd.nid);
         if (cmd.isRoot()) {
             $li.find('.name').text(cmd.nid + ': ' + groupname(cmd));
@@ -170,23 +169,31 @@ define(["jquery",
             if (updata.name !== undefined) {
                 // Set the text of this li to the name of whatever group I
                 // belong to
-                $('#group' + this.gid + ' .name')
+                $('#history_group' + this.gid + ' .name')
                     .text(this.gid + ': ' + groupname(cmds[this.gid]));
             }
-            if (updata.userdata && updata.userdata.archived) {
-                $li.addClass('archived');
+        });
+        $(cmd).on('archival', function (_, archived) {
+            // check, check, double check
+            if (!this.isRoot()) {
+                throw "received archival status change on non-root cmd " + this.nid;
+            }
+            if (archived) {
+                $('#history_group' + this.nid).addClass('archived');
+            } else {
+                $('#history_group' + this.nid).removeClass('archived');
             }
         });
         $(cmd).on('parentAdded', function () {
             // I am now a child, hide my li
-            $('#group' + this.nid).addClass('child');
+            $('#history_group' + this.nid).addClass('child');
         });
         $(cmd).on('parentRemoved', function () {
             // I'm back!
-            $('#group' + this.nid).removeClass('child');
+            $('#history_group' + this.nid).removeClass('child');
         });
         $(cmd).on('wasreleased', function () {
-            $('#group' + this.nid).remove();
+            $('#history_group' + this.nid).remove();
         });
         $li.append($('<button>').click(function (e) {
             e.preventDefault();
