@@ -170,9 +170,8 @@ define(["jquery",
             if (updata.name !== undefined) {
                 // Set the text of this li to the name of whatever group I
                 // belong to
-                var gid = this.getGroupId();
-                $('#group' + gid + ' .name')
-                    .text(gid + ': ' + groupname(cmds[gid]));
+                $('#group' + this.gid + ' .name')
+                    .text(this.gid + ': ' + groupname(cmds[this.gid]));
             }
             if (updata.userdata && updata.userdata.archived) {
                 $li.addClass('archived');
@@ -204,11 +203,8 @@ define(["jquery",
         return $li;
     };
 
-    // build the <div id=history>
-    var buildHistoryList = function () {
-        // make a $li for every command, hide it if it's not root
-        var lis = $.map(cmds, createHistoryLi);
-        $('#history ul').append(lis);
+    // prepare the UI for the list of commands
+    var initHistoryListControls = function () {
         $('#toggle_archived').click(function (e) {
             e.preventDefault();
             $('#history .archived').toggle();
@@ -289,14 +285,43 @@ define(["jquery",
         }
     };
 
-    var insertWidgetIntoDom = function (widget) {
-        // wrap in a group div
-        $('<div class=group id=group' + widget.cmd.nid + '>')
-            .append(widget.node)
-            .appendTo('#cmds');
-        $(widget.cmd).on('wasreleased', function () {
-            $('#group' + this.nid).remove();
-        });
+    var requestConnect = function (srcep, trgtep, stream, ctrl) {
+        var options = {
+            from: srcep.getParameter("sysid")(),
+            to: trgtep.getParameter("sysid")(),
+            stream: stream,
+        };
+        ctrl.send('connect', JSON.stringify(options));
+    };
+
+    // complete initialization of a command given its nid. Expects
+    // initialization data for this command and all possible child commands to
+    // be in cmds_init. will also init all child commands.
+    function initCommand(nid, ctrl) {
+        if (typeof nid !== "number") {
+            throw "nid must be a number";
+        }
+        var init = cmds_init[nid];
+        if (init === undefined) {
+            throw "No init data available for cmd " + nid;
+        }
+        // init children first
+        if (init.stdoutto && !(init.stdoutto in cmds)) {
+            initCommand(init.stdoutto, ctrl);
+        }
+        if (init.stderrto && !(init.stderrto in cmds)) {
+            initCommand(init.stdoutto, ctrl);
+        }
+        delete cmds_init[nid];
+        var cmd = new Command(ctrl, init, moi);
+        cmds[nid] = cmd;
+        var widget = new Widget(cmd, ctrl);
+        $('#history ul').append(createHistoryLi(cmd));
+        // some UI parts are not initialized, just hooked into wasupdated
+        // handlers.
+        // TODO: NOT MY PROBLEM -- or so I wish :( that should change
+        cmd.processUpdate(init);
+        return cmd;
     };
 
     $(document).ready(function () {
@@ -305,18 +330,15 @@ define(["jquery",
         ctrl.ws.onerror = function () {
             console.log('Error connecting to ' + ctrluri);
         };
-        $.each(cmds_init, function (_, cmdinit) {
-            var cmd = new Command(ctrl, cmdinit, moi);
-            cmds[cmdinit.nid] = cmd;
+        // build the command objects without triggering update handlers
+        $.each(cmds_init, function (nid) {
+            nid = +nid;
+            // parents automatically init children, don't reinit
+            if (nid in cmds_init) {
+                initCommand(nid, ctrl);
+            }
         });
-        $.each(cmds, function (_, cmd) {
-            var widget = new Widget(this);
-            insertWidgetIntoDom(widget);
-            widget.initJsPlumb(ctrl);
-        });
-        // second iteration to ensure all widgets exist before connecting them
-        $.each(cmds, function (_, cmd) { cmd.updatePipes(); });
-        buildHistoryList();
+        initHistoryListControls();
         jsPlumb.importDefaults({
             ConnectionsDetachable: false,
             // Put all connectors at z-index 3 and endpoints at 4
@@ -324,10 +346,11 @@ define(["jquery",
         });
         jsPlumb.bind("beforeDrop", function (info) {
             // Connected to another command
-            connect(
+            requestConnect(
                 info.connection.endpoints[0],
                 info.dropEndpoint,
-                info.connection.getParameter("stream")());
+                info.connection.getParameter("stream")(),
+                ctrl);
             return false;
         });
         $('button#newcmd').click(function () {
@@ -337,15 +360,9 @@ define(["jquery",
         $('.sortable').disableSelection().sortable();
         // a new command has been created
         $(ctrl).on("newcmd", function (_, cmdjson) {
-            var cmdinit = JSON.parse(cmdjson);
-            var cmd = new Command(this, cmdinit, moi);
-            cmds[cmd.nid] = cmd;
-            var widget = new Widget(cmd);
-            insertWidgetIntoDom(widget);
-            widget.initJsPlumb(this);
-            delete cmdinit.nid;
-            $('#history ul').append(createHistoryLi(cmd));
-            cmd.update(cmdinit, 'init');
+            var init = JSON.parse(cmdjson);
+            cmds_init[init.nid] = init;
+            var cmd = initCommand(init.nid, this);
             if (cmd.imadethis()) {
                 // i made this!
                 // capture all stdout and stderr to terminal
@@ -398,12 +415,8 @@ define(["jquery",
             var data = opts[2];
             cmds[sysid].processStream(stream, data);
         });
-        // now that all widgets have been built (and most importantly: update
-        // handlers have been set) populate the cmd objects to init the widgets
-        $.each(cmds_init, function (nid, cmdinit) {
-            cmds[nid].processUpdate(cmdinit);
-        });
         $('#loading').remove();
+        // that also deletes the <script>s.. buuuut...  seems to work still? :o
     });
 
 });

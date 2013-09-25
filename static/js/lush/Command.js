@@ -74,12 +74,22 @@ define(["jquery"], function ($) {
         if (ctrl === undefined || init === undefined || moi === undefined) {
             throw new "Command constructor requires three parameters";
         }
+        if (init.nid === undefined) {
+            throw new "Init data must contain .nid field";
+        }
         this.ctrl = ctrl;
         this._moi = moi;
         $.extend(this, init);
         // (depth-first) recursion of archival event
         $(this).on('archival', function (_, archived) {
             $(this.children()).trigger('archival', archived); // :D
+        });
+        this.gid = this.nid;
+        $(this).on('parentAdded', function (_, dad) {
+            this.gid = dad.gid;
+        });
+        $(this).on('parentRemoved', function () {
+            this.gid = this.nid;
         });
     };
 
@@ -252,7 +262,11 @@ define(["jquery"], function ($) {
             children.push(c);
         }
         return children;
-    }
+    };
+
+    Command.prototype.isRoot = function () {
+        return this.gid == this.nid;
+    };
 
     return Command;
 });

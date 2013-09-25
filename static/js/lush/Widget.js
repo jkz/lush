@@ -22,6 +22,32 @@
 
 
 // The View for command objects.
+//
+// Every command widget is wrapped in a group widget. Within that group widget resides:
+//
+// - the command widget
+// - helper nodes inserted by jsPlumb
+// - the group widget of every child of the command
+//
+// eg "echo hahahajustkidding | tee /tmp/foo | mail -s 'I think you are great' root"
+//
+// cmd ids: echo=1, tee=2, mail3
+//
+// then this is your view tree:
+//
+// (groupwidget1
+//   (cmdwidget1)
+//   (jsPlumbstuff)
+//   (morejsPlumbstuff)
+//   (children
+//     (groupwidget2
+//       (cmdwidget2)
+//       .... // jsplumb stuff
+//       (children
+//         (groupwidget3
+//           (cmdwidget3)
+//           ... // jsPlumb stuff
+//           )))))
 
 define(["jquery",
         'lush/help',
@@ -88,7 +114,7 @@ define(["jquery",
             .resizable()
             .append($ocbutton)
             .append($preview)
-            .appendTo('body');
+            .appendTo('#group' + cmdSysId);
         // Closure that fills the stream peeker with stdout data every second
         // until it is closed
         var refresher;
@@ -165,15 +191,6 @@ define(["jquery",
         });
     };
 
-    var connect = function (srcep, trgtep, stream) {
-        var options = {
-            from: srcep.getParameter("sysid")(),
-            to: trgtep.getParameter("sysid")(),
-            stream: stream,
-        };
-        ctrl.send('connect', JSON.stringify(options));
-    };
-
     var createStreamPeekerWhenDblClicked = function (ep, ctrl) {
         return $(ep.canvas)
             .css('z-index', 4) // put endpoint above the connector (is at 3)
@@ -182,33 +199,13 @@ define(["jquery",
             });
     };
 
-    // hide command widget, including meta widgets (streampeek)
+    // hide all visuals related to this command
     var hideCmd = function (cmd) {
-        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
-            conn.setVisible(false);
-            conn.endpoints[1].setVisible(false);
-            if (conn.getParameter('isStreampeek')) {
-                jsPlumb.repaint(conn.target.css('display', 'none'));
-            }
-        });
-        $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
-            ep.setVisible(false);
-        });
-        jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'none'));
+        $('#group' + cmd.nid).css('display', 'none');
     };
 
     var showCmd = function (cmd) {
-        $.map(jsPlumb.getConnections({source: cmd.htmlid}), function (conn) {
-            conn.setVisible(true);
-            conn.endpoints[1].setVisible(true);
-            if (conn.getParameter('isStreampeek')) {
-                jsPlumb.repaint(conn.target.css('display', 'block'));
-            }
-        });
-        $.map(jsPlumb.getEndpoints(cmd.htmlid), function (ep) {
-            ep.setVisible(true);
-        });
-        jsPlumb.repaint($('#' + cmd.htmlid).css('display', 'block'));
+        $('#group' + cmd.nid).css('display', 'none');
     };
 
     // create widget with command info and add it to the DOM.
@@ -221,15 +218,24 @@ define(["jquery",
     //
     // Hooks view updaters to a custom jQuery event 'wasupdated'. I.e. after
     // changing the cmd run $(cmd).trigger('wasupdated') to update the UI.
-    var Widget = function (cmd) {
+    // (This is done automatically if you update the command through its
+    // .update() method)
+    var Widget = function (cmd, ctrl) {
+        if (cmd === undefined || ctrl === undefined) {
+            throw "missing argument(s) to Widget constructor";
+        }
         var widget = this;
         // Fresh command widget in view mode
-        this.node = $('#cmdwidget_template')
+        this.groupnode = $('#groupwidget_template')
             .clone()
+            .attr("id", "group" + cmd.nid)[0];
+        this.node = $(this.groupnode).find('.cmdwidget')
             .attr("id", cmd.htmlid)
             .data('activetab', "view")[0];
         this.cmd = cmd;
         this._initView(cmd);
+        this._insertInDOM();
+        this._initJsPlumb(ctrl);
         $(cmd).on('archival', function (_, archived) {
             // if this is a group root, archive the entire group. no need for
             // a conditional; if it's not this jquery selector is empty and
@@ -245,12 +251,13 @@ define(["jquery",
         });
         $(cmd).on('wasreleased', function () {
             $(widget.node).remove();
+            delete widget.groupnode;
             delete widget.node;
             delete widget.cmd;
         });
     };
 
-    Widget.prototype.initJsPlumb = function (ctrl) {
+    Widget.prototype._initJsPlumb = function (ctrl) {
         var cmd = this.cmd;
         $(this.node).on('tabsactivate', function () {
             jsPlumb.repaint($(this));
@@ -273,26 +280,12 @@ define(["jquery",
                 sysid: constantly(cmd.nid),
             },
         });
-        // function that returns:
-        //
-        // - the group id of the "source command" (cmd that this div's source
-        //   endpoint is connected to), if any
-        //
-        // - the system id of this command otherwise
-        cmd.getGroupId = function () {
-            if (cmd.stdinep.connections.length > 0) {
-                var conn = cmd.stdinep.connections[0];
-                return conn.getParameter("groupid")();
-            }
-            return cmd.nid;
-        };
         cmd.stdoutep = jsPlumb.addEndpoint(this.node, {
             anchor: 'BottomCenter',
             isSource: true,
             parameters: {
                 stream: constantly("stdout"),
                 sysid: constantly(cmd.nid),
-                groupid: cmd.getGroupId,
             },
         });
         cmd.stderrep = jsPlumb.addEndpoint(this.node, {
@@ -301,27 +294,18 @@ define(["jquery",
             parameters: {
                 stream: constantly("stderr"),
                 sysid: constantly(cmd.nid),
-                groupid: cmd.getGroupId,
             },
         });
         // Doubleclicking a source endpoint creates a streampeeker
         createStreamPeekerWhenDblClicked(cmd.stdoutep, ctrl);
         createStreamPeekerWhenDblClicked(cmd.stderrep, ctrl);
-        // true iff this command does not take its stdin from another command
-        cmd.isRoot = function () {
-            return cmd.stdinep.connections.length == 0;
-        }
-        cmd.updatePipes = function () {
-            if (cmd.hasOwnProperty('stdoutto')) {
-                // connect my stdout to cmd.stdoutto's stdin
-                connectVisually(cmd.stdoutep, cmds[cmd.stdoutto].stdinep, 'stdout');
-            }
-            if (cmd.hasOwnProperty('stderrto')) {
-                connectVisually(cmd.stderrep, cmds[cmd.stderrto].stdinep, 'stderr');
-            }
-        };
-        $(cmd).on('wasupdated', function () {
-            this.updatePipes();
+        $(cmd).on('childAdded', function (_, child, stream) {
+            var ep = (stream == 'stdout') ? this.stdoutep : this.stderrep;
+            connectVisually(ep, child.stdinep, stream);
+        });
+        $(cmd).on('childRemoved', function (_, child, stream) {
+            // TODO
+            throw "disconnecting streams not implemented in UI";
         });
         $(cmd).on('wasreleased', function () {
             [this.stdinep, this.stdoutep, this.stderrep]
@@ -475,8 +459,8 @@ define(["jquery",
         this._initCloseButton();
     };
 
-    Widget.prototype.insertInDOM = function () {
-        $('#cmds').append(this.node);
+    Widget.prototype._insertInDOM = function () {
+        $('#cmds').append(this.groupnode);
     };
 
     return Widget;
