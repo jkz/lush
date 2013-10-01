@@ -208,6 +208,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         } else if (this.cmd !== undefined) {
             throw "there is already a command associated with this cli";
         }
+        this._cmd = null; // ok I'm working on this!
         var cli = this;
         this.processCmd({creator: 'prompt'}, function (cmd) {
             cli._cmd = cmd;
