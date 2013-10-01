@@ -336,7 +336,7 @@ define(["jquery",
         // Control stream (Websocket)
         ctrl = new Ctrl();
         ctrl.ws.onerror = function () {
-            console.log('Error connecting to ' + ctrluri);
+            console.log('Websocket connection error');
         };
         // build the command objects without triggering update handlers
         $.each(cmds_init, function (nid) {
