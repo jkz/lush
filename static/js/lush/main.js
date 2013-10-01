@@ -255,21 +255,29 @@ define(["jquery",
                 // trigger all callbacks, including this one.
                 var cbid = 'newcmdcallback.' + guid();
                 options.userdata.callback = cbid;
-                $(window).on(cbid, function (_, cmd) {
+                $(window).on(cbid, function (e, cmd) {
+                    if (cmd === undefined) {
+                        console.log('new commmand callback time-out: ' + JSON.stringify(options));
+                        $(window).unbind(e);
+                        // TODO: inform the callback about timeout
+                    }
                     // namespaced jquery event, can be triggered spuriously.
                     // make sure that this command corresponds to this
                     // callback.
-                    if (cmd.userdata.callback == cbid) {
+                    else if (cmd.userdata.callback == cbid) {
                         callback(cmd);
+                        $(window).unbind(e); // make the timeout trigger a NOP
                     }
                 });
                 // clear the callback after ten seconds. this means that the
                 // server has ten seconds to generate a newcmd event, which
                 // will trigger the newcmdcallback event. after that, the
-                // callback is silently deleted. this is not great because the
-                // callback has no way of knowing whether it timed out or not.
+                // callback is deleted.
                 setTimeout(function () {
-                    $(window).off(cbid);
+                    // clearing is done by triggering the event without a cmd
+                    // object. the handler will then unhook itself.
+                    $(window).trigger(cbid);
+                    // wish I could assert($(window).handlers(cbid).length == 0)
                 }, 10000);
             }
             ctrl.send("new", JSON.stringify(options));
