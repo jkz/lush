@@ -30,12 +30,31 @@ body {
     display: inline;
 }
 
-.groupwidget.archived {
+/* Command container div constrains the positioning of all root commands so
+ * must be sized appropriately */
+#cmds {
+    position: absolute;
+    top: 19em; /* .terminalwrap.height */
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* root is positioned absolute in the document */
+div.rootcontainer {
+    position: absolute !important;
+    display: inline-block; /* fit width to contents */
+}
+div.rootcontainer.archived {
     display: none;
+}
+/* children are positioned relative within root */
+div.groupwidget {
+    position: relative;
+    display: inline-block;
 }
 
 div.cmdwidget {
-    position: absolute;
     background-color: white;
     width: 15em;
     border: solid black thin;
@@ -103,7 +122,7 @@ div.streampeeker {
 
 /* hide template nodes intended for cloning */
 [id$="_template"] {
-    display: none;
+    display: none !important;
 }
 
 #path {

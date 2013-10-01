@@ -174,10 +174,6 @@ define(["jquery",
             }
         });
         $(cmd).on('archival', function (_, archived) {
-            // check, check, double check
-            if (!this.isRoot()) {
-                throw "received archival status change on non-root cmd " + this.nid;
-            }
             if (archived) {
                 $('#history_group' + this.nid).addClass('archived');
             } else {
@@ -187,12 +183,10 @@ define(["jquery",
         $(cmd).on('parentAdded', function () {
             // I am now a child, hide my li
             $('#history_group' + this.nid).addClass('child');
-        });
-        $(cmd).on('parentRemoved', function () {
+        }).on('parentRemoved', function () {
             // I'm back!
             $('#history_group' + this.nid).removeClass('child');
-        });
-        $(cmd).on('wasreleased', function () {
+        }).on('wasreleased', function () {
             $('#history_group' + this.nid).remove();
         });
         $li.append($('<button>').click(function (e) {

@@ -225,29 +225,38 @@ define(["jquery",
             .data('activetab', "view")[0];
         this.cmd = cmd;
         this._initView(cmd);
-        this._insertInDOM();
+        // container for the widget when it is root. this container will always
+        // reside as a direct child of <div id=cmds>, the widget will move
+        // around depending on its hierarchy. if it is root, it is here, if it
+        // is a child, it is in another element's <div class=children>.
+        var rootnode = $('<div class=rootcontainer id=root' + cmd.nid + '>')
+            .draggable({
+                containment: "parent",
+                stop: function () { storePositionOnServer(this, ctrl); },
+            })
+            .append(this.groupnode)
+            .appendTo('#cmds')[0];
+        syncPositionWithServer(rootnode, ctrl);
         this._initJsPlumb(ctrl);
         $(cmd).on('archival', function (_, archived) {
             if (archived) {
-                $('#group' + cmd.nid).addClass('archived');
+                $('#root' + this.nid).addClass('archived');
             } else {
-                $('#group' + cmd.nid).removeClass('archived');
+                $('#root' + this.nid).removeClass('archived');
             }
-        });
-        $(cmd).on('wasreleased', function () {
-            $(widget.node).remove();
+        }).on('wasreleased', function () {
+            $(widget.groupnode).remove();
+            $(widget.rootnode).remove();
             delete widget.groupnode;
             delete widget.node;
             delete widget.cmd;
-        });
-        $(cmd).on('parentAdded', function (_, daddy) {
+        }).on('parentAdded', function (_, daddy) {
             // I have a new parent, make my group node a child of its group
-            $(widget.groupnode).appendTo('#group' + daddy.nid);
-        });
-        $(cmd).on('parentRemoved', function () {
-            // command is now root: insert its group node back in the top list
+            $('#group' + this.nid).appendTo('#group' + daddy.nid + ' .children');
+        }).on('parentRemoved', function () {
+            // command is now root: put it back in its root container
             // (NOP if already root)
-            $(widget.groupnode).appendTo('#cmds');
+            $('#group' + this.nid).appendTo('#root' + this.nid);
         });
     };
 
@@ -255,12 +264,6 @@ define(["jquery",
         var cmd = this.cmd;
         $(this.node).on('tabsactivate', function () {
             jsPlumb.repaint($(this));
-        });
-        syncPositionWithServer(this.node, ctrl, function (node) {
-            jsPlumb.repaint($(node));
-        });
-        jsPlumb.draggable(this.node, {
-            stop: function () { storePositionOnServer(this, ctrl); },
         });
         $(this.node).resizable({
             resize: function () {
@@ -451,10 +454,6 @@ define(["jquery",
         this._initHelpTab();
         this._initTabsNav();
         this._initCloseButton();
-    };
-
-    Widget.prototype._insertInDOM = function () {
-        $('#cmds').append(this.groupnode);
     };
 
     return Widget;
