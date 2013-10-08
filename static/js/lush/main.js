@@ -335,7 +335,7 @@ define(["jquery",
             initCommand(init.stdoutto, ctrl);
         }
         if (init.stderrto && !(init.stderrto in cmds)) {
-            initCommand(init.stdoutto, ctrl);
+            initCommand(init.stderrto, ctrl);
         }
         delete cmds_init[nid];
         var cmd = new Command(ctrl, init, moi);
