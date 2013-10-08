@@ -155,6 +155,18 @@ define(["jquery",
     // sometimes i just dont know who i am anymore...
     var moi = guid();
 
+    // update the name of this entire command group in the history list.
+    //
+    // eg:
+    //
+    // 1: tar f foo.tar foo
+    // 3: echo lala | cat
+    //
+    // calling updateHistoryLiName(3) will refresh the entire second line
+    var updateHistoryLiName = function (gid) {
+        $('#history_group' + gid + ' .name').text(gid + ': ' + groupname(cmds[gid]));
+    };
+
     // build a <li> for the history list for this command
     var createHistoryLi = function (cmd) {
         var $li = $('<li id=history_group' + cmd.nid + '><span class=name></span></li>')
@@ -167,10 +179,8 @@ define(["jquery",
         $(cmd).on('wasupdated', function (_, updata) {
             // if my name changes, so does the name of my group
             if (updata.name !== undefined) {
-                // Set the text of this li to the name of whatever group I
-                // belong to
-                $('#history_group' + this.gid + ' .name')
-                    .text(this.gid + ': ' + groupname(cmds[this.gid]));
+                // Set the text of this li to the name of whatever group I belong to
+                updateHistoryLiName(this.gid);
             }
         }).on('archival', function (_, archived) {
             if (archived) {
@@ -178,11 +188,19 @@ define(["jquery",
             } else {
                 $('#history_group' + this.nid).removeClass('archived');
             }
-        }).on('parentAdded', function () {
+        }).on('parentAdded', function (_, daddy) {
             // I am now a child, hide my li
             $('#history_group' + this.nid).addClass('child');
-        }).on('parentRemoved', function () {
+            // update the name of whatever hierarchy I now belong to
+            updateHistoryLiName(daddy.gid);
+        }).on('parentRemoved', function (_, olddaddy) {
             // I'm back!
+            // my name might have changed while I was a child but that will not
+            // have been reflected in this LI
+            updateHistoryLiName(this.gid);
+            // now that I'm not a child of my old hierarchy, its name has
+            // changed
+            updateHistoryLiName(olddaddy.gid);
             $('#history_group' + this.nid).removeClass('child');
         }).on('wasreleased', function () {
             $('#history_group' + this.nid).remove();
