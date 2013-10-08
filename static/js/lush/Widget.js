@@ -252,7 +252,7 @@ define(["jquery",
             delete widget.cmd;
         }).on('parentAdded', function (_, daddy) {
             // I have a new parent, make my group node a child of its group
-            $('#group' + this.nid).appendTo('#group' + daddy.nid + ' .children');
+            $('#group' + this.nid).appendTo('#group' + daddy.nid + ' > .children');
         }).on('parentRemoved', function () {
             // command is now root: put it back in its root container
             // (NOP if already root)
