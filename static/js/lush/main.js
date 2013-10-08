@@ -172,15 +172,13 @@ define(["jquery",
                 $('#history_group' + this.gid + ' .name')
                     .text(this.gid + ': ' + groupname(cmds[this.gid]));
             }
-        });
-        $(cmd).on('archival', function (_, archived) {
+        }).on('archival', function (_, archived) {
             if (archived) {
                 $('#history_group' + this.nid).addClass('archived');
             } else {
                 $('#history_group' + this.nid).removeClass('archived');
             }
-        });
-        $(cmd).on('parentAdded', function () {
+        }).on('parentAdded', function () {
             // I am now a child, hide my li
             $('#history_group' + this.nid).addClass('child');
         }).on('parentRemoved', function () {
