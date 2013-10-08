@@ -32,12 +32,17 @@ body {
 
 /* Command container div constrains the positioning of all root commands so
  * must be sized appropriately */
-#cmds {
+div#cmds {
     position: absolute;
     top: 19em; /* .terminalwrap.height */
-    left: 0;
+    left: 20em;
     right: 0;
     bottom: 0;
+}
+div#rest {
+    position: absolute;
+    width: 20em;
+    left: 0;
 }
 
 /* root is positioned absolute in the document */
