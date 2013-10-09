@@ -43,8 +43,8 @@ div#cmds {
 div#sidepane {
     position: absolute;
     top: 0; /* play nice with min-height: 100% */
+    left: 0;
     width: 16em;
-    padding: .5em;
     padding-top: 19em; /* no content in the terminal window */
     min-height: 100%; /* stretch to bottom of window, expand to fit contents */
     border-right: solid thin black;
@@ -124,8 +124,8 @@ div.streampeeker {
 #history ul {
     font-family: monospace;
     list-style: none;
-    padding: 0;
-    margin: .2em;
+    padding: 0.2em;
+    border-top: solid thin black;
 }
 
 /* unarchived history entry */
