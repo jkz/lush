@@ -35,16 +35,21 @@ body {
 div#cmds {
     position: absolute;
     top: 19em; /* .terminalwrap.height */
-    left: 20em;
+    left: 16em; /* #sidepane.width */
     right: 0;
     bottom: 0;
 }
-div#rest {
-    padding: .5em;
+
+div#sidepane {
     position: absolute;
-    width: 20em;
-    left: 0;
+    top: 0; /* play nice with min-height: 100% */
+    width: 16em;
+    padding: .5em;
+    padding-top: 19em; /* no content in the terminal window */
+    min-height: 100%; /* stretch to bottom of window, expand to fit contents */
+    border-right: solid thin black;
 }
+
 
 /* root is positioned absolute in the document */
 div.rootcontainer {
@@ -114,14 +119,35 @@ div.streampeeker {
     height: 100%;
 }
 
-#history button:after {
-    content: "▬";
+/*** HISTORY ***/
+
+#history ul {
+    font-family: monospace;
+    list-style: none;
+    padding: 0;
+    margin: .2em;
 }
 
-#history .archived button:after {
-    content: "◳";
+/* unarchived history entry */
+#history li {
+    padding: .1em 0;
+}
+#history li .name {
+    color: #000;
+    text-decoration: underline;
 }
 
+/* archived history entry */
+#history li.archived {
+    padding: 0 0.3em;
+    font-size: 7pt;
+}
+#history li.archived .name {
+    color: #bbb;
+    text-decoration: none;
+}
+
+/* only show entries for root commands */
 #history li.child {
     display: none;
 }

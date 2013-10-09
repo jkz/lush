@@ -164,16 +164,23 @@ define(["jquery",
     //
     // calling updateHistoryLiName(3) will refresh the entire second line
     var updateHistoryLiName = function (gid) {
-        $('#history_group' + gid + ' .name').text(gid + ': ' + groupname(cmds[gid]));
+        $('#history_group' + gid + ' .name').text(groupname(cmds[gid]));
     };
 
     // build a <li> for the history list for this command
     var createHistoryLi = function (cmd) {
-        var $li = $('<li id=history_group' + cmd.nid + '><span class=name></span></li>')
-            .data('gid', cmd.nid);
-        if (cmd.isRoot()) {
-            $li.find('.name').text(cmd.nid + ': ' + groupname(cmd));
-        } else {
+        var $li = $('<li id=history_group' + cmd.nid + '>')
+            .data('gid', cmd.nid)
+            .append($('<a href class=name>')
+                .click(function (e) {
+                    e.preventDefault();
+                    var $li = $(this).closest('li');
+                    var cmd = cmds[$li.data('gid')];
+                    var currentState = $li.hasClass('archived');
+                    cmd.setArchivalState(!currentState);
+                })
+                .text(cmd.nid + ': ' + groupname(cmd)));
+        if (!cmd.isRoot()) {
             $li.addClass('child');
         }
         $(cmd).on('wasupdated', function (_, updata) {
@@ -205,18 +212,6 @@ define(["jquery",
         }).on('wasreleased', function () {
             $('#history_group' + this.nid).remove();
         });
-        $li.append($('<button>').click(function (e) {
-            e.preventDefault();
-            // dont close, allows the vm to coalesce these handlers. I
-            // actually don't know if js vms do this but it seems logical,
-            // since it's not a closure.. given all the fuss about v8 I'd
-            // expect at least that compiler to recognize this.
-            // surprisingly enough this is not easy to google.
-            var $li = $(this).closest('li');
-            var cmd = cmds[$li.data('gid')];
-            var currentState = $li.hasClass('archived');
-            cmd.setArchivalState(!currentState);
-        }));
         return $li;
     };
 

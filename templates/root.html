@@ -36,12 +36,6 @@
 <body>
 
 
-<div class=terminalwrap1>
-  <div class=terminalwrap2>
-    <div class=terminal ></div>
-  </div>
-</div>
-
 <div id="cmds"></div>
 
 
@@ -90,22 +84,29 @@
 </div>
 <!-- /groupwidget_template -->
 
-<div id=rest>
-<button id=newcmd>new command</button>
 
-<p>Path: <a id=togglepath href=#>(toggle)</a>
-<div id=pathcontainer>
-<form id=path>
-<ol class="sortable"></ol>
-</form>
+<div id=sidepane>
+    <div id=config>
+        <button id=newcmd>new command</button>
+        <p>Path: <a id=togglepath href=#>(toggle)</a>
+        <div id=pathcontainer>
+            <form id=path>
+            <ol class="sortable"></ol>
+            </form>
+        </div>
+        <a href=# id=delete_archived>Delete all archived commands</a>
+        <p><a href id=toggle_archived>show / hide archived history</a>
+    </div>
+    <div id=history>
+        <ul ></ul>
+    </div>
 </div>
 
-<div id=history>
-<h1>history</h1>
-<a href id=toggle_archived>show / hide archived</a>
-<ul ></ul>
-<a href=# id=delete_archived>Delete all archived commands</a>
-</div>
+
+<div class=terminalwrap1>
+  <div class=terminalwrap2>
+    <div class=terminal ></div>
+  </div>
 </div>
 
 <div id=loading>
