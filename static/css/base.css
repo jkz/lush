@@ -40,6 +40,7 @@ div#cmds {
     bottom: 0;
 }
 div#rest {
+    padding: .5em;
     position: absolute;
     width: 20em;
     left: 0;
