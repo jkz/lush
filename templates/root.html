@@ -87,15 +87,16 @@
 
 <div id=sidepane>
     <div id=config>
+        <h1>global config</h1>
         <button id=newcmd>new command</button>
-        <p>Path: <a id=togglepath href=#>(toggle)</a>
-        <div id=pathcontainer>
+        <p>Path: <a data-toggle-class="hidden"  href="#pathcontainer">(toggle)</a>
+        <div id=pathcontainer class=hidden>
             <form id=path>
             <ol class="sortable"></ol>
             </form>
         </div>
         <a href=# id=delete_archived>Delete all archived commands</a>
-        <p><a href id=toggle_archived>show / hide archived history</a>
+        <p><a href=#history data-toggle-class=hide_archived >show / hide archived history</a>
     </div>
     <div id=history>
         <ul ></ul>

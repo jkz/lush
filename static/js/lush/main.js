@@ -217,10 +217,6 @@ define(["jquery",
 
     // prepare the UI for the list of commands
     var initHistoryListControls = function () {
-        $('#toggle_archived').click(function (e) {
-            e.preventDefault();
-            $('#history .archived').toggle();
-        });
         $('#delete_archived').click(function (e) {
             e.preventDefault();
             $('#history .archived').each(function () {
@@ -435,6 +431,19 @@ define(["jquery",
             var stream = opts[1];
             var data = opts[2];
             cmds[sysid].processStream(stream, data);
+        });
+        // click on a <a data-toggle-class="foo" href="#lala"> toggles class
+        // foo on <p id=lala> 
+        $('[data-toggle-class]').click(function (e) {
+            e.preventDefault();
+            var clsName = this.dataset.toggleClass;
+            var targetSelector = $(this).attr('href');
+            var $node = $(targetSelector);
+            if ($node.hasClass(clsName)) {
+                $node.removeClass(clsName);
+            } else {
+                $node.addClass(clsName);
+            }
         });
         $('#loading').remove();
         // that also deletes the <script>s.. buuuut...  seems to work still? :o

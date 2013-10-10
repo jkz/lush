@@ -30,6 +30,10 @@ body {
     display: inline;
 }
 
+.hidden {
+    display: none;
+}
+
 /* Command container div constrains the positioning of all root commands so
  * must be sized appropriately */
 div#cmds {
@@ -149,6 +153,10 @@ div.streampeeker {
 
 /* only show entries for root commands */
 #history li.child {
+    display: none;
+}
+
+#history.hide_archived li.archived {
     display: none;
 }
 

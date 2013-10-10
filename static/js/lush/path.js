@@ -68,7 +68,6 @@ define(["jquery"], function ($) {
             .find('ol').on("sortstop", function () {
                 $form.submit();
             });
-        $('#togglepath').click(function () { $('#pathcontainer').toggle(); }).click();
         // Refresh form when server notifies PATH changes
         $(ctrl).on("path", function (_, pathjson) {
             var dirs = JSON.parse(pathjson);
