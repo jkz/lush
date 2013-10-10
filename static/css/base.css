@@ -123,12 +123,15 @@ div.streampeeker {
     height: 100%;
 }
 
-/*** HISTORY ***/
+/*
+ * HISTORY
+ */
 
 #history ul {
     font-family: monospace;
     list-style: none;
     padding: 0.2em;
+    margin: 0;
     border-top: solid thin black;
 }
 
@@ -193,7 +196,10 @@ div.streampeeker {
     padding: .1em .2em;
 }
 
-/* "loading page, please wait..." */
+
+/*
+ * LOADING MODAL
+ */
 #loading {
     position: fixed;
     top: 0;
@@ -217,4 +223,34 @@ div.streampeeker {
     font-family: sans-serif;
     font-weight: bold;
     color: #500;
+}
+
+/*
+ * CONFIGURATION SIDEPANE
+ */
+
+#config {
+    padding: .2em;
+}
+
+/* when collapsed hide everything... */
+#config.collapsed > * {
+    display: none;
+}
+
+/* ... except the header to restore */
+#config.collapsed h1 {
+    display: inline;
+    font-size: 12pt;
+    font-weight: normal;
+    margin: 0 0.3em;
+}
+
+#config h1 a {
+    color: #000;
+}
+
+#config.collapsed h1 a {
+    color: #bbb;
+    text-decoration: none;
 }

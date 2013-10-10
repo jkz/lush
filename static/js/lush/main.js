@@ -437,7 +437,7 @@ define(["jquery",
         $('[data-toggle-class]').click(function (e) {
             e.preventDefault();
             var clsName = this.dataset.toggleClass;
-            var targetSelector = $(this).attr('href');
+            var targetSelector = this.dataset.target || $(this).attr('href');
             var $node = $(targetSelector);
             if ($node.hasClass(clsName)) {
                 $node.removeClass(clsName);
