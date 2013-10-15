@@ -51,8 +51,8 @@ define(["jquery"], function ($) {
         case WebSocket.CONNECTING:
             // wait for open.
             // no race bc js is single threaded
-            $(ctrl).on('open', function () {
-                // try again
+            $(ctrl).one('open', function () {
+                // try again (and detach after handling)
                 Ctrl.prototype.send.apply(ctrl, args)
             });
             return;
