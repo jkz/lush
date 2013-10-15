@@ -231,6 +231,7 @@ define(["jquery",
         // this here is some tricky code dupe
         $.post("/chdir", {dir: dir})
             .fail(function (_, status, error) {
+                // TODO: obviously wrong UI
                 alert(status + ": " + error);
             });
     };

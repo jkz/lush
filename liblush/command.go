@@ -30,54 +30,12 @@ import (
 	"time"
 )
 
-type cmdstatus struct {
-	started   *time.Time
-	exited    *time.Time
-	err       error
-	listeners []func(CmdStatus) error
-}
-
 // command life-time phases
 const (
 	preparation = iota
 	running
 	done
 )
-
-func (s *cmdstatus) Started() *time.Time {
-	return s.started
-}
-
-func (s *cmdstatus) Exited() *time.Time {
-	return s.exited
-}
-
-func (s *cmdstatus) Success() bool {
-	return s.err == nil
-}
-
-func (s *cmdstatus) Err() error {
-	return s.err
-}
-
-func (s *cmdstatus) NotifyChange(f func(CmdStatus) error) {
-	s.listeners = append(s.listeners, f)
-}
-
-// call this whenever the status has changed to notify the listeners
-func (s *cmdstatus) changed() {
-	for i := 0; i < len(s.listeners); i++ {
-		err := s.listeners[i](s)
-		if err != nil {
-			s.listeners = append(s.listeners[:i], s.listeners[i+1:]...)
-			i--
-		}
-	}
-	if s.Exited() != nil {
-		// no more state changes are expected
-		s.listeners = nil
-	}
-}
 
 // Guaranteed to be unique for every command at one specific point in time but
 // once a command is cleaned up another may reuse his id.

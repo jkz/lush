@@ -30,13 +30,18 @@ import (
 // wrapper type for custom extensions of a Cmd object
 type metacmd struct{ liblush.Cmd }
 
+type statusJson struct {
+	Code   int    `json:"code"`
+	ErrStr string `json:"err"`
+}
+
 type cmdmetadata struct {
 	Id               liblush.CmdId `json:"nid"`
 	HtmlId           string        `json:"htmlid"`
 	Name             string        `json:"name"`
 	Cmd              string        `json:"cmd"`
 	Args             []string      `json:"args"`
-	Status           int           `json:"status"`
+	Status           statusJson    `json:"status"`
 	StdouttoId       liblush.CmdId `json:"stdoutto,omitempty"`
 	StderrtoId       liblush.CmdId `json:"stderrto,omitempty"`
 	StdoutScrollback int           `json:"stdoutScrollback"`
@@ -79,6 +84,14 @@ func cmdstatus2int(s liblush.CmdStatus) (i int) {
 	return
 }
 
+func cmdstatus2json(s liblush.CmdStatus) (sjson statusJson) {
+	sjson.Code = cmdstatus2int(s)
+	if err := s.Err(); err != nil {
+		sjson.ErrStr = err.Error()
+	}
+	return
+}
+
 func (mc metacmd) Metadata() (data cmdmetadata) {
 	data.Id = mc.Id()
 	data.HtmlId = fmt.Sprint("cmd", mc.Id())
@@ -96,6 +109,6 @@ func (mc metacmd) Metadata() (data cmdmetadata) {
 	if cmd := pipedcmd(mc.Stderr()); cmd != nil {
 		data.StderrtoId = cmd.Id()
 	}
-	data.Status = cmdstatus2int(mc.Status())
+	data.Status = cmdstatus2json(mc.Status())
 	return
 }

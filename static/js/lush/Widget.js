@@ -78,7 +78,7 @@ define(["jquery",
     // set the status info for this command in the given jquery node's content
     var setStatNode = function (cmd, $node) {
         var content;
-        switch (cmd.status) {
+        switch (cmd.status.code) {
         case 0:
             content = makeStartButton(cmd);
             break;

@@ -101,7 +101,7 @@ func wseventNew(s *server, optionsJSON string) error {
 		facebook := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
 		return json.NewEncoder(facebook).Encode(map[string]interface{}{
 			"nid":    c.Id(),
-			"status": cmdstatus2int(status),
+			"status": cmdstatus2json(status),
 		})
 	})
 	return nil

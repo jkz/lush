@@ -216,7 +216,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             // command.
             $(cmd).on('wasupdated.terminal', function (e) {
                 // if currently bound command is started externally
-                if (this.status == 1 &&
+                if (this.status.code == 1 &&
                     this.userdata.starter != cli.guid &&
                     cli._cmd == this)
                 {
@@ -226,7 +226,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
                     cli._prepareCmd();
                 }
                 // once started, every terminal event handler is useless
-                if (this.status > 0) {
+                if (this.status.code > 0) {
                     $(this).unbind('.terminal');
                 }
             });

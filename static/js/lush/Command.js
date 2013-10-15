@@ -157,7 +157,8 @@ define(["jquery"], function ($) {
         // If the status just updated to "successfully completed", and I am
         // god, and root, inform the server I wish to be archived.
         if (this.userdata.autoarchive &&
-            updata.status == 2 &&
+            updata.status !== undefined &&
+            updata.status.code == 2 &&
             this.isRoot() &&
             // only god archives a command, the rest will follow indirectly
             this.imadethis())
