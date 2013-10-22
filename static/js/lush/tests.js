@@ -20,9 +20,10 @@
 
 "use strict";
 
-define(["lush/Parser2",
+define(["jquery",
+        "lush/Parser2",
         "lush/Command",
-        "lush/utils"], function (Parser, Command) {
+        "lush/utils"], function ($, Parser, Command) {
     test("lcp(): longest common prefix", function () {
         equal(lcp(["abcd", "abab", "abba"]), "ab");
         equal(lcp([]), "", "common prefix of 0 strings");
@@ -293,11 +294,17 @@ define(["lush/Parser2",
                 if (args.length != 1) {
                     throw "Illegal length of argument string to updatecmd: " + args.length;
                 }
-                c.processUpdate(JSON.parse(args[0]));
+                cmd.processUpdate(JSON.parse(args[0]));
             },
         };
-        var c = new Command(ctrl, {nid: 1, name: "echo"}, "foo");
-        c.update({name: "echo 2"});
-        equal(c.name, "echo 2");
+        var cmd = new Command(ctrl, {nid: 1, name: "echo"}, "foo");
+        var wasupdatedCount = 0;
+        $(cmd).on('wasupdated', function (e, updata) {
+            wasupdatedCount++;
+            deepEqual(updata, {name: "echo 2"}, "updata equals cmdupdate request");
+        });
+        cmd.update({name: "echo 2"});
+        equal(cmd.name, "echo 2", "name property on command is updated");
+        equal(wasupdatedCount, 1, "wasupdated event triggered once");
     });
 });
