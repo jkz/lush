@@ -20,7 +20,9 @@
 
 "use strict";
 
-define(["lush/Parser2", "lush/utils"], function (Parser) {
+define(["lush/Parser2",
+        "lush/Command",
+        "lush/utils"], function (Parser, Command) {
     test("lcp(): longest common prefix", function () {
         equal(lcp(["abcd", "abab", "abba"]), "ab");
         equal(lcp([]), "", "common prefix of 0 strings");
@@ -265,5 +267,37 @@ define(["lush/Parser2", "lush/utils"], function (Parser) {
         ce.stderr = cee;
         equal(groupname(c), 'c | (co | coo | cooo 2| cooe) 2| ce 2| cee',
             'chained stderr')
+    });
+
+    test("command update events", function () {
+        // mock (websocket) control line to server
+        var ctrl = {
+            send: function () {
+                var argv = Array.prototype.slice.call(arguments);
+                // normal send
+                if (argv.length == 1) {
+                    // needs at least 1 argument
+                    argv.push("");
+                }
+                var h = handlers[argv[0]];
+                if (h) {
+                    h(argv.slice(1));
+                } else {
+                    throw "unknown websocket event " + argv[0];
+                }
+            },
+        };
+        // simulate server-side websocket event handlers
+        var handlers = {
+            updatecmd: function (args) {
+                if (args.length != 1) {
+                    throw "Illegal length of argument string to updatecmd: " + args.length;
+                }
+                c.processUpdate(JSON.parse(args[0]));
+            },
+        };
+        var c = new Command(ctrl, {nid: 1, name: "echo"}, "foo");
+        c.update({name: "echo 2"});
+        equal(c.name, "echo 2");
     });
 });
