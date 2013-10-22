@@ -72,10 +72,10 @@ define(["jquery"], function ($) {
     // third arg is a uuid identifying this session
     var Command = function (ctrl, init, moi) {
         if (ctrl === undefined || init === undefined || moi === undefined) {
-            throw new "Command constructor requires three parameters";
+            throw "Command constructor requires three parameters";
         }
         if (init.nid === undefined) {
-            throw new "Init data must contain .nid field";
+            throw "Init data must contain .nid field";
         }
         this.ctrl = ctrl;
         this._moi = moi;
