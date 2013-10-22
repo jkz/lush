@@ -61,7 +61,7 @@ define(["jquery"], function ($) {
             })
             // + button to allow creating entirely new PATH entries
             .after($('<button>+</button>').click(function () {
-                $('ol', $form).append(createPathInput($form, ''))
+                $('ol', $form).append(createPathInput(''))
                 return false;
             }))
             // reordering path entries is also an edit
