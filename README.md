@@ -2,7 +2,7 @@ Lush is a shell that is accessible through a browser instead of a terminal
 emulator.
 
 It is not technically a "(login) shell" but you use it where you would normally
-logging in to a server with ssh. Or instead of opening a terminal on your own computer.
+log in to a server with ssh. Or instead of opening a terminal on your own computer.
 
 The goal of lush is to reinvent interaction with an operating system. Currently
 there are two major players: the command line and graphical shells. Lush is a
