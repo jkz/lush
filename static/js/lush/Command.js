@@ -45,8 +45,7 @@
 // here.
 //
 // - stdout.stream / stderr.stream: called when the running command is
-// generating data on the relevant streams. Handlers are automatically unbound
-// once the command stops running.
+// generating data on the relevant streams.
 //
 // - archival: triggered when this command is being (un)archived. can be caused
 // by a server event, by the user minimizing the widget, or by a parent widget
@@ -69,8 +68,10 @@
 // the stream.
 //
 // - done: the status is updated from active to either success or error. the
-// status object is passed as the argument. consider binding to these events
-// with $().one instead of $().on.
+// status object is passed as the argument. automatically unbinds all events
+// that can now not happen anymore, including itself.
+//
+// TODO: This should be a Deferred object not an Event, for obvious reasons
 
 define(["jquery"], function ($) {
 
@@ -88,18 +89,16 @@ define(["jquery"], function ($) {
         this.gid = this.nid;
         $(this).on('parentAdded', function (_, dad) {
             this.gid = dad.gid;
-        });
-        $(this).on('parentRemoved', function () {
+        }).on('parentRemoved', function () {
             this.gid = this.nid;
-        });
-        $(this).one('done', function () {
-            $(this).unbind('.stream');
-        });
-        $(this).on('wasupdated', function (_, updata) {
+        }).on('done', function () {
+            $(this).off('.stream childAdded childRemoved parentAdded parentRemoved done');
+        }).on('wasupdated', function (e, updata) {
             if (updata.status !== undefined &&
                 updata.status.code > 1)
             {
                 $(this).trigger('done');
+                $(this).off(e); // no need for me anymore
             }
         });
     };
@@ -239,7 +238,7 @@ define(["jquery"], function ($) {
     // object.
     Command.prototype.processRelease = function () {
         $(this).trigger('wasreleased')
-               .unbind(); // unbind all jquery event handlers
+               .off(); // unbind all jquery event handlers
         delete this.cmd;
         delete this.args;
         delete this.userdata;
