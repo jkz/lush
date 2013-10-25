@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -36,16 +35,6 @@ import (
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
-
-type server struct {
-	session liblush.Session
-	root    string
-	tmplts  *template.Template
-	web     *web.Server
-	// indexed data store for arbitrary session data from client
-	userdata    map[string]string
-	ctrlclients liblush.FlexibleMultiWriter
-}
 
 func redirect(ctx *web.Context, loc *url.URL) {
 	if _, ok := ctx.Params["noredirect"]; ok {

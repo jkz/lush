@@ -22,20 +22,9 @@ package main
 
 import (
 	"flag"
-	"go/build"
-	"html/template"
 	"log"
-	"os"
 	"runtime"
-
-	"bitbucket.org/kardianos/osext"
-	"github.com/hraban/lush/liblush"
-	"github.com/hraban/web"
 )
-
-const basePkg = "github.com/hraban/lush/"
-
-var serverinitializers []func(*server)
 
 // Create new PATH envvar value by adding dir to existing PATH
 func appendPath(oldpath, dir string) string {
@@ -49,51 +38,11 @@ func appendPath(oldpath, dir string) string {
 	return oldpath + sep + dir
 }
 
-// find the directory containing the lush resource files. looks for a
-// "templates" directory in the directory of the executable. if not found try
-// to look for them in GOPATH ($GOPATH/src/github.com/....). Panics if no
-// resources are found.
-func resourceDir() string {
-	root, err := osext.ExecutableFolder()
-	if err == nil {
-		if _, err = os.Stat(root + "/templates"); err == nil {
-			return root
-		}
-	}
-	// didn't find <dir of executable>/templates
-	p, err := build.Default.Import(basePkg, "", build.FindOnly)
-	if err != nil {
-		panic("Couldn't find lush resource files")
-	}
-	return p.Dir
-}
-
 func main() {
 	listenaddr := flag.String("l", "localhost:8081", "listen address")
 	flag.Parse()
-	root := resourceDir()
-	tmplts := template.New("")
-	tmplts = template.Must(tmplts.ParseGlob(root + "/templates/*.html"))
-	// also search for binaries local /bin folder
-	path := os.Getenv("PATH")
-	path = appendPath(path, root+"/bin")
-	err := os.Setenv("PATH", path)
-	if err != nil {
-		log.Print("Failed to add ./bin to the PATH: ", err)
-		// continue
-	}
-	s := &server{
-		session: liblush.NewSession(),
-		root:    root,
-		web:     web.NewServer(),
-		tmplts:  tmplts,
-	}
-	s.web.Config.StaticDirs = []string{root + "/static"}
-	s.web.User = s
-	for _, f := range serverinitializers {
-		f(s)
-	}
-	err = s.web.Run(*listenaddr)
+	s := newServer()
+	err := s.web.Run(*listenaddr)
 	if err != nil {
 		log.Fatalf("Failed to listen on %s: %v", *listenaddr, err)
 	}
