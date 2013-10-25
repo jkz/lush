@@ -212,7 +212,7 @@ define(["jquery",
         }).on('childRemoved', function (_, child, stream) {
             // TODO
             //throw "disconnecting streams not implemented in UI";
-        }).one('release_jslumb', function () {
+        }).one('release_jsplumb', function () {
             // custom event for releasing all jsPlumb resources, once
             [this.stdinep, this.stdoutep, this.stderrep]
                 .forEach(jsPlumb.deleteEndpoint);
