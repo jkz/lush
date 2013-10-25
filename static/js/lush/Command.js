@@ -45,7 +45,8 @@
 // here.
 //
 // - stdout.stream / stderr.stream: called when the running command is
-// generating data on the relevant streams.
+// generating data on the relevant streams. Handlers are automatically unbound
+// once the command stops running.
 //
 // - archival: triggered when this command is being (un)archived. can be caused
 // by a server event, by the user minimizing the widget, or by a parent widget
@@ -66,6 +67,10 @@
 // - childRemoved: an output pipe is disconnected from a command. the first
 // parameter is the command that was disconnected, the second is the name of
 // the stream.
+//
+// - done: the status is updated from active to either success or error. the
+// status object is passed as the argument. consider binding to these events
+// with $().one instead of $().on.
 
 define(["jquery"], function ($) {
 
@@ -86,6 +91,16 @@ define(["jquery"], function ($) {
         });
         $(this).on('parentRemoved', function () {
             this.gid = this.nid;
+        });
+        $(this).one('done', function () {
+            $(this).unbind('.stream');
+        });
+        $(this).on('wasupdated', function (_, updata) {
+            if (updata.status !== undefined &&
+                updata.status.code > 1)
+            {
+                $(this).trigger('done');
+            }
         });
     };
 
