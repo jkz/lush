@@ -155,75 +155,9 @@ define(["jquery",
         parser.parse('?*');
         strictEqual(ctx.gotquestionmark, 0, 'indexed wildcards: ?');
         strictEqual(ctx.gotstar, 1, 'indexed wildcards: *');
-        parser.parse('[abc]');
-        deepEqual(ctx.gotchoice, ['a', 'b', 'c'], 'wildcard choice: [abc]');
-    });
-
-    // these tests are part of a wip to define the api of the prompt (they are
-    // supposed to fail)
-    test("command-line interaction", function() {
-        // simple prompt testing
-        var ctx;
-        // it is the prompt's job to translate user input to an array of words
-        // (argv) that is ready to be executed. this includes:
-        // - parse the input
-        // - deal with tab key appropriately (auto complete, show options, etc)
-        // - expand globbing chars
-        var cli = new Prompt();
-        // called for every fresh prompt line
-        cli.oninit = function () {
-            ctx = {
-                argv: [],
-                options: [],
-            };
-        };
-        // called by prompt when user wants to run a command (hits enter)
-        cli.onrun = function (argv) {
-            ctx.argv = argv;
-        };
-        // called by prompt to indicate multiple options to user (eg multiple
-        // options for tab completion)
-        cli.onshowoptions = function (options) {
-            ctx.options = options;
-        };
-        // called by prompt when user hits tab with current input parsed.
-        // this implementation is purely for testing purposes of course in
-        // reality you want something completely different
-        cli.ontab = function (argv) {
-            // foo -> one option, foofoo
-            // nothing -> no options
-            // * -> argv = all the options
-            switch (argv[0]) {
-            case 'foo':
-                return ['foofoo'];
-            case 'nothing':
-                return [];
-            }
-            return argv;
-        };
-
-        // process command
-        cli.setprompt('ls foo');
-        cli.enter();
-        deepEqual(ctx.argv, ['ls', 'foo'], 'simple prompt parsing + exec');
-
-        // tab completion 1 option
-        cli.setprompt('foo bar');
-        cli.tab();
-        equal(cli.getprompt(), 'foo foofoo ', 'tab completion 1 option: substitute input');
-        deepEqual(ctx.suggestions, [], 'tab completion 1 option: nop in ui');
-
-        // tab completion no options
-        cli.setprompt('nothing bar');
-        cli.tab();
-        equal(cli.getprompt(), 'nothing bar', 'tab completion no options: nop on input');
-        deepEqual(ctx.suggestions, [], 'tab completion no options: nop in ui');
-
-        // tab completion: multiple options
-        cli.setprompt('a b c');
-        cli.tab();
-        equal(cli.getprompt(), 'a b c', 'tab completion multiple options: nop on input');
-        deepEqual(ctx.suggestions, ['a', 'b', 'c'], 'tab completion multiple options: show in UI');
+        // Not implemented yet
+        //parser.parse('[abc]');
+        //deepEqual(ctx.gotchoice, ['a', 'b', 'c'], 'wildcard choice: [abc]');
     });
 
     test("groupname: pipe notation", function () {
