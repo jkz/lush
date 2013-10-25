@@ -174,7 +174,8 @@ define(["jquery",
 
     Widget.prototype._initJsPlumb = function (ctrl) {
         var cmd = this.cmd;
-        $(this.node).on('tabsactivate', function () {
+        var widget = this;
+        $(this.node).on('tabsactivate.jsplumb', function () {
             jsPlumb.repaint($(this));
         });
         $(this.node).resizable({
@@ -208,14 +209,19 @@ define(["jquery",
         $(cmd).on('childAdded', function (_, child, stream) {
             var ep = (stream == 'stdout') ? this.stdoutep : this.stderrep;
             connectVisually(ep, child.stdinep, stream);
-        });
-        $(cmd).on('childRemoved', function (_, child, stream) {
+        }).on('childRemoved', function (_, child, stream) {
             // TODO
             //throw "disconnecting streams not implemented in UI";
-        });
-        $(cmd).on('wasreleased', function () {
+        }).one('release_jslumb', function () {
+            // custom event for releasing all jsPlumb resources, once
             [this.stdinep, this.stdoutep, this.stderrep]
                 .forEach(jsPlumb.deleteEndpoint);
+            delete this.stdinep;
+            delete this.stdoutep;
+            delete this.stderrep;
+            $(widget.node).off('.jsplumb');
+        }).one('done wasreleased', function () {
+            $(this).trigger('release_jsplumb');
         });
     };
 
@@ -342,7 +348,7 @@ define(["jquery",
                     e.preventDefault();
                     $(this).closest('.cmdwidget').data('activetab', $(this).text());
                 });
-            return $('<li>').append($a)[0];
+            return $('<li>').addClass(tabname).append($a)[0];
         });
         $(this.node).find('.tabsnav').append(navlinks);
         $(this.node).tabs({
@@ -370,6 +376,13 @@ define(["jquery",
         this._initHelpTab();
         this._initTabsNav();
         this._initCloseButton();
+        var widget = this;
+        $(this.cmd).one('done', function () {
+            widget._switchToViewTab();
+            $(widget.node)
+                .find('.tab_edit, .tab_help, .tabsnav .edit, .tabsnav .help')
+                    .remove();
+        });
     };
 
     return Widget;
