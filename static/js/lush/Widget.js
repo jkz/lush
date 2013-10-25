@@ -398,6 +398,13 @@ define(["jquery",
         });
     };
 
+    Widget.prototype._initOutputTab = function () {
+        var $out = $(this.node).find('.outputhere');
+        $(this.cmd).on('stdout.stream stderr.stream', function (_, line) {
+            $out.text($out.text() + line);
+        });
+    };
+
     // initialize a widget's help view
     Widget.prototype._initHelpTab = function () {
         var widget = this;
@@ -451,6 +458,7 @@ define(["jquery",
     Widget.prototype._initView = function () {
         this._initViewTab();
         this._initEditTab();
+        this._initOutputTab();
         this._initHelpTab();
         this._initTabsNav();
         this._initCloseButton();
