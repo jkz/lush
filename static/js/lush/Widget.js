@@ -95,86 +95,6 @@ define(["jquery",
         return $node.empty().append(content);
     };
 
-    // deferred object fetching most recent stream data for streampeeker
-    var getRecentStream = function (sysId, stream) {
-        return $.get('/' + sysId + '/stream/' + stream + '.bin?numbytes=100');
-    };
-
-    // Stream peeker is like a small dumb terminal window showing a stream's most
-    // recent output
-    var addstreampeeker = function (srcep, ctrl) {
-        var cmdSysId = srcep.getParameter("sysid")();
-        var stream = srcep.getParameter("stream")();
-        var id = 'streampeeker-' + cmdSysId + '-' + stream;
-        // open / collapse button
-        var $ocbutton = $('<button>');
-        // preview box
-        var $preview = $('<pre class=monitor-stream>').data('stream', stream);
-        var $sp = $('<div class=streampeeker id=' + id + '><pre>')
-            .resizable()
-            .append($ocbutton)
-            .append($preview)
-            .appendTo('#group' + cmdSysId);
-        // Closure that fills the stream peeker with stdout data every second
-        // until it is closed
-        var refresher;
-        var dontrefresh = function () {};
-        var dorefresh = function () {
-            getRecentStream(cmdSysId, stream).done(function (data) {
-                repeatExec
-                if ($sp.hasClass('open')) {
-                    $preview.text(data);
-                    jsPlumb.repaint($sp);
-                    // continue refreshing
-                    window.setTimeout(refresher, 1000);
-                }
-            });
-        };
-        // functions that open / collapse the streampeeker
-        var openf, collapsef;
-        openf = function () {
-            $sp.removeClass('collapsed');
-            $sp.addClass('open');
-            $ocbutton.text('▬');
-            $sp.resizable({
-                resize: function (e, ui) {
-                    jsPlumb.repaint(ui.helper);
-                }})
-            jsPlumb.repaint($sp);
-            refresher = dorefresh;
-            refresher();
-            $ocbutton.one('click', collapsef);
-        };
-        collapsef = function () {
-            $sp.removeClass('open');
-            $sp.addClass('collapsed');
-            $preview.empty();
-            $ocbutton.text('◳');
-            $sp.resizable('destroy');
-            jsPlumb.repaint($sp);
-            refresher = dontrefresh;
-            $ocbutton.one('click', openf);
-        };
-        collapsef();
-        var myep = jsPlumb.addEndpoint(id, {
-            anchor: 'TopCenter',
-            isTarget: true,
-            endpoint: 'Rectangle',
-        });
-        // connect to the source endpoint (create a new endpoint on the source dynamically)
-        var connection = jsPlumb.connect({
-            source: srcep.getElement(),
-            target: myep,
-            anchors: [stream2anchor(stream), myep],
-            parameters: { isStreampeek: true },
-        });
-        syncPositionWithServer($sp[0], ctrl, jsPlumb.repaint);
-        jsPlumb.draggable($sp[0], {
-            stop: function () { storePositionOnServer(this, ctrl); },
-        });
-        return $sp;
-    };
-
     var stream2anchor = function (stream) {
         return {stderr: "RightMiddle", stdout: "BottomCenter"}[stream]
     };
@@ -189,14 +109,6 @@ define(["jquery",
             source: srcep,
             target: trgtep,
         });
-    };
-
-    var createStreamPeekerWhenDblClicked = function (ep, ctrl) {
-        return $(ep.canvas)
-            .css('z-index', 4) // put endpoint above the connector (is at 3)
-            .one('dblclick', function() {
-                addstreampeeker(ep, ctrl);
-            });
     };
 
     // create widget with command info and add it to the DOM.
@@ -293,9 +205,6 @@ define(["jquery",
                 sysid: constantly(cmd.nid),
             },
         });
-        // Doubleclicking a source endpoint creates a streampeeker
-        createStreamPeekerWhenDblClicked(cmd.stdoutep, ctrl);
-        createStreamPeekerWhenDblClicked(cmd.stderrep, ctrl);
         $(cmd).on('childAdded', function (_, child, stream) {
             var ep = (stream == 'stdout') ? this.stdoutep : this.stderrep;
             connectVisually(ep, child.stdinep, stream);
@@ -307,7 +216,6 @@ define(["jquery",
         $(cmd).on('wasreleased', function () {
             [this.stdinep, this.stdoutep, this.stderrep]
                 .forEach(jsPlumb.deleteEndpoint);
-            // TODO: delete streampeekers
         });
     };
 

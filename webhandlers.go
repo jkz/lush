@@ -28,7 +28,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -190,30 +189,6 @@ func handleGetNewNames(ctx *web.Context) error {
 	return err
 }
 
-func handleGetStream(ctx *web.Context, idstr, streamname string) error {
-	id, _ := liblush.ParseCmdId(idstr)
-	s := ctx.User.(*server)
-	c := s.session.GetCommand(id)
-	if c == nil {
-		return web.WebError{404, "no such command: " + idstr}
-	}
-	var stream liblush.OutStream
-	switch streamname {
-	case "stdout":
-		stream = c.Stdout()
-	case "stderr":
-		stream = c.Stderr()
-	default:
-		return web.WebError{400, "No such stream: " + streamname}
-	}
-	n, _ := strconv.Atoi(ctx.Params["numbytes"])
-	buf := make([]byte, n)
-	n = stream.Scrollback().Last(buf)
-	buf = buf[:n]
-	_, err := ctx.Write(buf)
-	return err
-}
-
 func handleWsStream(ctx *web.Context, idstr, streamname string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
@@ -306,7 +281,6 @@ func init() {
 		s.web.Post(`/(\d+)/close`, handlePostClose)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
 		s.web.Websocket(`/(\d+)/stream/(\w+).bin`, handleWsStream)
-		s.web.Get(`/(\d+)/stream/(\w+).bin`, handleGetStream)
 		s.web.Post(`/chdir`, handlePostChdir)
 		s.web.Get(`/files.json`, handleGetFiles)
 		s.web.Websocket(`/ctrl`, handleWsCtrl)
