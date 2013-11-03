@@ -21,6 +21,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
@@ -47,6 +48,8 @@ type cmdmetadata struct {
 	StdoutScrollback int           `json:"stdoutScrollback"`
 	StderrScrollback int           `json:"stderrScrollback"`
 	UserData         interface{}   `json:"userdata"`
+	Stdout           string        `json:"stdout"`
+	Stderr           string        `json:"stderr"`
 }
 
 // if this writer is the instream of a command return that
@@ -92,7 +95,16 @@ func cmdstatus2json(s liblush.CmdStatus) (sjson statusJson) {
 	return
 }
 
-func (mc metacmd) Metadata() (data cmdmetadata) {
+func stringifyWriterTo(w io.WriterTo) (string, error) {
+	var buf bytes.Buffer
+	_, err := w.WriteTo(&buf)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func (mc metacmd) Metadata() (data cmdmetadata, err error) {
 	data.Id = mc.Id()
 	data.HtmlId = fmt.Sprint("cmd", mc.Id())
 	data.Name = mc.Name()
@@ -110,5 +122,17 @@ func (mc metacmd) Metadata() (data cmdmetadata) {
 		data.StderrtoId = cmd.Id()
 	}
 	data.Status = cmdstatus2json(mc.Status())
+	data.Stdout, err = stringifyWriterTo(mc.Stdout().Scrollback())
+	if err != nil {
+		err = fmt.Errorf("failed to retrieve stdout scrollback for %d: %v",
+			mc.Id(), err)
+		return
+	}
+	data.Stderr, err = stringifyWriterTo(mc.Stderr().Scrollback())
+	if err != nil {
+		err = fmt.Errorf("failed to retrieve stderr scrollback for %d: %v",
+			mc.Id(), err)
+		return
+	}
 	return
 }

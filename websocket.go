@@ -92,7 +92,11 @@ func wseventNew(s *server, optionsJSON string) error {
 	c.SetUserData(options.UserData)
 	// broadcast newcmd message to all connected websocket clients
 	w := newPrefixedWriter(&s.ctrlclients, []byte("newcmd;"))
-	err = json.NewEncoder(w).Encode(metacmd{c}.Metadata())
+	md, err := metacmd{c}.Metadata()
+	if err != nil {
+		return err
+	}
+	err = json.NewEncoder(w).Encode(md)
 	if err != nil {
 		return err
 	}

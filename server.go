@@ -52,7 +52,7 @@ var serverinitializers []func(*server)
 var root = resourceDir()
 
 // HTML templates
-var tmplts = template.Must(template.ParseGlob(root + "/templates/*.html"))
+var tmplts *template.Template
 
 // PATH
 var path string
@@ -99,4 +99,6 @@ func init() {
 		log.Print("Failed to add ./bin to the PATH: ", err)
 		// continue
 	}
+	tmplts = template.New("lushhtmltemplates")
+	tmplts = template.Must(tmplts.ParseGlob(root + "/templates/*.html"))
 }
