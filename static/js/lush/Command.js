@@ -37,7 +37,12 @@
 // parameter (i.e. the second arg, bc its a jquery event so the first arg is
 // the jquery event object). that is an object containing only the keys that
 // have been updated, and their new values. this saves the poor client the
-// trouble of refreshing a view that didn't change.
+// trouble of refreshing a view that didn't change.  If only listening for one
+// parameter change, use the 'updated' event instead.
+//
+// - updated: like wasupdated but is triggered in the namespace of an updated
+// property, with the new property as a parameter. e.g. instead of wasupdated,
+// with param {name: "foo"}, you get 'updated.name' with param "foo".
 //
 // - wasreleased: triggered when resources associated with a command have been
 // released by the server and the client wants to clean up the command. any
@@ -121,7 +126,8 @@ define(["jquery"], function ($) {
     // see if the nid matches. I didn't profile it but I can already feel the
     // O(n) pain.
     Command.prototype.processUpdate = function (updata) {
-        if (updata.nid !== this.nid) {
+        var cmd = this;
+        if (updata.nid !== cmd.nid) {
             throw "updating with foreign command data";
         }
         var updatedby;
@@ -130,7 +136,7 @@ define(["jquery"], function ($) {
             delete updata.userdata.updatedby;
             // follow semantics of .update() method; object properties are
             // extended, not replaced.
-            $.extend(this.userdata, updata.userdata);
+            $.extend(cmd.userdata, updata.userdata);
         }
         // return a cmd object if argument is not undefined
         var getCmd = function (nid) {
@@ -143,21 +149,25 @@ define(["jquery"], function ($) {
         if (updata.stdoutto !== undefined)
         {
             childMod.stdout = {
-                from: getCmd(this.stdoutto),
+                from: getCmd(cmd.stdoutto),
                 to: getCmd(updata.stdoutto),
             };
         }
         if (updata.stderrto !== undefined)
         {
             childMod.stderr = {
-                from: getCmd(this.stderrto),
+                from: getCmd(cmd.stderrto),
                 to: getCmd(updata.stderrto),
             };
         }
-        $.extend(this, updata);
-        $(this).trigger('wasupdated', [updata, updatedby]);
+        $.extend(cmd, updata);
+        // 'wasupdated' event with updata as object
+        $(cmd).trigger('wasupdated', [updata, updatedby]);
+        // per-property update events
+        $.each(updata, function (key, value) {
+            $(cmd).trigger('updated.' + key, [value, updatedby]);
+        });
         // trigger child/parent add/remove events
-        var cmd = this;
         $.map(childMod, function (mod, stream) {
             if (mod.from !== undefined) {
                 $(mod.from).trigger('parentRemoved', [cmd, stream]);
@@ -170,22 +180,22 @@ define(["jquery"], function ($) {
         });
         // If the status just updated to "successfully completed", and I am
         // god, and root, inform the server I wish to be archived.
-        if (this.userdata.autoarchive &&
+        if (cmd.userdata.autoarchive &&
             updata.status !== undefined &&
             updata.status.code == 2 &&
-            this.isRoot() &&
+            cmd.isRoot() &&
             // only god archives a command, the rest will follow indirectly
-            this.imadethis())
+            cmd.imadethis())
         {
-            this.setArchivalState(true);
+            cmd.setArchivalState(true);
         }
         // if the server tells me that I've been (de)archived, generate an
         // "archival" jQuery event
         if (updata.userdata && updata.userdata.archived !== undefined) {
-            if (!this.isRoot()) {
-                throw "Received archival event on non-root node " + this.nid;
+            if (!cmd.isRoot()) {
+                throw "Received archival event on non-root node " + cmd.nid;
             }
-            $(this).trigger('archival', updata.userdata.archived);
+            $(cmd).trigger('archival', updata.userdata.archived);
         }
     };
 

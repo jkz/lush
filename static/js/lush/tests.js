@@ -205,7 +205,7 @@ define(["jquery",
     });
 
     test("command update events", function () {
-        // mock (websocket) control line to server
+        // Mock (websocket) control line to server
         var ctrl = {
             send: function () {
                 var argv = Array.prototype.slice.call(arguments);
@@ -232,13 +232,33 @@ define(["jquery",
             },
         };
         var cmd = new Command(ctrl, {nid: 1, name: "echo"}, "foo");
-        var wasupdatedCount = 0;
+
+        // Setting up the callbacks
+        var wasUpdatedEventCount = 0;
+        var updatedNameEventCount = 0;
+        var updatedArgsEventCount = 0;
+        // deprecated event
         $(cmd).on('wasupdated', function (e, updata) {
-            wasupdatedCount++;
+            wasUpdatedEventCount++;
             deepEqual(updata, {name: "echo 2"}, "updata equals cmdupdate request");
         });
+        // a jquery event for just this property: updated.name
+        $(cmd).on('updated.name', function (e, name) {
+            updatedNameEventCount++;
+            equal(name, "echo 2", "updated.name handler passed new name");
+        });
+        // a jquery event for a property that was not updated
+        $(cmd).on('updated.args', function (e, name) {
+            updatedArgsEventCount++;
+        });
+        
+        // Perform the update
         cmd.update({name: "echo 2"});
+
+        // Verify the effects
         equal(cmd.name, "echo 2", "name property on command is updated");
-        equal(wasupdatedCount, 1, "wasupdated event triggered once");
+        equal(wasUpdatedEventCount, 1, "wasupdated event triggered once");
+        equal(updatedNameEventCount, 1, "updated.name event triggered once");
+        equal(updatedArgsEventCount, 0, 'updated.args event not triggered');
     });
 });
