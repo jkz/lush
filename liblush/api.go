@@ -46,9 +46,15 @@ type CmdStatus interface {
 type Ringbuffer interface {
 	Size() int
 	Resize(int)
-	// Fill this buffer with the most recently written bytes
+	// Fill this buffer with the most recently written bytes.  Not implemented
+	// as io.Reader because that is intended for streams, i.e.  advancing some
+	// internal seek counter, i.e. state. This Last() method is very explicitly
+	// read-only; it does not modify any internal state.  Calling it twice on
+	// an unmodified buffer will yield the same result.  Read will not.
 	Last(p []byte) int
 	Write(data []byte) (int, error)
+	// Write the entire contents to this io.Writer
+	WriteTo(w io.Writer) (int64, error)
 }
 
 // Output stream of a command

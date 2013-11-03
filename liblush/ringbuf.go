@@ -22,6 +22,7 @@ package liblush
 
 import (
 	"errors"
+	"io"
 	"sync"
 )
 
@@ -29,7 +30,7 @@ type ringbuf_unsafe struct {
 	buf []byte
 	// Oldest byte in the buffer (write starts here)
 	head int
-	// processed bytes
+	// num clean bytes ever written to this slice
 	seen int
 }
 
@@ -55,7 +56,10 @@ func (r *ringbuf_unsafe) Resize(i int) {
 	n := r.Last(buf)
 	if i > 0 {
 		r.head = n % i
+	} else {
+		r.head = 0
 	}
+	r.seen = imin(n, i)
 	r.buf = buf
 }
 
@@ -108,6 +112,15 @@ func (r *ringbuf_unsafe) Write(p []byte) (n int, err error) {
 	return
 }
 
+func (r *ringbuf_unsafe) WriteTo(w io.Writer) (int64, error) {
+	// not efficient but very simple
+	b := make([]byte, r.Size())
+	n := r.Last(b)
+	b = b[:n]
+	n, err := w.Write(b)
+	return int64(n), err
+}
+
 type ringbuf_safe struct {
 	ringbuf_unsafe
 	l sync.Mutex
@@ -135,6 +148,12 @@ func (rs *ringbuf_safe) Write(data []byte) (int, error) {
 	rs.l.Lock()
 	defer rs.l.Unlock()
 	return rs.ringbuf_unsafe.Write(data)
+}
+
+func (rs *ringbuf_safe) WriteTo(w io.Writer) (int64, error) {
+	rs.l.Lock()
+	defer rs.l.Unlock()
+	return rs.ringbuf_unsafe.WriteTo(w)
 }
 
 func newRingbuf(size int) Ringbuffer {
