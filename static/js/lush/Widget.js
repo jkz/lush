@@ -175,10 +175,9 @@ define(["jquery",
     Widget.prototype._initJsPlumb = function (ctrl) {
         var cmd = this.cmd;
         var widget = this;
-        $(this.node).on('tabsactivate.jsplumb', function () {
+        $(widget.node).on('tabsactivate.jsplumb', function () {
             jsPlumb.repaint($(this));
-        });
-        $(this.node).resizable({
+        }).resizable({
             resize: function () {
                 jsPlumb.repaint($(this));
             }
@@ -206,22 +205,18 @@ define(["jquery",
                 sysid: constantly(cmd.nid),
             },
         });
-        $(cmd).on('childAdded', function (_, child, stream) {
-            var ep = (stream == 'stdout') ? this.stdoutep : this.stderrep;
-            connectVisually(ep, child.stdinep, stream);
-        }).on('childRemoved', function (_, child, stream) {
-            // TODO
-            //throw "disconnecting streams not implemented in UI";
-        }).one('release_jsplumb', function () {
+        $(cmd).one('release_jsplumb', function () {
+            var cmd = this;
             // custom event for releasing all jsPlumb resources, once
-            [this.stdinep, this.stdoutep, this.stderrep]
+            [cmd.stdinep, cmd.stdoutep, cmd.stderrep]
                 .forEach(jsPlumb.deleteEndpoint);
-            delete this.stdinep;
-            delete this.stdoutep;
-            delete this.stderrep;
+            delete cmd.stdinep;
+            delete cmd.stdoutep;
+            delete cmd.stderrep;
             $(widget.node).off('.jsplumb');
         }).one('done wasreleased', function () {
-            $(this).trigger('release_jsplumb');
+            var cmd = this;
+            $(cmd).trigger('release_jsplumb');
         });
     };
 
