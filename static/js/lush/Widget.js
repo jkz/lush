@@ -307,10 +307,19 @@ define(["jquery",
         });
     };
 
-    Widget.prototype._initOutputTab = function () {
-        var $out = $(this.node).find('.outputhere');
-        $(this.cmd).on('stdout.stream stderr.stream', function (_, line) {
-            $out.text($out.text() + line);
+    Widget.prototype._initStdoutTab = function () {
+        var widget = this;
+        $(widget.cmd).on('updated.stdout', function (_, data) {
+            var cmd = this;
+            $('#' + cmd.htmlid + ' .tab_stdout .streamdata').text(data);
+        });
+    };
+
+    Widget.prototype._initStderrTab = function () {
+        var widget = this;
+        $(widget.cmd).on('updated.stderr', function (_, data) {
+            var cmd = this;
+            $('#' + cmd.htmlid + ' .tab_stderr .streamdata').text(data);
         });
     };
 
@@ -365,14 +374,15 @@ define(["jquery",
 
     // Init the different tabs and further lay-out
     Widget.prototype._initView = function () {
-        this._initViewTab();
-        this._initEditTab();
-        this._initOutputTab();
-        this._initHelpTab();
-        this._initTabsNav();
-        this._initCloseButton();
         var widget = this;
-        $(this.cmd).one('done', function () {
+        widget._initViewTab();
+        widget._initEditTab();
+        widget._initStdoutTab();
+        widget._initStderrTab();
+        widget._initHelpTab();
+        widget._initTabsNav();
+        widget._initCloseButton();
+        $(widget.cmd).one('done', function () {
             widget._switchToViewTab();
             $(widget.node)
                 .find('.tab_edit, .tab_help, .tabsnav .edit, .tabsnav .help')
