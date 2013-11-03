@@ -204,9 +204,9 @@ define(["jquery",
             'chained stderr')
     });
 
-    test("command update events", function () {
-        // Mock (websocket) control line to server
-        var ctrl = {
+    // Mock (websocket) control line to server
+    function buildMockCtrl(handlers) {
+        return {
             send: function () {
                 var argv = Array.prototype.slice.call(arguments);
                 // normal send
@@ -218,10 +218,13 @@ define(["jquery",
                 if (h) {
                     h(argv.slice(1));
                 } else {
-                    throw "unknown websocket event " + argv[0];
+                    throw "websocket event not in mock: " + argv[0];
                 }
             },
         };
+    }
+
+    function buildMockCommand(init) {
         // simulate server-side websocket event handlers
         var handlers = {
             updatecmd: function (args) {
@@ -231,7 +234,13 @@ define(["jquery",
                 cmd.processUpdate(JSON.parse(args[0]));
             },
         };
-        var cmd = new Command(ctrl, {nid: 1, name: "echo"}, "foo");
+        var ctrl = buildMockCtrl(handlers);
+        var cmd = new Command(ctrl, init, "foo");
+        return cmd;
+    }
+
+    test("command update events", function () {
+        var cmd = buildMockCommand({nid: 1, name: "echo"});
 
         // Setting up the callbacks
         var wasUpdatedEventCount = 0;
@@ -260,5 +269,33 @@ define(["jquery",
         equal(wasUpdatedEventCount, 1, "wasupdated event triggered once");
         equal(updatedNameEventCount, 1, "updated.name event triggered once");
         equal(updatedArgsEventCount, 0, 'updated.args event not triggered');
+    });
+
+    test("stream events", function () {
+        var cmd = buildMockCommand({nid: 1, name: "echo"});
+
+        var stdoutData = [];
+        var stderrData = [];
+        var stdout, stderr;
+        $(cmd).on('stdout.stream', function (e, data) {
+            stdoutData.push(data);
+        }).on('stderr.stream', function (e, data) {
+            stderrData.push(data);
+        }).on('updated.stdout', function (e, data) {
+            stdout = data;
+        }).on('updated.stderr', function (e, data) {
+            stderr = data;
+        });
+
+        cmd.processStream('stdout', 'first out, ');
+        cmd.processStream('stderr', 'then err');
+        cmd.processStream('stdout', 'more out');
+
+        deepEqual(stdoutData, ['first out, ', 'more out'], "stdout.stream events for every stdout data");
+        deepEqual(stderrData, ['then err'], "stderr.stream events for every stderr data");
+        equal(stdout, "first out, more out", 'updated.stdout event for full stdout data');
+        equal(stderr, "then err", 'updated.stderr event for full stderr data');
+        equal(stdout, cmd.stdout, "updated.stdout event data and cmd.stdout member in sync");
+        equal(stderr, cmd.stderr, "updated.stderr event data and cmd.stderr member in sync");
     });
 });

@@ -82,29 +82,48 @@ define(["jquery"], function ($) {
 
     // third arg is a uuid identifying this session
     var Command = function (ctrl, init, moi) {
+        var cmd = this;
         if (ctrl === undefined || init === undefined || moi === undefined) {
             throw "Command constructor requires three parameters";
         }
         if (init.nid === undefined) {
             throw "Init data must contain .nid field";
         }
-        this.ctrl = ctrl;
-        this._moi = moi;
-        $.extend(this, init);
-        this.gid = this.nid;
-        $(this).on('parentAdded', function (_, dad) {
-            this.gid = dad.gid;
+        cmd.ctrl = ctrl;
+        cmd._moi = moi;
+        $.extend(cmd, init);
+        cmd.gid = cmd.nid;
+        if (!cmd.stdout) {
+            cmd.stdout = '';
+        }
+        if (!cmd.stderr) {
+            cmd.stderr = '';
+        }
+        $(cmd).on('parentAdded', function (_, dad) {
+            var cmd = this;
+            cmd.gid = dad.gid;
         }).on('parentRemoved', function () {
-            this.gid = this.nid;
+            var cmd = this;
+            cmd.gid = cmd.nid;
         }).on('done', function () {
-            $(this).off('.stream childAdded childRemoved parentAdded parentRemoved done');
+            var cmd = this;
+            $(cmd).off('.stream childAdded childRemoved parentAdded parentRemoved done');
         }).on('wasupdated', function (e, updata) {
+            var cmd = this;
             if (updata.status !== undefined &&
                 updata.status.code > 1)
             {
-                $(this).trigger('done');
-                $(this).off(e); // no need for me anymore
+                $(cmd).trigger('done');
+                $(cmd).off(e); // no need for me anymore
             }
+        }).on('stdout.stream', function (_, data) {
+            var cmd = this;
+            cmd.stdout += data;
+            $(cmd).trigger('updated.stdout', [cmd.stdout]);
+        }).on('stderr.stream', function (_, data) {
+            var cmd = this;
+            cmd.stderr += data;
+            $(cmd).trigger('updated.stderr', [cmd.stderr]);
         });
     };
 
