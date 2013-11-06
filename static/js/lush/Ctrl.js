@@ -23,7 +23,7 @@
 
 // control stream related scripting
 
-define(["jquery"], function ($) {
+define(["jquery", "lush/utils"], function ($) {
 
     var Ctrl = function () {
         var ctrl = this;
