@@ -323,77 +323,86 @@ func writePrefixedJson(w io.Writer, prefix string, jsonobj interface{}) error {
 	return err
 }
 
-func wseventGetprop(s *server, argsjoined string) error {
-	var objname, propname string
-	var args []string
-	args = strings.SplitN(argsjoined, ";", 2)
-	if len(args) != 2 {
-		return errors.New("getprop requires two args")
+type getPropRequest struct {
+	Objname  string `json:"name"`
+	Propname string `json:"prop"`
+	// opaque value to return to client in corresponding request
+	Userdata string `json:"userdata,omitempty"`
+}
+
+type getPropResponse struct {
+	getPropRequest
+	Value interface{}
+}
+
+func wseventGetprop(s *server, reqstr string) error {
+	var r getPropResponse
+	var err error
+	err = json.Unmarshal([]byte(reqstr), &r)
+	if err != nil {
+		return fmt.Errorf("getprop: decoding request failed: %v", err)
 	}
-	objname = args[0]
-	propname = args[1]
 	switch {
-	case strings.HasPrefix(objname, "cmd"):
-		var response interface{} // must be serializable by json
-		var idstr string = objname[3:]
+	case strings.HasPrefix(r.Objname, "cmd"):
+		var idstr string = r.Objname[3:]
 		id, _ := liblush.ParseCmdId(idstr)
 		c := s.session.GetCommand(id)
 		if c == nil {
 			return errors.New("no such command: " + idstr)
 		}
-		switch propname {
+		switch r.Propname {
 		case "name":
-			response = c.Name()
+			r.Value = c.Name()
 		case "cmd":
-			response = c.Argv()[0]
+			r.Value = c.Argv()[0]
 		case "args":
-			response = c.Argv()[1:]
+			r.Value = c.Argv()[1:]
 		case "status":
-			response = cmdstatus2json(c.Status())
+			r.Value = cmdstatus2json(c.Status())
 		case "userdata":
-			response = c.UserData()
+			r.Value = c.UserData()
 		case "stdoutScrollback":
-			response = c.Stdout().Scrollback().Size()
+			r.Value = c.Stdout().Scrollback().Size()
 		case "stderrScrollback":
-			response = c.Stderr().Scrollback().Size()
+			r.Value = c.Stderr().Scrollback().Size()
 		case "stdoutto":
 			if tocmd := pipedcmd(c.Stdout()); tocmd != nil {
-				response = tocmd.Id()
+				r.Value = tocmd.Id()
 			}
 		case "stderrto":
 			if tocmd := pipedcmd(c.Stderr()); tocmd != nil {
-				response = tocmd.Id()
+				r.Value = tocmd.Id()
 			}
 		default:
-			return errors.New("Unknown command property name: " + propname)
+			return errors.New("Unknown command property name: " + r.Propname)
 		}
-		prefix := fmt.Sprintf("property;%s;%s;", objname, propname)
-		return writePrefixedJson(&s.ctrlclients, prefix, response)
+		return writePrefixedJson(&s.ctrlclients, "property;", r)
 	}
-	return errors.New("getprop: unknown object name: " + objname)
+	return errors.New("getprop: unknown object name: " + r.Objname)
 }
 
-func wseventSetprop(s *server, argsjoined string) error {
-	var objname, propname, valstr string
-	var args []string
-	args = strings.SplitN(argsjoined, ";", 3)
-	if len(args) != 3 {
-		return errors.New("setprop requires three args")
+func wseventSetprop(s *server, reqstr string) error {
+	type setPropRequest getPropResponse
+	var r setPropRequest
+	var err error
+	err = json.Unmarshal([]byte(reqstr), &r)
+	if err != nil {
+		return fmt.Errorf("setprop: decoding request failed: %v", err)
 	}
-	objname = args[0]
-	propname = args[1]
-	valstr = args[2]
 	switch {
-	case strings.HasPrefix(objname, "cmd"):
-		idstr := objname[3:]
+	case strings.HasPrefix(r.Objname, "cmd"):
+		idstr := r.Objname[3:]
 		// this is insane
-		omg := fmt.Sprintf("{\"nid\": %s, \"%s\": %s}", idstr, propname, valstr)
-		wseventUpdatecmd(s, omg)
+		omg := fmt.Sprintf("{\"nid\": %s, %q: %#v}", idstr, r.Propname, r.Value)
+		err = wseventUpdatecmd(s, omg)
+		if err != nil {
+			return err
+		}
 		break
 	default:
-		return errors.New("setprop: unknown object name: " + objname)
+		return errors.New("setprop: unknown object name: " + r.Objname)
 	}
-	return wseventGetprop(s, objname+";"+propname)
+	return wseventGetprop(s, reqstr)
 }
 
 type wsHandler func(*server, string) error
