@@ -262,13 +262,21 @@ define(["jquery",
         });
         
         // Perform the update
-        cmd.update({name: "echo 2"});
+        var oldCmdCopy = $.extend({}, cmd);
+        var updata = {name: "echo 2"};
+        cmd.update(updata);
 
         // Verify the effects
         equal(cmd.name, "echo 2", "name property on command is updated");
         equal(wasUpdatedEventCount, 1, "wasupdated event triggered once");
         equal(updatedNameEventCount, 1, "updated.name event triggered once");
         equal(updatedArgsEventCount, 0, 'updated.args event not triggered');
+        // this is how you expect updating to work
+        var updatedWithSimpleSemantics = $.extend({}, oldCmdCopy, updata);
+        // poor man's deepEqual, works better for some reason that I don't care
+        // about
+        equal(JSON.stringify(cmd), JSON.stringify(updatedWithSimpleSemantics),
+                "No extra fluff is introduced by command updating");
     });
 
     test("stream events", function () {

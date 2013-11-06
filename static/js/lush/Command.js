@@ -93,12 +93,17 @@ define(["jquery"], function ($) {
         cmd._moi = moi;
         $.extend(cmd, init);
         cmd.gid = cmd.nid;
+        // default values for properties
         if (!cmd.stdout) {
             cmd.stdout = '';
         }
         if (!cmd.stderr) {
             cmd.stderr = '';
         }
+        if (!cmd.userdata) {
+            cmd.userdata = {};
+        }
+        // stock event handlers
         $(cmd).on('parentAdded', function (_, dad) {
             var cmd = this;
             cmd.gid = dad.gid;
@@ -107,6 +112,8 @@ define(["jquery"], function ($) {
             cmd.gid = cmd.nid;
         }).on('done', function () {
             var cmd = this;
+            // these event handlers only make sense for running commands
+            // TODO: this list is bound to grow out of sync. How to fix?
             $(cmd).off('.stream childAdded childRemoved parentAdded parentRemoved done');
         }).on('wasupdated', function (e, updata) {
             var cmd = this;
@@ -136,6 +143,21 @@ define(["jquery"], function ($) {
         this.update({userdata: {archived: state}});
     }
 
+    // return a cmd object if argument is not undefined
+    function getCmd(nid) {
+        // :( pattern matching
+        if (nid !== undefined) {
+            return cmds[nid];
+        }
+    }
+
+    function makeChildModObject(fromid, toid) {
+        return {
+            from: getCmd(fromid),
+            to: getCmd(toid),
+        };
+    }
+
     // update the properties of this command with those from the argument
     // object. calls the 'wasupdated' jquery event after command is updated.
     // this function is exposed for the handler of the websocket 'updatecmd'
@@ -149,35 +171,24 @@ define(["jquery"], function ($) {
         if (updata.nid !== cmd.nid) {
             throw "updating with foreign command data";
         }
+        delete updata.nid;
         var updatedby;
         if (updata.userdata) {
             updatedby = updata.userdata.updatedby;
             delete updata.userdata.updatedby;
-            // follow semantics of .update() method; object properties are
-            // extended, not replaced.
-            $.extend(cmd.userdata, updata.userdata);
-        }
-        // return a cmd object if argument is not undefined
-        var getCmd = function (nid) {
-            if (nid !== undefined) {
-                return cmds[nid];
+            if ($.isEmptyObject(updata.userdata)) {
+                delete updata.userdata;
             }
-        };
+        }
         // map(streamname => map({from, to} => [Command | null]))
         var childMod = {};
-        if (updata.stdoutto !== undefined)
-        {
-            childMod.stdout = {
-                from: getCmd(cmd.stdoutto),
-                to: getCmd(updata.stdoutto),
-            };
+        if (updata.stdoutto !== undefined) {
+            childMod.stdout = 
+                makeChildModObject(cmd.stdoutto, updata.stdoutto);
         }
-        if (updata.stderrto !== undefined)
-        {
-            childMod.stderr = {
-                from: getCmd(cmd.stderrto),
-                to: getCmd(updata.stderrto),
-            };
+        if (updata.stderrto !== undefined) {
+            childMod.stderr = 
+                makeChildModObject(cmd.stderrto, updata.stderrto);
         }
         $.extend(cmd, updata);
         // 'wasupdated' event with updata as object
