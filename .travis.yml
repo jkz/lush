@@ -5,4 +5,4 @@ before_script:
 - sleep 3
 script:
 - go test -v ./...
-- phantomjs phantom-qunit-runner.js http://127.0.0.1:4737
+- phantomjs phantom-qunit-runner.js http://127.0.0.1:4737/test.html
