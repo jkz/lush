@@ -332,7 +332,7 @@ type getPropRequest struct {
 
 type getPropResponse struct {
 	getPropRequest
-	Value interface{}
+	Value interface{} `json:"value"`
 }
 
 func wseventGetprop(s *server, reqstr string) error {
