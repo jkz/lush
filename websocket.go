@@ -26,9 +26,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 
@@ -308,6 +310,92 @@ func wseventRelease(s *server, idstr string) error {
 	return err
 }
 
+// first write the given prefix to w, then serialize jsonobj to JSON and write
+// it to w as well. Ensures that w is only written to once, and only if
+// serialization succeeded.
+func writePrefixedJson(w io.Writer, prefix string, jsonobj interface{}) error {
+	buf := bytes.NewBufferString(prefix)
+	err := json.NewEncoder(buf).Encode(jsonobj)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, buf)
+	return err
+}
+
+func wseventGetprop(s *server, argsjoined string) error {
+	var objname, propname string
+	var args []string
+	args = strings.SplitN(argsjoined, ";", 2)
+	if len(args) != 2 {
+		return errors.New("getprop requires two args")
+	}
+	objname = args[0]
+	propname = args[1]
+	switch {
+	case strings.HasPrefix(objname, "cmd"):
+		var response interface{} // must be serializable by json
+		var idstr string = objname[3:]
+		id, _ := liblush.ParseCmdId(idstr)
+		c := s.session.GetCommand(id)
+		if c == nil {
+			return errors.New("no such command: " + idstr)
+		}
+		switch propname {
+		case "name":
+			response = c.Name()
+		case "cmd":
+			response = c.Argv()[0]
+		case "args":
+			response = c.Argv()[1:]
+		case "status":
+			response = cmdstatus2json(c.Status())
+		case "userdata":
+			response = c.UserData()
+		case "stdoutScrollback":
+			response = c.Stdout().Scrollback().Size()
+		case "stderrScrollback":
+			response = c.Stderr().Scrollback().Size()
+		case "stdoutto":
+			if tocmd := pipedcmd(c.Stdout()); tocmd != nil {
+				response = tocmd.Id()
+			}
+		case "stderrto":
+			if tocmd := pipedcmd(c.Stderr()); tocmd != nil {
+				response = tocmd.Id()
+			}
+		default:
+			return errors.New("Unknown command property name: " + propname)
+		}
+		prefix := fmt.Sprintf("property;%s;%s;", objname, propname)
+		return writePrefixedJson(&s.ctrlclients, prefix, response)
+	}
+	return errors.New("getprop: unknown object name: " + objname)
+}
+
+func wseventSetprop(s *server, argsjoined string) error {
+	var objname, propname, valstr string
+	var args []string
+	args = strings.SplitN(argsjoined, ";", 3)
+	if len(args) != 3 {
+		return errors.New("setprop requires three args")
+	}
+	objname = args[0]
+	propname = args[1]
+	valstr = args[2]
+	switch {
+	case strings.HasPrefix(objname, "cmd"):
+		idstr := objname[3:]
+		// this is insane
+		omg := fmt.Sprintf("{\"nid\": %s, \"%s\": %s}", idstr, propname, valstr)
+		wseventUpdatecmd(s, omg)
+		break
+	default:
+		return errors.New("setprop: unknown object name: " + objname)
+	}
+	return wseventGetprop(s, objname+";"+propname)
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
@@ -322,6 +410,8 @@ var wsHandlers = map[string]wsHandler{
 	"start":       wseventStart,
 	"stop":        wseventStop,
 	"release":     wseventRelease,
+	"getprop":     wseventGetprop,
+	"setprop":     wseventSetprop,
 }
 
 func parseAndHandleWsEvent(s *server, msg []byte) error {
