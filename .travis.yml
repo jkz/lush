@@ -1,1 +1,8 @@
 language: go
+before_script:
+- go build
+- sh -c "./lush -l 127.0.0.1:4737 &"
+- sleep 3
+script:
+- go test -v ./...
+- phantomjs phantom-qunit-runner.js http://127.0.0.1:4737
