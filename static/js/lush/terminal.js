@@ -210,7 +210,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         }
         this._cmd = null; // ok I'm working on this!
         var cli = this;
-        this.processCmd({creator: 'prompt'}, function (cmd) {
+        this.processCmd({userdata: {creator: 'prompt'}}, function (cmd) {
             cli._cmd = cmd;
             // when the command is started, the cli will need a new placeholder
             // command.

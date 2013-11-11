@@ -293,7 +293,6 @@ define(["jquery",
                 o.name += ' ' + args[i];
             }
             o.userdata = $(this).data();
-            o.userdata.autostart = this.autostart.checked;
             o.userdata.autoarchive = this.autoarchive.checked;
             widget.cmd.update(o);
             widget._switchToViewTab();
@@ -319,7 +318,6 @@ define(["jquery",
         });
         $(cmd).on('updated.userdata.init_edit_form', function () {
             var cmd = this;
-            $editm.find('[name=autostart]')[0].checked = cmd.userdata.autostart;
             $editm.find('[name=autoarchive]')[0].checked = cmd.userdata.autoarchive;
         });
         $editm.find('.cancelbtn').click(function () {

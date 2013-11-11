@@ -375,6 +375,7 @@ define(["jquery",
         $('.sortable').disableSelection().sortable();
         // a new command has been created
         $(ctrl).on("newcmd", function (_, cmdjson) {
+            var ctrl = this;
             var init = JSON.parse(cmdjson);
             cmds_init[init.nid] = init;
             var cmd = initCommand(init.nid, this);
@@ -388,13 +389,10 @@ define(["jquery",
                 $(cmd).on('stdout.stream', printer);
                 $(cmd).on('stderr.stream', printer);
                 // subscribe to stream data
-                this.send('subscribe', cmd.nid, 'stdout');
-                this.send('subscribe', cmd.nid, 'stderr');
+                ctrl.send('subscribe', cmd.nid, 'stdout');
+                ctrl.send('subscribe', cmd.nid, 'stderr');
                 var $widget = $('#' + cmd.htmlid);
-                if (cmd.userdata.autostart) {
-                    cmd.start();
-                } else {
-                    // If not autostarting, go directly into edit mode
+                if (cmd.userdata.creator != 'prompt') {
                     $widget.tabs('option', 'active', 1);
                 }
                 // trigger all callbacks waiting for a newcmd event
