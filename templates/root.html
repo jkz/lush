@@ -36,6 +36,32 @@
 <body data-status=loading>
 
 
+<div id=sidepane>
+    <div id=config class=collapsed>
+        <h1><a data-toggle-class=collapsed href=#config>global config</a></h1>
+        <button id=newcmd>new command</button>
+        <p>Path: <a data-toggle-class="hidden"  href="#pathcontainer">(toggle)</a>
+        <div id=pathcontainer class=hidden>
+            <form id=path>
+            <ol class="sortable"></ol>
+            </form>
+        </div>
+        <a href=# id=delete_archived>Delete all archived commands</a>
+        <p><a href=#history data-toggle-class=hide_archived >show / hide archived history</a>
+    </div>
+    <div id=history>
+        <ul ></ul>
+    </div>
+</div>
+
+
+<div class=terminalwrap1>
+  <div class=terminalwrap2>
+    <div class=terminal ></div>
+  </div>
+</div>
+
+
 <div id="cmds"></div>
 
 
@@ -90,32 +116,6 @@
 <div class=children></div>
 </div>
 <!-- /groupwidget_template -->
-
-
-<div id=sidepane>
-    <div id=config class=collapsed>
-        <h1><a data-toggle-class=collapsed href=#config>global config</a></h1>
-        <button id=newcmd>new command</button>
-        <p>Path: <a data-toggle-class="hidden"  href="#pathcontainer">(toggle)</a>
-        <div id=pathcontainer class=hidden>
-            <form id=path>
-            <ol class="sortable"></ol>
-            </form>
-        </div>
-        <a href=# id=delete_archived>Delete all archived commands</a>
-        <p><a href=#history data-toggle-class=hide_archived >show / hide archived history</a>
-    </div>
-    <div id=history>
-        <ul ></ul>
-    </div>
-</div>
-
-
-<div class=terminalwrap1>
-  <div class=terminalwrap2>
-    <div class=terminal ></div>
-  </div>
-</div>
 
 <p id=connection_error> connection error, please reload the page</p>
 

@@ -140,10 +140,6 @@ define(["jquery",
         // around depending on its hierarchy. if it is root, it is here, if it
         // is a child, it is in another element's <div class=children>.
         var rootnode = $('<div class=rootcontainer id=root' + cmd.nid + '>')
-            .draggable({
-                containment: "parent",
-                stop: function () { storePositionOnServer(this, ctrl); },
-            })
             .append(this.groupnode)
             .appendTo('#cmds')[0];
         syncPositionWithServer(rootnode, ctrl);
@@ -175,10 +171,6 @@ define(["jquery",
         var widget = this;
         $(widget.node).on('tabsactivate.jsplumb', function () {
             jsPlumb.repaint($(this));
-        }).resizable({
-            resize: function () {
-                jsPlumb.repaint($(this));
-            }
         });
         cmd.stdinep = jsPlumb.addEndpoint(this.node, {
             anchor: 'TopCenter',
