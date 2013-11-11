@@ -226,21 +226,26 @@ define(["jquery",
     };
 
     Widget.prototype._initViewTab = function () {
-        var $viewm = $(this.node).find('.tab_view');
+        var widget = this;
+        var cmd = widget.cmd;
+        var $viewm = $(widget.node).find('.tab_view');
         // static parts of the UI (depend on constant cmd property "nid")
-        $viewm.find('.link').attr('href', '/' + this.cmd.nid + '/')
-              .find('.linktext').text(this.cmd.nid + ': ');
+        $viewm.find('.link').attr('href', '/' + cmd.nid + '/')
+              .find('.linktext').text(cmd.nid + ': ');
         // when clicked will prepare this command for repeating (argv ->
         // prompt, focus prompt)
-        var cmd = this.cmd;
         $viewm.find('.repeat').click(function (e) {
             e.preventDefault();
             term.set_command(cmd.getArgv().join(' ')).focus();
         });
         // dynamic parts of the UI
-        $(this.cmd).on('wasupdated', function () {
-            setStatNode(this, $('.status', $viewm));
-            var argvtxt = this.getArgv().join(' ');
+        $(cmd).on('updated.status', function () {
+            var cmd = this;
+            setStatNode(cmd, $viewm.find('.status'));
+        });
+        $(cmd).on('updated.cmd.args', function () {
+            var cmd = this;
+            var argvtxt = cmd.getArgv().join(' ');
             $viewm.find('.argv').text(argvtxt);
             $viewm.find('.bookmark').attr('href', '#prompt;' + argvtxt);
         });
@@ -248,7 +253,8 @@ define(["jquery",
 
     Widget.prototype._initEditTab = function () {
         var widget = this;
-        var $editm = $(this.node).find('.tab_edit');
+        var cmd = widget.cmd;
+        var $editm = $(widget.node).find('.tab_edit');
         $editm.find('[name=cmd]').autocomplete({source: "/new/names.json"});
         var lastarg = 1;
         var addarg = function () {
@@ -287,29 +293,40 @@ define(["jquery",
             widget.cmd.update(o);
             widget._switchToViewTab();
         });
-        var setFormContents = function ($editm, cmd) {
+        $(cmd).on('updated.cmd.init_edit_form', function () {
+            var cmd = this;
             $editm.find('[name=cmd]').val(cmd.cmd);
+        });
+        $(cmd).on('updated.args.init_edit_form', function () {
+            var cmd = this;
             cmd.args.forEach(function (arg, idx) {
                 // keydown triggers the "create new arg input" handler
                 $editm.find('[name=arg' + (idx + 1) + ']').val(arg).keydown();
             });
+        });
+        $(cmd).on('updated.stdoutScrollback.init_edit_form', function () {
+            var cmd = this;
             $editm.find('[name=stdoutScrollback]').val(cmd.stdoutScrollback)
+        });
+        $(cmd).on('updated.stderrScrollback.init_edit_form', function () {
+            var cmd = this;
             $editm.find('[name=stderrScrollback]').val(cmd.stderrScrollback)
+        });
+        $(cmd).on('updated.userdata.init_edit_form', function () {
+            var cmd = this;
             $editm.find('[name=autostart]')[0].checked = cmd.userdata.autostart;
             $editm.find('[name=autoarchive]')[0].checked = cmd.userdata.autoarchive;
-        };
-        $(this.cmd).on('wasupdated', function () {
-            setFormContents($editm, this);
         });
         $editm.find('.cancelbtn').click(function () {
-            setFormContents($(this).closest('.tab_edit'), cmd);
+            $(cmd).trigger('updated.init_edit_form');
             widget._switchToViewTab();
         });
     };
 
     Widget.prototype._initStdoutTab = function () {
         var widget = this;
-        $(widget.cmd).on('updated.stdout', function (_, data) {
+        var cmd = widget.cmd;
+        $(cmd).on('updated.stdout', function (_, data) {
             var cmd = this;
             $('#' + cmd.htmlid + ' .tab_stdout .streamdata').text(data);
         });
@@ -317,7 +334,8 @@ define(["jquery",
 
     Widget.prototype._initStderrTab = function () {
         var widget = this;
-        $(widget.cmd).on('updated.stderr', function (_, data) {
+        var cmd = widget.cmd;
+        $(cmd).on('updated.stderr', function (_, data) {
             var cmd = this;
             $('#' + cmd.htmlid + ' .tab_stderr .streamdata').text(data);
         });
@@ -326,13 +344,15 @@ define(["jquery",
     // initialize a widget's help view
     Widget.prototype._initHelpTab = function () {
         var widget = this;
-        $(this.cmd).on('wasupdated', function () {
-            var $help = $('#' + this.htmlid + ' .tab_help');
+        var cmd = widget.cmd;
+        $(cmd).on('updated.cmd', function () {
+            var cmd = this;
+            var $help = $('#' + cmd.htmlid + ' .tab_help');
             // clean out help div
             $help.empty();
-            var action = help(this);
+            var action = help(cmd);
             if (action) {
-                action(this, $help, function () { widget._switchToViewTab(); });
+                action(cmd, $help, function () { widget._switchToViewTab(); });
             } else {
                 // todo: hide help tab?
             }
@@ -340,8 +360,9 @@ define(["jquery",
     };
 
     Widget.prototype._initTabsNav = function () {
-        var cmd = this.cmd;
-        var navlinks = $(this.node).find('.tab-pane').map(function () {
+        var widget = this;
+        var cmd = widget.cmd;
+        var navlinks = $(widget.node).find('.tab-pane').map(function () {
             var tabname = $(this).data('tabname');
             // give every tab an ID (necessary for jquery.ui)
             this.id = cmd.htmlid + '_tab_' + tabname;
@@ -354,8 +375,8 @@ define(["jquery",
                 });
             return $('<li>').addClass(tabname).append($a)[0];
         });
-        $(this.node).find('.tabsnav').append(navlinks);
-        $(this.node).tabs({
+        $(widget.node).find('.tabsnav').append(navlinks);
+        $(widget.node).tabs({
             activate: function (e, ui) {
                 jsPlumb.repaint(this);
             },

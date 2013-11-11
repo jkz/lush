@@ -164,7 +164,7 @@ define(["jquery",
     //
     // calling updateHistoryLiName(3) will refresh the entire second line
     var updateHistoryLiName = function (gid) {
-        $('#history_group' + gid + ' .name').text(groupname(cmds[gid]));
+        $('#history_group' + gid + ' .name').text(gid + ': ' + groupname(cmds[gid]));
     };
 
     // build a <li> for the history list for this command
@@ -178,17 +178,15 @@ define(["jquery",
                     var cmd = cmds[$li.data('gid')];
                     var currentState = $li.hasClass('archived');
                     cmd.setArchivalState(!currentState);
-                })
-                .text(cmd.nid + ': ' + groupname(cmd)));
+                }));
         if (!cmd.isRoot()) {
             $li.addClass('child');
         }
-        $(cmd).on('wasupdated', function (_, updata) {
-            // if my name changes, so does the name of my group
-            if (updata.name !== undefined) {
-                // Set the text of this li to the name of whatever group I belong to
-                updateHistoryLiName(this.gid);
-            }
+        $(cmd).on('updated.name', function () {
+            var cmd = this;
+            // if my name changes, so does the name of my group.  Set the text
+            // of this li to the name of whatever group I belong to
+            updateHistoryLiName(cmd.gid);
         }).on('archival', function (_, archived) {
             if (archived) {
                 $('#history_group' + this.nid).addClass('archived');
@@ -337,7 +335,8 @@ define(["jquery",
         // some UI parts are not initialized, just hooked into wasupdated
         // handlers.
         // TODO: NOT MY PROBLEM -- or so I wish :( that should change
-        $(cmd).trigger('wasupdated', init, 'init');
+        $(cmd).trigger('wasupdated', [init, 'init']);
+        $(cmd).trigger('updated', ['init']);
         $(cmd).trigger('archival', [!!cmd.userdata.archived]);
         return cmd;
     };

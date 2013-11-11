@@ -42,7 +42,10 @@
 //
 // - updated: like wasupdated but is triggered in the namespace of an updated
 // property, with the new property as a parameter. e.g. instead of wasupdated,
-// with param {name: "foo"}, you get 'updated.name' with param "foo".
+// with param {name: "foo"}, you get an 'updated.name' event, without the value
+// as a parameter. The new value can be extracted directly from the command
+// object. The first parameter to the event is a string identifying who
+// generated the event.
 //
 // - wasreleased: triggered when resources associated with a command have been
 // released by the server and the client wants to clean up the command. any
@@ -115,10 +118,9 @@ define(["jquery"], function ($) {
             // these event handlers only make sense for running commands
             // TODO: this list is bound to grow out of sync. How to fix?
             $(cmd).off('.stream childAdded childRemoved parentAdded parentRemoved done');
-        }).on('wasupdated', function (e, updata) {
+        }).on('updated.status', function (e) {
             var cmd = this;
-            if (updata.status !== undefined &&
-                updata.status.code > 1)
+            if (cmd.status.code > 1)
             {
                 $(cmd).trigger('done');
                 $(cmd).off(e); // no need for me anymore
@@ -180,7 +182,7 @@ define(["jquery"], function ($) {
         updata[prop] = value;
         $(cmd).trigger('wasupdated', [updata, updatedby]);
         // per-property update event
-        $(cmd).trigger('updated.' + prop, [value, updatedby]);
+        $(cmd).trigger('updated.' + prop, [updatedby]);
         // trigger child/parent add/remove event if relevant
         $.map(childMod, function (mod, stream) {
             if (mod.from !== undefined) {

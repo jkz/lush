@@ -214,11 +214,12 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             cli._cmd = cmd;
             // when the command is started, the cli will need a new placeholder
             // command.
-            $(cmd).on('wasupdated.terminal', function (e) {
+            $(cmd).on('updated.status.terminal', function (e) {
+                var cmd = this;
                 // if currently bound command is started externally
-                if (this.status.code == 1 &&
-                    this.userdata.starter != cli.guid &&
-                    cli._cmd == this)
+                if (cmd.status.code > 0 &&
+                    cmd.userdata.starter != cli.guid &&
+                    cli._cmd == cmd)
                 {
                     // unbind me from the cli
                     cli._cmd = undefined;
@@ -226,8 +227,8 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
                     cli._prepareCmd();
                 }
                 // once started, every terminal event handler is useless
-                if (this.status.code > 0) {
-                    $(this).unbind('.terminal');
+                if (cmd.status.code > 0) {
+                    $(cmd).unbind('.terminal');
                 }
             });
             $(cli).trigger('prepared', [cmd]);
@@ -272,23 +273,21 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         cli.onerror = $term.error;
         // a cmd object (and widget) has been prepared for this cli
         $(cli).on('prepared', function (_, cmd) {
-            // when the associated command is updated from outside
-            $(cmd).on('wasupdated.terminal', function (e, updata, by) {
-                if (by == cli.guid || !updata || by == 'init') {
+            // when the associated command (args or cmd) is updated from outside
+            $(cmd).on('updated.args.cmd.terminal', function (e, by) {
+                var cmd = this;
+                if (by == cli.guid || by == 'init') {
                     // ignore init, empty updates and updates from myself
                     return;
                 }
-                if (updata.cmd !== undefined || updata.args !== undefined) {
-                    var txt = $.map(this.getArgv(), pescape).join(' ');
-                    // hack to prevent the onCommandChange handler from sending
-                    // this change back to the command object. justified
-                    // because the real solution is a better jQuery.terminal
-                    // API imo.
-                    var tempcli = cli;
-                    cli = undefined;
-                    $term.set_command(txt);
-                    cli = tempcli;
-                }
+                var txt = $.map(cmd.getArgv(), pescape).join(' ');
+                // hack to prevent the onCommandChange handler from sending this
+                // change back to the command object. justified because the real
+                // solution is a better jQuery.terminal API imo.
+                var tempcli = cli;
+                cli = undefined;
+                $term.set_command(txt);
+                cli = tempcli;
             });
         });
         return $term;
