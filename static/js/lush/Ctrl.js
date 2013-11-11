@@ -39,6 +39,9 @@ define(["jquery", "lush/utils"], function ($) {
         ctrl.ws.onopen = function () {
             $(ctrl).trigger('open')
         };
+        ctrl.ws.onclose = function () {
+            $('body').attr('data-status', 'connection_error');
+        };
     }
 
     Ctrl.prototype.send = function () {

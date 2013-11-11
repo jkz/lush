@@ -198,7 +198,7 @@ div.streampeeker {
 
 
 /*
- * LOADING MODAL
+ * UI-BLOCKING "PAGE LOADING" MODAL
  */
 #loading {
     position: fixed;
@@ -223,6 +223,24 @@ div.streampeeker {
     font-family: sans-serif;
     font-weight: bold;
     color: #500;
+}
+
+/* not a modal to allow access to UI (user knows best) */
+#connection_error {
+    position: absolute;
+    bottom: 2em;
+    text-align: center;
+    font-size: 3em;
+    font-family: sans-serif;
+    font-weight: bold;
+    color: #500;
+    background-color: rgba(100, 100, 100, 0.85);
+}
+
+/* hide status messages for statuses other than the active one */
+body:not([data-status=loading]) #loading,
+body:not([data-status=connection_error]) #connection_error {
+    display: none;
 }
 
 /*

@@ -453,8 +453,7 @@ define(["jquery",
                 $node.addClass(clsName);
             }
         });
-        $('#loading').remove();
-        // that also deletes the <script>s.. buuuut...  seems to work still? :o
+        $('body').attr('data-status', 'ok');
     });
 
 });
