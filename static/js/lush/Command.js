@@ -160,46 +160,28 @@ define(["jquery"], function ($) {
         };
     }
 
-    // update the properties of this command with those from the argument
-    // object. calls the 'wasupdated' jquery event after command is updated.
-    // this function is exposed for the handler of the websocket 'updatecmd'
-    // event handler to call. it would be cleaner to register a handler for
-    // that in the constructor of this object, but that would mean a new
-    // handler for every command object that decodes the updata json just to
-    // see if the nid matches. I didn't profile it but I can already feel the
-    // O(n) pain.
-    Command.prototype.processUpdate = function (updata) {
+    Command.prototype.processUpdate = function (response) {
+        var prop = response.prop;
+        var value = response.value;
+        var updatedby = response.userdata;
         var cmd = this;
-        if (updata.nid !== cmd.nid) {
-            throw "updating with foreign command data";
-        }
-        delete updata.nid;
-        var updatedby;
-        if (updata.userdata) {
-            updatedby = updata.userdata.updatedby;
-            delete updata.userdata.updatedby;
-            if ($.isEmptyObject(updata.userdata)) {
-                delete updata.userdata;
-            }
-        }
         // map(streamname => map({from, to} => [Command | null]))
         var childMod = {};
-        if (updata.stdoutto !== undefined) {
+        if (prop == "stdoutto") {
             childMod.stdout = 
-                makeChildModObject(cmd.stdoutto, updata.stdoutto);
-        }
-        if (updata.stderrto !== undefined) {
+                makeChildModObject(cmd.stdoutto, value);
+        } else if (prop == "stderrto") {
             childMod.stderr = 
-                makeChildModObject(cmd.stderrto, updata.stderrto);
+                makeChildModObject(cmd.stderrto, value);
         }
-        $.extend(cmd, updata);
-        // 'wasupdated' event with updata as object
+        cmd[prop] = value;
+        // (obsolete) 'wasupdated' event with updata as object
+        var updata = {};
+        updata[prop] = value;
         $(cmd).trigger('wasupdated', [updata, updatedby]);
-        // per-property update events
-        $.each(updata, function (key, value) {
-            $(cmd).trigger('updated.' + key, [value, updatedby]);
-        });
-        // trigger child/parent add/remove events
+        // per-property update event
+        $(cmd).trigger('updated.' + prop, [value, updatedby]);
+        // trigger child/parent add/remove event if relevant
         $.map(childMod, function (mod, stream) {
             if (mod.from !== undefined) {
                 $(mod.from).trigger('parentRemoved', [cmd, stream]);
@@ -213,8 +195,8 @@ define(["jquery"], function ($) {
         // If the status just updated to "successfully completed", and I am
         // god, and root, inform the server I wish to be archived.
         if (cmd.userdata.autoarchive &&
-            updata.status !== undefined &&
-            updata.status.code == 2 &&
+            prop == 'status' &&
+            value.code == 2 &&
             cmd.isRoot() &&
             // only god archives a command, the rest will follow indirectly
             cmd.imadethis())
@@ -223,11 +205,11 @@ define(["jquery"], function ($) {
         }
         // if the server tells me that I've been (de)archived, generate an
         // "archival" jQuery event
-        if (updata.userdata && updata.userdata.archived !== undefined) {
+        if (prop == 'userdata' && value.archived !== undefined) {
             if (!cmd.isRoot()) {
                 throw "Received archival event on non-root node " + cmd.nid;
             }
-            $(cmd).trigger('archival', updata.userdata.archived);
+            $(cmd).trigger('archival', value.archived);
         }
     };
 
@@ -243,18 +225,24 @@ define(["jquery"], function ($) {
     // the second argument will be passed verbatim to the
     // wasupdated event handler as the second custom (third) argument.
     Command.prototype.update = function (updata, by) {
+        var cmd = this;
         if (updata.nid !== undefined) {
             throw "updating nid not allowed!";
         }
-        if (updata.userdata === null) {
-            updata.userdata = {}
-        } else {
-            updata.userdata = $.extend({}, this.userdata, updata.userdata);
-        }
-        // store the updatedby key in the command userdata
-        updata.userdata = $.extend(updata.userdata, {updatedby: by});
-        updata.nid = this.nid;
-        this.ctrl.send('updatecmd', JSON.stringify(updata));
+        $.each(updata, function (key, val) {
+            var req = {
+                name: cmd.htmlid,
+                prop: key,
+                userdata: by,
+            };
+            // (client-side) special case for updating userdata: extend
+            if (key == "userdata") {
+                req.value = $.extend({}, cmd.userdata, updata.userdata);
+            } else {
+                req.value = val;
+            }
+            cmd.ctrl.send('setprop', JSON.stringify(req));
+        });
     };
 
     Command.prototype.getArgv = function () {

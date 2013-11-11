@@ -78,6 +78,10 @@ type cmdOptions struct {
 	UserData         interface{}
 }
 
+func cmdId2Json(id liblush.CmdId) string {
+	return fmt.Sprintf("cmd%d", id)
+}
+
 // eg new;{"cmd":"echo","args":["arg1","arg2"],...}
 func wseventNew(s *server, optionsJSON string) error {
 	var options cmdOptions
@@ -104,10 +108,10 @@ func wseventNew(s *server, optionsJSON string) error {
 	}
 	// subscribe everyone to status updates
 	c.Status().NotifyChange(func(status liblush.CmdStatus) error {
-		facebook := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
-		return json.NewEncoder(facebook).Encode(map[string]interface{}{
-			"nid":    c.Id(),
-			"status": cmdstatus2json(status),
+		return notifyPropertyUpdate(&s.ctrlclients, getPropResponse{
+			Objname:  cmdId2Json(c.Id()),
+			Propname: "status",
+			Value:    cmdstatus2json(status),
 		})
 	})
 	return nil
@@ -181,10 +185,12 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 			return fmt.Errorf("failed to update args: %v", err)
 		}
 	}
+	// obsolete:
 	// broadcast command update to all connected websocket clients
-	w := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
-	_, err = w.Write(jsonbytes)
-	return err
+	//w := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
+	//_, err = w.Write(jsonbytes)
+	//return err
+	return nil
 }
 
 // store opaque data in a session-local key/value store on server.
@@ -250,12 +256,11 @@ func wseventConnect(s *server, optionsJSON string) error {
 	}
 	stream.AddWriter(to.Stdin())
 	// notify all channels of the update
-	w := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
-	updateinfo := map[string]interface{}{
-		"nid": options.From,
-		options.Stream + "to": options.To,
-	}
-	return json.NewEncoder(w).Encode(updateinfo)
+	return notifyPropertyUpdate(&s.ctrlclients, getPropResponse{
+		Objname:  cmdId2Json(options.From),
+		Propname: options.Stream + "to",
+		Value:    fmt.Sprintf("%d", options.To),
+	})
 }
 
 // start a command
@@ -323,6 +328,11 @@ func writePrefixedJson(w io.Writer, prefix string, jsonobj interface{}) error {
 	return err
 }
 
+// write a "property updated" event to this client
+func notifyPropertyUpdate(w io.Writer, r getPropResponse) error {
+	return writePrefixedJson(w, "property;", r)
+}
+
 type getPropRequest struct {
 	Objname  string `json:"name"`
 	Propname string `json:"prop"`
@@ -331,8 +341,14 @@ type getPropRequest struct {
 }
 
 type getPropResponse struct {
-	getPropRequest
 	Value interface{} `json:"value"`
+	// code dupe because Go doesn't allow promoted fields in struct literals
+	// but I want to have my cake and eat it too, which I shall, because I can,
+	// though I am not pleased one bit with how hard Go is making this.
+	Objname  string `json:"name"`
+	Propname string `json:"prop"`
+	// opaque value to return to client in corresponding request
+	Userdata string `json:"userdata,omitempty"`
 }
 
 func wseventGetprop(s *server, reqstr string) error {
@@ -376,7 +392,7 @@ func wseventGetprop(s *server, reqstr string) error {
 		default:
 			return errors.New("Unknown command property name: " + r.Propname)
 		}
-		return writePrefixedJson(&s.ctrlclients, "property;", r)
+		return notifyPropertyUpdate(&s.ctrlclients, r)
 	}
 	return errors.New("getprop: unknown object name: " + r.Objname)
 }
@@ -393,7 +409,9 @@ func wseventSetprop(s *server, reqstr string) error {
 	case strings.HasPrefix(r.Objname, "cmd"):
 		idstr := r.Objname[3:]
 		// this is insane
-		omg := fmt.Sprintf("{\"nid\": %s, %q: %#v}", idstr, r.Propname, r.Value)
+		var valueJson []byte
+		valueJson, err = json.Marshal(r.Value)
+		omg := fmt.Sprintf("{\"nid\": %s, %q: %s}", idstr, r.Propname, valueJson)
 		err = wseventUpdatecmd(s, omg)
 		if err != nil {
 			return err
@@ -412,7 +430,6 @@ var wsHandlers = map[string]wsHandler{
 	"new":         wseventNew,
 	"setpath":     wseventSetpath,
 	"getpath":     wseventGetpath,
-	"updatecmd":   wseventUpdatecmd,
 	"setuserdata": wseventSetuserdata,
 	"getuserdata": wseventGetuserdata,
 	"connect":     wseventConnect,
@@ -421,6 +438,8 @@ var wsHandlers = map[string]wsHandler{
 	"release":     wseventRelease,
 	"getprop":     wseventGetprop,
 	"setprop":     wseventSetprop,
+	// obsolete
+	//"updatecmd":   wseventUpdatecmd,
 }
 
 func parseAndHandleWsEvent(s *server, msg []byte) error {

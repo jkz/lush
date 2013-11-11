@@ -337,8 +337,8 @@ define(["jquery",
         // some UI parts are not initialized, just hooked into wasupdated
         // handlers.
         // TODO: NOT MY PROBLEM -- or so I wish :( that should change
-        init.userdata.updatedby = 'init';
-        cmd.processUpdate(init);
+        $(cmd).trigger('wasupdated', init, 'init');
+        $(cmd).trigger('archival', [!!cmd.userdata.archived]);
         return cmd;
     };
 
@@ -404,11 +404,19 @@ define(["jquery",
                 $(window).trigger('newcmdcallback', cmd);
             }
         });
-        // command has been updated
-        $(ctrl).on("updatecmd", function (_, updatajson) {
-            var updata = JSON.parse(updatajson);
-            var cmd = cmds[updata.nid];
-            cmd.processUpdate(updata);
+        // the property of some object was changed
+        $(ctrl).on("property", function (_, propdataJson) {
+            var propdata = JSON.parse(propdataJson);
+            var match = /^cmd(\d+)/.exec(propdata.name);
+            if (match) {
+                // it is a command property
+                var cmd = cmds[match[1]];
+                if (cmd) {
+                    cmd.processUpdate(propdata);
+                } else {
+                    console.log("property for unknown command: " + propdata);
+                }
+            }
         });
         $(ctrl).on("cmd_released", function (_, idstr) {
             var nid = +idstr;

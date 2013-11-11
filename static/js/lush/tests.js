@@ -227,12 +227,10 @@ define(["jquery",
     function buildMockCommand(init) {
         // simulate server-side websocket event handlers
         var handlers = {
-            updatecmd: function (args) {
-                if (args.length != 1) {
-                    throw "Illegal length of argument string to updatecmd: " + args.length;
-                }
-                cmd.processUpdate(JSON.parse(args[0]));
-            },
+            setprop: function (reqjson) {
+                var req = JSON.parse(reqjson);
+                cmd.processUpdate(req);
+            }
         };
         var ctrl = buildMockCtrl(handlers);
         var cmd = new Command(ctrl, init, "foo");
