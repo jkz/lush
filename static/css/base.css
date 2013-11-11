@@ -37,11 +37,11 @@ body {
 /* Command container div constrains the positioning of all root commands so
  * must be sized appropriately */
 div#cmds {
-    display: inline-block; /* fit width to contents */
     position: absolute;
     left: 500px; /* .terminalwrap.height */
     bottom: 0;
     top: 0;
+    width: 5000px; /* how do you stretch width to contents, past viewport? */
 }
 
 div#sidepane {
@@ -58,6 +58,7 @@ div#sidepane {
 /* root is positioned absolute in the document */
 div.rootcontainer {
     display: inline-block; /* fit width to contents */
+    top: 0;
 }
 div.rootcontainer.archived {
     display: none;
