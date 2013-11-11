@@ -241,14 +241,8 @@ define(["jquery",
         var cmd = buildMockCommand({nid: 1, name: "echo"});
 
         // Setting up the callbacks
-        var wasUpdatedEventCount = 0;
         var updatedNameEventCount = 0;
         var updatedArgsEventCount = 0;
-        // deprecated event
-        $(cmd).on('wasupdated', function (e, updata) {
-            wasUpdatedEventCount++;
-            deepEqual(updata, {name: "echo 2"}, "updata equals cmdupdate request");
-        });
         // a jquery event for just this property: updated.name
         $(cmd).on('updated.name', function (e, name) {
             updatedNameEventCount++;
@@ -266,7 +260,6 @@ define(["jquery",
 
         // Verify the effects
         equal(cmd.name, "echo 2", "name property on command is updated");
-        equal(wasUpdatedEventCount, 1, "wasupdated event triggered once");
         equal(updatedNameEventCount, 1, "updated.name event triggered once");
         equal(updatedArgsEventCount, 0, 'updated.args event not triggered');
         // this is how you expect updating to work

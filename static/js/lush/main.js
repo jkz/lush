@@ -332,10 +332,8 @@ define(["jquery",
         cmds[nid] = cmd;
         var widget = new Widget(cmd, ctrl);
         $('#history ul').append(createHistoryLi(cmd));
-        // some UI parts are not initialized, just hooked into wasupdated
-        // handlers.
+        // some UI parts are not initialized, just hooked into updated handlers.
         // TODO: NOT MY PROBLEM -- or so I wish :( that should change
-        $(cmd).trigger('wasupdated', [init, 'init']);
         $(cmd).trigger('updated', ['init']);
         $(cmd).trigger('archival', [!!cmd.userdata.archived]);
         return cmd;

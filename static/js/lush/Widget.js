@@ -119,10 +119,8 @@ define(["jquery",
     // endpoints and stores their reference in the cmd argument object as
     // .stdinep, .stdoutep and .stderrep.
     //
-    // Hooks view updaters to a custom jQuery event 'wasupdated'. I.e. after
-    // changing the cmd run $(cmd).trigger('wasupdated') to update the UI.
-    // (This is done automatically if you update the command through its
-    // .update() method)
+    // View is synced with command object through the relevant updated jQuery
+    // events (see doc for Command constructor).
     var Widget = function (cmd, ctrl) {
         if (cmd === undefined || ctrl === undefined) {
             throw "missing argument(s) to Widget constructor";
@@ -266,9 +264,9 @@ define(["jquery",
         // request the command to be updated. behind the scenes this happens:
         // send "updatecmd" message over ctrl stream.  server will reply with
         // updatecmd, which will invoke a handler to update the cmd object,
-        // which will invoke $(cmd).trigger('wasupdated'), which will invoke
-        // the handler that updates the view for viewmode (<div
-        // class=tab_view>).
+        // which will invoke $(cmd).trigger('updated') (in the relevant
+        // namespace), which will invoke the handler that updates the view for
+        // viewmode (<div class=tab_view>).
         $editm.find('form').submit(function (e) {
             e.preventDefault();
             var o = $(this).serializeObject();
