@@ -276,10 +276,17 @@ define(["jquery",
                     o[key] = parseInt(val);
                 }
             });
+            // arg1="foo", arg2="bar", ... => ["foo", "bar", ...]
             var $args = $(this).find('input[name^=arg]');
             var args = $.map($args, attrgetter('value'));
             args = removeFalse(args);
             o.args = args;
+            // delete old arg properties
+            for (var k in o) {
+                if (/^arg/.test(k)) {
+                    delete o[k];
+                }
+            }
             // set command name to argv
             o.name = o.cmd;
             for (var i = 0; i < args.length; i++) {
