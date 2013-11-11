@@ -135,12 +135,14 @@ define(["jquery"], function ($) {
     };
 
     Command.prototype.imadethis = function () {
-        return this._moi && this._moi == this.userdata.god;
+        var cmd = this;
+        return cmd._moi && cmd._moi == cmd.userdata.god;
     }
 
     // update the state of archival on the server
     Command.prototype.setArchivalState = function (state) {
-        this.update({userdata: {archived: state}});
+        var cmd = this;
+        cmd.update({userdata: {archived: state}});
     }
 
     // return a cmd object if argument is not undefined
