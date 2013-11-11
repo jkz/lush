@@ -244,9 +244,9 @@ define(["jquery",
         var updatedNameEventCount = 0;
         var updatedArgsEventCount = 0;
         // a jquery event for just this property: updated.name
-        $(cmd).on('updated.name', function (e, name) {
+        $(cmd).on('updated.name', function (e, by) {
             updatedNameEventCount++;
-            equal(name, "echo 2", "updated.name handler passed new name");
+            equal(by, "batman", "updated.name handler passed 'by' param");
         });
         // a jquery event for a property that was not updated
         $(cmd).on('updated.args', function (e, name) {
@@ -256,7 +256,7 @@ define(["jquery",
         // Perform the update
         var oldCmdCopy = $.extend({}, cmd);
         var updata = {name: "echo 2"};
-        cmd.update(updata);
+        cmd.update(updata, "batman");
 
         // Verify the effects
         equal(cmd.name, "echo 2", "name property on command is updated");
