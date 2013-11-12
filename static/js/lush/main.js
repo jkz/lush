@@ -187,28 +187,36 @@ define(["jquery",
             // if my name changes, so does the name of my group.  Set the text
             // of this li to the name of whatever group I belong to
             updateHistoryLiName(cmd.gid);
-        }).on('archival', function (_, archived) {
+        });
+        $(cmd).on('archival', function (_, archived) {
+            var cmd = this;
             if (archived) {
-                $('#history_group' + this.nid).addClass('archived');
+                $('#history_group' + cmd.nid).addClass('archived');
             } else {
-                $('#history_group' + this.nid).removeClass('archived');
+                $('#history_group' + cmd.nid).removeClass('archived');
             }
-        }).on('parentAdded', function (_, daddy) {
+        });
+        $(cmd).on('parentAdded', function (_, daddy) {
+            var cmd = this;
             // I am now a child, hide my li
-            $('#history_group' + this.nid).addClass('child');
+            $('#history_group' + cmd.nid).addClass('child');
             // update the name of whatever hierarchy I now belong to
             updateHistoryLiName(daddy.gid);
-        }).on('parentRemoved', function (_, olddaddy) {
+        });
+        $(cmd).on('parentRemoved', function (_, olddaddy) {
+            var cmd = this;
             // I'm back!
             // my name might have changed while I was a child but that will not
             // have been reflected in this LI
-            updateHistoryLiName(this.gid);
+            updateHistoryLiName(cmd.gid);
             // now that I'm not a child of my old hierarchy, its name has
             // changed
             updateHistoryLiName(olddaddy.gid);
-            $('#history_group' + this.nid).removeClass('child');
-        }).on('wasreleased', function () {
-            $('#history_group' + this.nid).remove();
+            $('#history_group' + cmd.nid).removeClass('child');
+        });
+        $(cmd).on('wasreleased', function () {
+            var cmd = this;
+            $('#history_group' + cmd.nid).remove();
         });
         return $li;
     };

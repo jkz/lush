@@ -99,26 +99,31 @@ define(["jquery"], function ($) {
         $(cmd).on('parentAdded', function (_, dad) {
             var cmd = this;
             cmd.gid = dad.gid;
-        }).on('parentRemoved', function () {
+        });
+        $(cmd).on('parentRemoved', function () {
             var cmd = this;
             cmd.gid = cmd.nid;
-        }).on('done', function () {
+        });
+        $(cmd).on('done', function () {
             var cmd = this;
             // these event handlers only make sense for running commands
             // TODO: this list is bound to grow out of sync. How to fix?
             $(cmd).off('.stream childAdded childRemoved parentAdded parentRemoved done');
-        }).on('updated.status', function (e) {
+        });
+        $(cmd).on('updated.status', function (e) {
             var cmd = this;
             if (cmd.status.code > 1)
             {
                 $(cmd).trigger('done');
                 $(cmd).off(e); // no need for me anymore
             }
-        }).on('stdout.stream', function (_, data) {
+        });
+        $(cmd).on('stdout.stream', function (_, data) {
             var cmd = this;
             cmd.stdout += data;
             $(cmd).trigger('updated.stdout', [cmd.stdout]);
-        }).on('stderr.stream', function (_, data) {
+        });
+        $(cmd).on('stderr.stream', function (_, data) {
             var cmd = this;
             cmd.stderr += data;
             $(cmd).trigger('updated.stderr', [cmd.stderr]);
