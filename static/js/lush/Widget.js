@@ -147,24 +147,40 @@ define(["jquery",
         syncPositionWithServer(rootnode, ctrl);
         this._initJsPlumb(ctrl);
         $(cmd).on('archival', function (_, archived) {
+            var cmd = this;
             if (archived) {
-                $('#root' + this.nid).addClass('archived');
+                $('#root' + cmd.nid).addClass('archived');
             } else {
-                $('#root' + this.nid).removeClass('archived');
+                $('#root' + cmd.nid).removeClass('archived');
             }
-        }).on('wasreleased', function () {
+        });
+        $(cmd).on('wasreleased', function () {
             $(widget.groupnode).remove();
             $(widget.rootnode).remove();
             delete widget.groupnode;
             delete widget.node;
             delete widget.cmd;
-        }).on('parentAdded', function (_, daddy) {
-            // I have a new parent, make my group node a child of its group
-            $('#group' + this.nid).appendTo('#group' + daddy.nid + ' > .children');
-        }).on('parentRemoved', function () {
+        });
+        function setChild(cmd, childid, streamname) {
+            // I have a new child, make its group node a child of my group
+            $('#group' + childid)
+                .appendTo('#group' + cmd.nid + ' > .children')
+                .attr('data-parent-stream', streamname);
+        }
+        $(cmd).on('updated.stdoutto', function () {
+            var cmd = this;
+            setChild(cmd, cmd.stdoutto, 'stdout');
+        });
+        $(cmd).on('updated.stderrto', function () {
+            var cmd = this;
+            setChild(cmd, cmd.stderrto, 'stderr');
+        });
+        $(cmd).on('parentRemoved', function () {
+            var cmd = this;
             // command is now root: put it back in its root container
             // (NOP if already root)
-            $('#group' + this.nid).appendTo('#root' + this.nid);
+            $('#group' + cmd.nid).appendTo('#root' + cmd.nid)
+                                 .removeAttr('data-parent-stream');
         });
     };
 
