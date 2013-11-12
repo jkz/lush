@@ -169,11 +169,15 @@ define(["jquery",
         }
         $(cmd).on('updated.stdoutto', function () {
             var cmd = this;
-            setChild(cmd, cmd.stdoutto, 'stdout');
+            if (cmd.stdoutto) {
+                setChild(cmd, cmd.stdoutto, 'stdout');
+            }
         });
         $(cmd).on('updated.stderrto', function () {
             var cmd = this;
-            setChild(cmd, cmd.stderrto, 'stderr');
+            if (cmd.stderrto) {
+                setChild(cmd, cmd.stderrto, 'stderr');
+            }
         });
         $(cmd).on('parentRemoved', function () {
             var cmd = this;

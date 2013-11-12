@@ -196,12 +196,23 @@ define(["jquery",
                 $('#history_group' + cmd.nid).removeClass('archived');
             }
         });
-        $(cmd).on('parentAdded', function (_, daddy) {
-            var cmd = this;
-            // I am now a child, hide my li
-            $('#history_group' + cmd.nid).addClass('child');
+        function setChild(cmd, childid) {
+            // mark the child's history entry (will hide it)
+            $('#history_group' + childid).addClass('child');
             // update the name of whatever hierarchy I now belong to
-            updateHistoryLiName(daddy.gid);
+            updateHistoryLiName(cmd.nid);
+        }
+        $(cmd).on('updated.stdoutto', function () {
+            var cmd = this;
+            if (cmd.stdoutto) {
+                setChild(cmd, cmd.stdoutto);
+            }
+        });
+        $(cmd).on('updated.stdoutto', function () {
+            var cmd = this;
+            if (cmd.stderrto) {
+                setChild(cmd, cmd.stderrto);
+            }
         });
         $(cmd).on('parentRemoved', function (_, olddaddy) {
             var cmd = this;
