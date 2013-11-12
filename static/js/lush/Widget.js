@@ -31,7 +31,7 @@
 //
 // eg "echo hahahajustkidding | tee /tmp/foo | mail -s 'I think you are great' root"
 //
-// cmd ids: echo=1, tee=2, mail3
+// cmd ids: echo=1, tee=2, mail=3
 //
 // then this is your view tree:
 //
@@ -48,6 +48,8 @@
 //           (cmdwidget3)
 //           ... // jsPlumb stuff
 //           )))))
+//
+// all this is wrapped in a <div class=rootcontainer>
 
 define(["jquery",
         'lush/help',
