@@ -83,22 +83,6 @@ div.cmdwidget button.close {
     float: right;
 }
 
-div.streampeeker {
-    position: absolute;
-    background-color: white;
-    border: solid red thin;
-}
-
-.streampeeker.collapsed {
-    width: 3em;
-    height: 3em;
-}
-
-.streampeeker.open {
-    width: 15em;
-    min-height: 5em;
-}
-
 /* terminal window */
 .terminalwrap1 {
     position: absolute;
