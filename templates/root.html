@@ -54,6 +54,44 @@
     </div>
 </div>
 
+<div id=cmddetailarea>
+
+  <ul>
+    <li><a href="#cmdedit">edit</a></li>
+    <li><a href="#cmdstdout">stdout</a></li>
+    <li><a href="#cmdstderr">stderr</a></li>
+    <li><a href="#cmdhelp">help</a></li>
+  </ul>
+
+  <div id=cmdedit>
+    <form>
+     name <input name=cmd><br>
+     args:
+       <input size=10 name=arg1>
+       <br>
+     <button>save</button>
+     <button class=cancelbtn type=button>cancel</button>
+
+    <h2>Configuration</h2>
+    <p>stdout scrollback: <input size=4 name=stdoutScrollback value=1000> bytes<br>
+    stderr scrollback: <input size=4 name=stderrScrollback value=1000> bytes
+    <p>
+    archive when done: <input type=checkbox name=autoarchive><br>
+    </form>
+  </div>
+
+  <div id=cmdstdout>
+    <pre class=streamdata></pre>
+  </div>
+
+  <div id=cmdstderr>
+    <pre class=streamdata></pre>
+  </div>
+
+  <div id=cmdhelp>
+  </div>
+
+</div>
 
 <div class=terminalwrap1>
   <div class=terminalwrap2>
@@ -71,45 +109,11 @@
 
     <button class=close>×</button>
 
-  <ul class=tabsnav>
-  </ul>
 
-  <!-- View mode -->
-  <div class="tab-pane tab_view" data-tabname=view>
     <a class=link><span class=linktext></span><tt class=argv></tt></a>
     <span class=status></span>
     <a class='ui-icon ui-icon-link bookmark' title='link to bookmark this command'></a>
     <button class=repeat>↻</button>
-  </div>
-
-  <!-- edit mode -->
-  <div class="tab-pane tab_edit" data-tabname=edit>
-    <form>
-     name <input name=cmd><br>
-     args:
-       <input size=10 name=arg1>
-       <br>
-     <button>save</button>
-     <button class=cancelbtn type=button>cancel</button>
-
-    <h2>Configuration</h2>
-    <p>stdout scrollback: <input size=4 name=stdoutScrollback value=1000> bytes<br>
-    stderr scrollback: <input size=4 name=stderrScrollback value=1000> bytes
-    <p>
-    archive when done: <input type=checkbox name=autoarchive><br>
-    </form>
-  </div>
-
-  <div class='tab-pane tab_stdout' data-tabname=stdout>
-      <pre class=streamdata></pre>
-  </div>
-
-  <div class='tab-pane tab_stderr' data-tabname=stderr>
-      <pre class=streamdata></pre>
-  </div>
-
-  <div class="tab-pane tab_help" data-tabname=help>
-  </div>
 
 </div>
 <!-- /cmdwidget_template -->

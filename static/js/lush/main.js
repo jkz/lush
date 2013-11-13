@@ -135,6 +135,7 @@ define(["jquery",
         "lush/Ctrl",
         "lush/Command",
         "lush/Widget",
+        "lush/CmdConfig",
         "lush/terminal",
         "lush/path",
         "jsPlumb",
@@ -143,6 +144,7 @@ define(["jquery",
                  Ctrl,
                  Command,
                  Widget,
+                 CmdConfig,
                  terminal,
                  path) {
 
@@ -359,6 +361,9 @@ define(["jquery",
     };
 
     $(document).ready(function () {
+        var confwin = new CmdConfig();
+        confwin.init();
+        // todo: associate confwin with selected commands
         // Control stream (Websocket)
         ctrl = new Ctrl();
         ctrl.ws.onerror = function () {

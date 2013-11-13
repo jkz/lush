@@ -38,9 +38,9 @@ body {
  * must be sized appropriately */
 div#cmds {
     position: absolute;
-    left: 500px; /* .terminalwrap.height */
-    bottom: 0;
-    top: 0;
+    left: 506px; /* .terminalwrap.width + some */
+    bottom: 212px;
+    top: 6px;
     width: 5000px; /* how do you stretch width to contents, past viewport? */
 }
 
@@ -48,8 +48,8 @@ div#sidepane {
     position: absolute;
     top: 0; /* play nice with min-height: 100% */
     left: 0;
-    width: 16em;
-    padding-top: 19em; /* no content in the terminal window */
+    width: 256px;
+    padding-top: 306px; /* no content in the terminal window */
     min-height: 100%; /* stretch to bottom of window, expand to fit contents */
     border-right: solid thin black;
 }
@@ -58,9 +58,8 @@ div#sidepane {
 /* root is positioned absolute in the document */
 div.rootcontainer {
     width: 200px;
-    top: 0;
-    border-right: solid thin #446;
     height: 100%;
+    border-right: solid thin #446;
     float: left;
     padding: 2px;
     background-color: #d3d3cf;
@@ -93,7 +92,7 @@ div.cmdwidget button.close {
     left: 0;
     top: 0;
     width: 500px;
-    height: 19em;
+    height: 306px;
 }
 .terminalwrap2 {
     position: relative;
@@ -156,6 +155,10 @@ div.cmdwidget button.close {
     display: none !important;
 }
 
+/*
+ * PATH
+ */
+
 #path {
     width: 600px;
     overflow: auto;
@@ -174,6 +177,21 @@ div.cmdwidget button.close {
     display: inline-block;
 }
 
+
+/*
+ * COMMAND DETAIL AREA
+ */
+
+#cmddetailarea {
+    position: absolute;
+    bottom: 6px;
+    height: 200px;
+    left: 262px;
+    right: 6px;
+    overflow: auto;
+}
+
+
 /* Holy schmoly jquery ui tabs are big.. */
 .ui-tabs-nav {
     font-size: 10pt;
@@ -188,6 +206,7 @@ div.cmdwidget button.close {
 /*
  * UI-BLOCKING "PAGE LOADING" MODAL
  */
+
 #loading {
     position: fixed;
     top: 0;
