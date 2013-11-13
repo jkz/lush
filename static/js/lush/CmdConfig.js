@@ -55,6 +55,7 @@ define(["jquery",
             return;
         }
         $(cmd).off('.cmdconfig');
+        conf._cmd = undefined;
         // TODO: empty UI
     }
 
@@ -178,10 +179,11 @@ define(["jquery",
     CmdConfig.prototype.associateCmd = function (cmd) {
         var conf = this;
         conf.disassociate();
+        conf._cmd = cmd;
         conf._assocEdit();
         conf._assocStdout();
         conf._assocStderr();
-        cnof._assocHelp();
+        conf._assocHelp();
     };
 
     return CmdConfig;
