@@ -176,7 +176,7 @@ define(["jquery",
         var cmd = conf._cmd;
         $(cmd).on('updated.cmd.cmdconfig', function () {
             var cmd = this;
-            var $help = $('#' + cmd.htmlid + ' .tab_help');
+            var $help = $('#cmdhelp');
             // clean out help div
             $help.empty();
             var action = help(cmd);
