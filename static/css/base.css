@@ -44,16 +44,6 @@ div#cmds {
     width: 5000px; /* how do you stretch width to contents, past viewport? */
 }
 
-div#sidepane {
-    position: absolute;
-    top: 0; /* play nice with min-height: 100% */
-    left: 0;
-    width: 256px;
-    padding-top: 306px; /* no content in the terminal window */
-    min-height: 100%; /* stretch to bottom of window, expand to fit contents */
-    border-right: solid thin black;
-}
-
 
 /* root is positioned absolute in the document */
 div.rootcontainer {
@@ -251,8 +241,18 @@ body:not([data-status=connection_error]) #connection_error {
 }
 
 /*
- * CONFIGURATION SIDEPANE
+ * GLOBAL CONFIGURATION SIDEPANE
  */
+
+div#sidepane {
+    position: absolute;
+    bottom: 0;
+    height: 200px;
+    left: 0;
+    width: 256px;
+    border-right: solid thin black;
+    border-top: solid thin black;
+}
 
 #config {
     padding: .2em;
