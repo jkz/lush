@@ -472,6 +472,9 @@ define(["jquery",
                 $node.addClass(clsName);
             }
         });
+        $('#sidepane').tabs();
+        // I hate this class
+        $('.ui-widget').removeClass('ui-widget');
         $('body').attr('data-status', 'ok');
     });
 
