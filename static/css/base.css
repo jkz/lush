@@ -227,8 +227,11 @@ div.cmdwidget button.close {
 
 /* not a modal to allow access to UI (user knows best) */
 #connection_error {
-    position: absolute;
-    bottom: 2em;
+    position: fixed;
+    bottom: 250px;
+    left: 0;
+    right: 0;
+    margin: 0;
     text-align: center;
     font-size: 3em;
     font-family: sans-serif;
