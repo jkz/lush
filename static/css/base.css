@@ -81,8 +81,8 @@ div.cmdwidget button.close {
     position: absolute;
     left: 0;
     top: 0;
+    bottom: 212px;
     width: 500px;
-    height: 306px;
 }
 .terminalwrap2 {
     position: relative;
