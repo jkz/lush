@@ -157,6 +157,9 @@ define(["jquery",
     // sometimes i just dont know who i am anymore...
     var moi = guid();
 
+    // command detail area
+    var confwin;
+
     // update the name of this entire command group in the history list.
     //
     // eg:
@@ -360,12 +363,18 @@ define(["jquery",
         return cmd;
     };
 
+    function selectCommand(nid) {
+        $('.selected').removeClass('selected');
+        $('#cmd' + nid).addClass('selected');
+        confwin.associateCmd(cmds[nid]);
+    };
+
     $(document).ready(function () {
-        var confwin = new CmdConfig();
+        confwin = new CmdConfig();
         // associate clicked command widget with confwin
         $('#cmds').on('click', '.cmdwidget', function (e) {
             var nid = /\d+$/.exec(this.id)[0];
-            confwin.associateCmd(cmds[nid]);
+            selectCommand(+nid);
         });
         // Control stream (Websocket)
         ctrl = new Ctrl();

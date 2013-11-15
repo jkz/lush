@@ -71,6 +71,10 @@ div.cmdwidget {
     font-size: 10pt;
 }
 
+div.cmdwidget.selected {
+    background-color: rgb(255, 206, 187);
+}
+
 div.cmdwidget button.close {
     font-size: 9pt;
     float: right;
