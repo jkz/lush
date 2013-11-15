@@ -418,10 +418,6 @@ define(["jquery",
                 // subscribe to stream data
                 ctrl.send('subscribe', cmd.nid, 'stdout');
                 ctrl.send('subscribe', cmd.nid, 'stderr');
-                var $widget = $('#' + cmd.htmlid);
-                if (cmd.userdata.creator != 'prompt') {
-                    $widget.tabs('option', 'active', 1);
-                }
                 // trigger all callbacks waiting for a newcmd event
                 $(window).trigger('newcmdcallback', cmd);
             }
