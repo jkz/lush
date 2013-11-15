@@ -83,10 +83,10 @@ div.cmdwidget button.close {
 /* terminal window */
 .terminalwrap1 {
     position: absolute;
-    left: 0;
-    top: 0;
+    left: 6px;
+    top: 6px;
     bottom: 212px;
-    width: 500px;
+    width: 494px;
 }
 .terminalwrap2 {
     position: relative;
