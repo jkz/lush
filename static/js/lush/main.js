@@ -136,6 +136,7 @@ define(["jquery",
         "lush/Command",
         "lush/Widget",
         "lush/CmdConfig",
+        "lush/HistoryWidget",
         "lush/terminal",
         "lush/path",
         "jsPlumb",
@@ -145,6 +146,7 @@ define(["jquery",
                  Command,
                  Widget,
                  CmdConfig,
+                 HistoryWidget,
                  terminal,
                  path) {
 
@@ -159,95 +161,6 @@ define(["jquery",
 
     // command detail area
     var confwin;
-
-    // update the name of this entire command group in the history list.
-    //
-    // eg:
-    //
-    // 1: tar f foo.tar foo
-    // 3: echo lala | cat
-    //
-    // calling updateHistoryLiName(3) will refresh the entire second line
-    var updateHistoryLiName = function (gid) {
-        $('#history_group' + gid + ' .name').text(gid + ': ' + groupname(cmds[gid]));
-    };
-
-    // build a <li> for the history list for this command
-    var createHistoryLi = function (cmd) {
-        var $li = $('<li id=history_group' + cmd.nid + '>')
-            .data('gid', cmd.nid)
-            .append($('<a href class=name>')
-                .click(function (e) {
-                    e.preventDefault();
-                    var $li = $(this).closest('li');
-                    var cmd = cmds[$li.data('gid')];
-                    var currentState = $li.hasClass('archived');
-                    cmd.setArchivalState(!currentState);
-                }));
-        if (!cmd.isRoot()) {
-            $li.addClass('child');
-        }
-        $(cmd).on('updated.name', function () {
-            var cmd = this;
-            // if my name changes, so does the name of my group.  Set the text
-            // of this li to the name of whatever group I belong to
-            updateHistoryLiName(cmd.gid);
-        });
-        $(cmd).on('archival', function (_, archived) {
-            var cmd = this;
-            if (archived) {
-                $('#history_group' + cmd.nid).addClass('archived');
-            } else {
-                $('#history_group' + cmd.nid).removeClass('archived');
-            }
-        });
-        function setChild(cmd, childid) {
-            // mark the child's history entry (will hide it)
-            $('#history_group' + childid).addClass('child');
-            // update the name of whatever hierarchy I now belong to
-            updateHistoryLiName(cmd.nid);
-        }
-        $(cmd).on('updated.stdoutto', function () {
-            var cmd = this;
-            if (cmd.stdoutto) {
-                setChild(cmd, cmd.stdoutto);
-            }
-        });
-        $(cmd).on('updated.stdoutto', function () {
-            var cmd = this;
-            if (cmd.stderrto) {
-                setChild(cmd, cmd.stderrto);
-            }
-        });
-        $(cmd).on('parentRemoved', function (_, olddaddy) {
-            var cmd = this;
-            // I'm back!
-            // my name might have changed while I was a child but that will not
-            // have been reflected in this LI
-            updateHistoryLiName(cmd.gid);
-            // now that I'm not a child of my old hierarchy, its name has
-            // changed
-            updateHistoryLiName(olddaddy.gid);
-            $('#history_group' + cmd.nid).removeClass('child');
-        });
-        $(cmd).on('wasreleased', function () {
-            var cmd = this;
-            $('#history_group' + cmd.nid).remove();
-        });
-        return $li;
-    };
-
-    // prepare the UI for the list of commands
-    var initHistoryListControls = function () {
-        $('#delete_archived').click(function (e) {
-            e.preventDefault();
-            $('#history .archived').each(function () {
-                var gid = $(this).data('gid');
-                var cmd = cmds[gid];
-                cmd.release();
-            });
-        });
-    };
 
     var chdir = function (dir) {
         // this here is some tricky code dupe
@@ -336,9 +249,12 @@ define(["jquery",
     // complete initialization of a command given its nid. Expects
     // initialization data for this command and all possible child commands to
     // be in cmds_init. will also init all child commands.
-    function initCommand(nid, ctrl) {
+    function initCommand(nid, ctrl, historyw) {
         if (typeof nid !== "number") {
             throw "nid must be a number";
+        }
+        if (historyw === undefined) {
+            throw "history widget must be defined";
         }
         var init = cmds_init[nid];
         if (init === undefined) {
@@ -346,16 +262,16 @@ define(["jquery",
         }
         // init children first
         if (init.stdoutto && !(init.stdoutto in cmds)) {
-            initCommand(init.stdoutto, ctrl);
+            initCommand(init.stdoutto, ctrl, historyw);
         }
         if (init.stderrto && !(init.stderrto in cmds)) {
-            initCommand(init.stderrto, ctrl);
+            initCommand(init.stderrto, ctrl, historyw);
         }
         delete cmds_init[nid];
         var cmd = new Command(ctrl, init, moi);
         cmds[nid] = cmd;
         var widget = new Widget(cmd, ctrl);
-        $('#history ul').append(createHistoryLi(cmd));
+        historyw.addCommand(cmd);
         // some UI parts are not initialized, just hooked into updated handlers.
         // TODO: NOT MY PROBLEM -- or so I wish :( that should change
         $(cmd).trigger('updated', ['init']);
@@ -376,6 +292,7 @@ define(["jquery",
             var nid = /\d+$/.exec(this.id)[0];
             selectCommand(+nid);
         });
+        var historyw = new HistoryWidget();
         // Control stream (Websocket)
         ctrl = new Ctrl();
         ctrl.ws.onerror = function () {
@@ -386,10 +303,9 @@ define(["jquery",
             nid = +nid;
             // parents automatically init children, don't reinit
             if (nid in cmds_init) {
-                initCommand(nid, ctrl);
+                initCommand(nid, ctrl, historyw);
             }
         });
-        initHistoryListControls();
         jsPlumb.importDefaults({
             ConnectionsDetachable: false,
             // Put all connectors at z-index 3 and endpoints at 4
@@ -410,11 +326,12 @@ define(["jquery",
         });
         $('.sortable').disableSelection().sortable();
         // a new command has been created
-        $(ctrl).on("newcmd", function (_, cmdjson) {
+        $(ctrl).on("newcmd", {historyw: historyw}, function (e, cmdjson) {
             var ctrl = this;
+            var historyw = e.data.historyw;
             var init = JSON.parse(cmdjson);
             cmds_init[init.nid] = init;
-            var cmd = initCommand(init.nid, this);
+            var cmd = initCommand(init.nid, ctrl, historyw);
             if (cmd.imadethis()) {
                 // i made this!
                 // capture all stdout and stderr to terminal
