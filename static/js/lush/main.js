@@ -362,11 +362,9 @@ define(["jquery",
 
     $(document).ready(function () {
         var confwin = new CmdConfig();
-        confwin.init();
         // associate clicked command widget with confwin
-        $('#cmds').click('.cmdwidget', function (e) {
-            var widgetnode = e.target;
-            var nid = /cmd(\d+)/.exec(widgetnode.id)[1];
+        $('#cmds').on('click', '.cmdwidget', function (e) {
+            var nid = /\d+$/.exec(this.id)[0];
             confwin.associateCmd(cmds[nid]);
         });
         // Control stream (Websocket)

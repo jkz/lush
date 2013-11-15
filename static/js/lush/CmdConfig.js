@@ -31,6 +31,7 @@ define(["jquery",
     var numInstances = 0;
 
     var CmdConfig = function () {
+        var conf = this;
         if (numInstances++ > 0) {
             throw "CmdConfig must not be instanciated more than once";
             // yeah yeah yeah that means it's not supposed to be a class. it's
@@ -41,44 +42,31 @@ define(["jquery",
         }
         $('#cmdedit input[name=cmd]').autocomplete({source: "/new/names.json"});
         $('#cmddetailarea').tabs();
-    };
-
-    CmdConfig.prototype.init = function () {
-        var conf = this;
-        var node = conf.node;
-    }
-
-    CmdConfig.prototype.disassociate = function () {
-        var conf = this;
-        var cmd = conf._cmd;
-        if (cmd === undefined) {
-            return;
-        }
-        $(cmd).off('.cmdconfig');
-        conf._cmd = undefined;
-        // TODO: empty UI
-    }
-
-    // initialize the edit tab for the newly associated command
-    CmdConfig.prototype._assocEdit = function () {
-        var conf = this;
-        var $editm = $('#cmdedit');
-        var cmd = conf._cmd;
-        var lastarg = 1;
-        var addarg = function () {
-            $('[name=arg' + lastarg + ']', $editm).after(
-                $('<input size=10 name=arg' + (++lastarg) + '>')
-                    .one('keydown', addarg));
-        };
-        $editm.find('[name=arg1]').one('keydown', addarg);
-        // request the command to be updated. behind the scenes this happens:
-        // send "updatecmd" message over ctrl stream.  server will reply with
-        // updatecmd, which will invoke a handler to update the cmd object,
-        // which will invoke $(cmd).trigger('updated') (in the relevant
-        // namespace), which will invoke the handler that updates the view for
-        // viewmode (<div class=tab_view>).
-        $editm.find('form').submit(function (e) {
+        $('#cmdedit form').on('keydown', 'input[name^=arg]', function (e) {
+            // if typing in the last argument field
+            if ($(this).nextAll('input[name^=arg]').length == 0) {
+                var newname = +(this.name.slice(3)) + 1; // hahaha
+                newname = 'arg' + newname;
+                // the user needs a new empty argument field
+                $(this).clone()
+                    .attr('name', newname)
+                    .val('')
+                    .insertAfter(this);
+            }
+        }).submit({conf: conf}, function (e) {
+            // request the command to be updated. behind the scenes this
+            // happens: send "updatecmd" message over ctrl stream.  server will
+            // reply with updatecmd, which will invoke a handler to update the
+            // cmd object, which will invoke $(cmd).trigger('updated') (in the
+            // relevant namespace), which will invoke the handler that updates
+            // the view
             e.preventDefault();
+            var conf = e.data.conf;
+            var cmd = conf._cmd;
+            if (cmd === undefined) {
+                // no associated command
+                throw "Select command before saving changes";
+            }
             var o = $(this).serializeObject();
             // cast numeric inputs to JS ints
             $.each(o, function (key, val) {
@@ -93,7 +81,7 @@ define(["jquery",
             o.args = args;
             // delete old arg properties
             for (var k in o) {
-                if (/^arg/.test(k)) {
+                if (/^arg\d/.test(k)) {
                     delete o[k];
                 }
             }
@@ -106,44 +94,69 @@ define(["jquery",
             o.userdata.autoarchive = this.autoarchive.checked;
             cmd.update(o);
         });
-        $(cmd).on('updated.cmd.init_edit_form', function () {
+    };
+
+    CmdConfig.prototype.disassociate = function () {
+        var conf = this;
+        var cmd = conf._cmd;
+        if (cmd === undefined) {
+            return;
+        }
+        $(cmd).off('.cmdconfig');
+        conf._cmd = undefined;
+        conf._disassocEdit();
+    };
+
+    CmdConfig.prototype._disassocEdit = function () {
+        $('#cmdedit input[name=arg1] ~ input[name^=arg]').remove();
+        $('#cmdedit input').val('');
+    };
+
+    // initialize the edit tab for the newly associated command
+    CmdConfig.prototype._assocEdit = function () {
+        var conf = this;
+        var $editm = $('#cmdedit');
+        var cmd = conf._cmd;
+        $(cmd).on('updated.cmd.cmdconfig', function () {
             var cmd = this;
             $editm.find('[name=cmd]').val(cmd.cmd);
         });
-        $(cmd).on('updated.args.init_edit_form', function () {
+        $(cmd).on('updated.args.cmdconfig', function () {
             var cmd = this;
+            // remove all arg fields (in case num args decreased)
+            $editm.find('input[name=arg1] ~ input[name^=arg]').remove();
             cmd.args.forEach(function (arg, idx) {
                 // keydown triggers the "create new arg input" handler
                 $editm.find('[name=arg' + (idx + 1) + ']').val(arg).keydown();
             });
         });
-        $(cmd).on('updated.stdoutScrollback.init_edit_form', function () {
+        $(cmd).on('updated.stdoutScrollback.cmdconfig', function () {
             var cmd = this;
             $editm.find('[name=stdoutScrollback]').val(cmd.stdoutScrollback)
         });
-        $(cmd).on('updated.stderrScrollback.init_edit_form', function () {
+        $(cmd).on('updated.stderrScrollback.cmdconfig', function () {
             var cmd = this;
             $editm.find('[name=stderrScrollback]').val(cmd.stderrScrollback)
         });
-        $(cmd).on('updated.userdata.init_edit_form', function () {
+        $(cmd).on('updated.userdata.cmdconfig', function () {
             var cmd = this;
             $editm.find('[name=autoarchive]')[0].checked = cmd.userdata.autoarchive;
         });
-        $(cmd).on('done', function () {
+        $(cmd).on('done.cmdconfig', function () {
             // no need for editing anymore, release all closures
             var cmd = this;
-            $(cmd).off('.init_edit_form');
+            $(cmd).off('.cmdconfig');
         });
         $editm.find('.cancelbtn').click({cmd: cmd}, function (e) {
             var cmd = e.data.cmd;
-            $(cmd).trigger('updated.init_edit_form');
+            $(cmd).trigger('updated.cmdconfig');
         });
     };
 
     CmdConfig.prototype._assocStdout = function () {
         var conf = this;
         var cmd = conf._cmd;
-        $(cmd).on('updated.stdout', function () {
+        $(cmd).on('updated.stdout.cmdconfig', function () {
             var cmd = this;
             $('#' + cmd.htmlid + ' .tab_stdout .streamdata').text(cmd.stdout);
         });
@@ -152,7 +165,7 @@ define(["jquery",
     CmdConfig.prototype._assocStderr = function () {
         var conf = this;
         var cmd = conf._cmd;
-        $(cmd).on('updated.stderr', function () {
+        $(cmd).on('updated.stderr.cmdconfig', function () {
             var cmd = this;
             $('#' + cmd.htmlid + ' .tab_stderr .streamdata').text(cmd.stderr);
         });
@@ -161,7 +174,7 @@ define(["jquery",
     CmdConfig.prototype._assocHelp = function () {
         var conf = this;
         var cmd = conf._cmd;
-        $(cmd).on('updated.cmd', function () {
+        $(cmd).on('updated.cmd.cmdconfig', function () {
             var cmd = this;
             var $help = $('#' + cmd.htmlid + ' .tab_help');
             // clean out help div
@@ -184,6 +197,8 @@ define(["jquery",
         conf._assocStdout();
         conf._assocStderr();
         conf._assocHelp();
+        // view bindings are hooked to updated event, trigger for initialization
+        $(cmd).trigger('updated.cmdconfig');
     };
 
     return CmdConfig;

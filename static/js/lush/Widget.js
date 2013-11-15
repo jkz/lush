@@ -59,8 +59,8 @@ define(["jquery",
     // build jquery node containing [▶] button that starts cmd in background
     var makeStartButton = function (cmd) {
         return $('<button class=start>▶</button>').click(function (e) {
-            $(e.target).html('⌚');
-            $(e.target).prop('disabled', true);
+            $(this).html('⌚');
+            $(this).prop('disabled', true);
             cmd.start();
             // stop bubbling: prevent terminal from losing focus
             return false;
@@ -71,8 +71,8 @@ define(["jquery",
     var makeStopButton = function (cmd) {
         return $('<button class=stop>◼</button>').click(function (e) {
             e.preventDefault();
-            $(e.target).html('⌚');
-            $(e.target).prop('disabled', true);
+            $(this).html('⌚');
+            $(this).prop('disabled', true);
             cmd.stop();
         });
     };
