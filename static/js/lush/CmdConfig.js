@@ -158,7 +158,7 @@ define(["jquery",
         var cmd = conf._cmd;
         $(cmd).on('updated.stdout.cmdconfig', function () {
             var cmd = this;
-            $('#' + cmd.htmlid + ' .tab_stdout .streamdata').text(cmd.stdout);
+            $('#cmdstdout .streamdata').text(cmd.stdout);
         });
     };
 
@@ -167,7 +167,7 @@ define(["jquery",
         var cmd = conf._cmd;
         $(cmd).on('updated.stderr.cmdconfig', function () {
             var cmd = this;
-            $('#' + cmd.htmlid + ' .tab_stderr .streamdata').text(cmd.stderr);
+            $('#cmdstderr .streamdata').text(cmd.stderr);
         });
     };
 
