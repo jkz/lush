@@ -109,21 +109,22 @@
 
 <!-- HTML template for a command widget -->
 <div id=groupwidget_template class=groupwidget>
-<div  class='cmdwidget'>
 
+  <div  class='cmdwidget'>
     <button class=close>×</button>
-
-
-    <a class=link><span class=linktext></span><tt class=argv></tt></a>
+    <a class=link>
+      <span class=linktext></span>
+      <tt class=argv></tt>
+    </a>
     <span class=status></span>
-    <a class='ui-icon ui-icon-link bookmark' title='link to bookmark this command'></a>
+    <a class='ui-icon ui-icon-link bookmark'
+       title='link to bookmark this command'></a>
     <button class=repeat>↻</button>
+  </div> <!-- /.cmdwidget -->
 
-</div>
-<!-- /cmdwidget_template -->
-<div class=children></div>
-</div>
-<!-- /groupwidget_template -->
+  <div class=children></div>
+
+</div> <!-- /#groupwidget_template -->
 
 <p id=connection_error> connection error, please reload the page</p>
 
