@@ -192,14 +192,17 @@ define(["jquery",
     Widget.prototype._initJsPlumb = function (ctrl) {
         var widget = this;
         var cmd = widget.cmd;
-        cmd.stdinep = jsPlumb.addEndpoint(widget.node, {
+        jsPlumb.makeTarget(widget.node, {
             anchor: 'TopCenter',
             isTarget: true,
+            maxConnections: 1,
+            cssClass: 'stdinep',
             parameters: { sysid: cmd.nid },
         });
         cmd.stdoutep = jsPlumb.addEndpoint(this.node, {
             anchor: 'BottomCenter',
             isSource: true,
+            cssClass: 'stdoutep',
             parameters: {
                 stream: "stdout",
                 sysid: cmd.nid,
@@ -208,6 +211,7 @@ define(["jquery",
         cmd.stderrep = jsPlumb.addEndpoint(this.node, {
             anchor: 'RightMiddle',
             isSource: true,
+            cssClass: 'stderrep',
             parameters: {
                 stream: "stderr",
                 sysid: cmd.nid,
@@ -216,11 +220,12 @@ define(["jquery",
         $(cmd).one('release_jsplumb', function () {
             var cmd = this;
             // custom event for releasing all jsPlumb resources, once
-            [cmd.stdinep, cmd.stdoutep, cmd.stderrep]
-                .forEach(jsPlumb.deleteEndpoint);
-            delete cmd.stdinep;
+            jsPlumb.deleteEndpoint(cmd.stdoutep);
+            jsPlumb.deleteEndpoint(cmd.stderrep);
             delete cmd.stdoutep;
             delete cmd.stderrep;
+            // todo: stdin endpoint deleted on detach, so should be detached if
+            // applicable
             $(widget.node).off('.jsplumb');
         }).one('done wasreleased', function () {
             var cmd = this;

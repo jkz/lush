@@ -237,14 +237,36 @@ define(["jquery",
         }
     };
 
-    var requestConnect = function (srcep, trgtep, ctrl) {
+    // ask the server to connect these two commands
+    var requestConnect = function (srcid, trgtid, stream, ctrl) {
         var options = {
-            from: srcep.getParameter("sysid"),
-            to: trgtep.getParameter("sysid"),
-            stream: srcep.getParameter("stream"),
+            from: srcid,
+            to: trgtid,
+            stream: stream,
         };
         ctrl.send('connect', JSON.stringify(options));
     };
+
+    // "blabla123" -> int(123)
+    function parseTrailingInteger(str) {
+        return +(/\d+$/.exec(str)[0]);
+    }
+
+    // the user just connected two widgets
+    function jsPlumbBeforeDropHandler(info) {
+        if ($('#' + info.targetId).closest('.children').length != 0) {
+            // TODO: log to user
+            console.log("stdin of " + info.targetId + " already bound");
+            return false;
+        }
+        var srcid = parseTrailingInteger(info.sourceId);
+        var trgtid = parseTrailingInteger(info.targetId);
+        var stream = info.connection.endpoints[0].getParameter("stream");
+        requestConnect(srcid, trgtid, stream, ctrl);
+        // if server accepts, it will generate an event that will cause binding
+        // in the UI. don't bind here.
+        return false;
+    }
 
     // complete initialization of a command given its nid. Expects
     // initialization data for this command and all possible child commands to
@@ -311,14 +333,7 @@ define(["jquery",
             // Put all connectors at z-index 3 and endpoints at 4
             ConnectorZIndex: 3,
         });
-        jsPlumb.bind("beforeDrop", function (info) {
-            // Connected to another command
-            requestConnect(
-                info.connection.endpoints[0],
-                info.dropEndpoint,
-                ctrl);
-            return false;
-        });
+        jsPlumb.bind("beforeDrop", jsPlumbBeforeDropHandler);
         $('button#newcmd').click(function () {
             // create an empty command
             processCmd({});
