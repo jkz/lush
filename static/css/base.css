@@ -59,6 +59,9 @@ div.rootcontainer:empty,
 div.rootcontainer.archived {
     display: none;
 }
+div.children {
+    margin-top: 32px;
+}
 /* children are positioned relative within root */
 div.groupwidget {
     position: relative;
