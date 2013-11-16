@@ -195,24 +195,22 @@ define(["jquery",
         cmd.stdinep = jsPlumb.addEndpoint(widget.node, {
             anchor: 'TopCenter',
             isTarget: true,
-            parameters: {
-                sysid: constantly(cmd.nid),
-            },
+            parameters: { sysid: cmd.nid },
         });
         cmd.stdoutep = jsPlumb.addEndpoint(this.node, {
             anchor: 'BottomCenter',
             isSource: true,
             parameters: {
-                stream: constantly("stdout"),
-                sysid: constantly(cmd.nid),
+                stream: "stdout",
+                sysid: cmd.nid,
             },
         });
         cmd.stderrep = jsPlumb.addEndpoint(this.node, {
             anchor: 'RightMiddle',
             isSource: true,
             parameters: {
-                stream: constantly("stderr"),
-                sysid: constantly(cmd.nid),
+                stream: "stderr",
+                sysid: cmd.nid,
             },
         });
         $(cmd).one('release_jsplumb', function () {

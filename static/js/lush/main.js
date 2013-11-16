@@ -239,8 +239,8 @@ define(["jquery",
 
     var requestConnect = function (srcep, trgtep, stream, ctrl) {
         var options = {
-            from: srcep.getParameter("sysid")(),
-            to: trgtep.getParameter("sysid")(),
+            from: srcep.getParameter("sysid"),
+            to: trgtep.getParameter("sysid"),
             stream: stream,
         };
         ctrl.send('connect', JSON.stringify(options));
@@ -316,7 +316,7 @@ define(["jquery",
             requestConnect(
                 info.connection.endpoints[0],
                 info.dropEndpoint,
-                info.connection.getParameter("stream")(),
+                info.connection.getParameter("stream"),
                 ctrl);
             return false;
         });
