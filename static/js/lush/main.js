@@ -190,6 +190,12 @@ define(["jquery",
             if (!$.isPlainObject(options.userdata)) {
                 options.userdata = {};
             }
+            if (!options.hasOwnProperty('stdoutScrollback')) {
+                options.stdoutScrollback = 1000;
+            }
+            if (!options.hasOwnProperty('stderrScrollback')) {
+                options.stderrScrollback = 1000;
+            }
             options.userdata.god = moi;
             if (callback !== undefined) {
                 // subscribe to the "newcmdcallback" event in a unique
