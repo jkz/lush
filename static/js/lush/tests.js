@@ -142,10 +142,6 @@ define(["jquery",
         parser.onglobChoice = function (choices, idx) {
             ctx.gotchoice = choices;
         };
-        var t = function (raw, out, name) {
-            parser.parse(raw);
-            deepEqual(ctx.argv, out, name);
-        };
         parser.parse('*');
         strictEqual(ctx.gotstar, 0, 'indexed wildcard: * (0)');
         parser.parse('foo*bar');
@@ -158,6 +154,62 @@ define(["jquery",
         // Not implemented yet
         //parser.parse('[abc]');
         //deepEqual(ctx.gotchoice, ['a', 'b', 'c'], 'wildcard choice: [abc]');
+    });
+
+    test("parser: pipe syntax", function() {
+        var ctx;
+        var parser = new Parser();
+        parser.oninit = function () {
+            ctx = {
+                newarg: '',
+                tree: {me: [], stdout: undefined, stderr: undefined},
+            };
+            // start by parsing for me
+            ctx.argv = ctx.tree.me;
+        };
+        parser.onliteral = function (c) {
+            ctx.newarg += c;
+        };
+        parser.onboundary = function () {
+            ctx.argv.push(ctx.newarg);
+            ctx.newarg = '';
+        };
+        parser.onpipe1 = function () {
+            ctx.argv = ctx.tree.stdout = [];
+        };
+        parser.onpipe2 = function () {
+            ctx.argv = ctx.tree.stderr = [];
+        };
+
+        parser.parse('trala blabla');
+        deepEqual(ctx.tree,
+                  {me: ["trala", "blabla"], stdout: undefined, stderr: undefined},
+                  "no pipe");
+
+        parser.parse('echo foobar | cat');
+        deepEqual(ctx.tree,
+                  {me: ["echo", "foobar"], stdout: ["cat"], stderr: undefined},
+                  "pipe stdout");
+
+        parser.parse('abc | yeye 2| ohno!');
+        deepEqual(ctx.tree,
+                  {me: ["abc"], stdout: ["yeye"], stderr: ["ohno!"]},
+                  "pipe stdout and stderr");
+
+        parser.parse('lookma|nospaces');
+        deepEqual(ctx.tree,
+                  {me: ["lookma"], stdout: ["nospaces"], stderr: undefined},
+                  "no spaces around stdout pipe");
+
+        parser.parse('endsin2| imstdout');
+        deepEqual(ctx.tree,
+                  {me: ["endsin2"], stdout: ["imstdout"], stderr: undefined},
+                  "command name ends in 2");
+
+        parser.parse('first 2| third | second');
+        deepEqual(ctx.tree,
+                  {me: ["first"], stdout: ["second"], stderr: ["third"]},
+                  "reverse order pipes");
     });
 
     test("groupname: pipe notation", function () {

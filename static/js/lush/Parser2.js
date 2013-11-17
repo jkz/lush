@@ -50,45 +50,36 @@ define(function () {
     };
 
     Parser.prototype.parsec = function (c, i) {
-        // no matter what, if this char is not a space the next word boundary
-        // should trigger an event.
-        if (c != ' ') {
-            this.state.parsingword = true;
+        // in quoting mode, only look for closing quote
+        switch (this.state.quotetype) {
+        case QUOTE_SINGLE:
+            if (c == "'") {
+                this.state.quotetype = QUOTE_NONE;
+            } else {
+                this.onliteral(c);
+            }
+            return;
+        case QUOTE_DOUBLE:
+            if (c == '"') {
+                this.state.quotetype = QUOTE_NONE;
+            } else {
+                this.onliteral(c);
+            }
+            return;
         }
+        // not quoted, these chars have special meaning
         switch (c) {
         case "'":
-            switch (this.state.quotetype) {
-            case QUOTE_NONE:
-                // Start new single quoted block
-                this.state.quotetype = QUOTE_SINGLE;
-                this.state.quotestart = i;
-                break;
-            case QUOTE_SINGLE:
-                // End single quoted block
-                this.state.quotetype = QUOTE_NONE;
-                break;
-            case QUOTE_DOUBLE:
-                // Single quote in double quoted block: normal char
-                this.onliteral(c);
-                break;
-            }
+            // Start new single quoted block
+            this.state.quotetype = QUOTE_SINGLE;
+            this.state.quotestart = i;
+            this.state.parsingword = true;
             break;
         case '"':
-            switch (this.state.quotetype) {
-            case QUOTE_NONE:
-                // Start new double quoted block
-                this.state.quotetype = QUOTE_DOUBLE;
-                this.state.quotestart = i;
-                break;
-            case QUOTE_SINGLE:
-                // Double quotes in single quoted block: normal char
-                this.onliteral(c);
-                break;
-            case QUOTE_DOUBLE:
-                // End double quoted block
-                this.state.quotetype = QUOTE_NONE;
-                break;
-            }
+            // Start new double quoted block
+            this.state.quotetype = QUOTE_DOUBLE;
+            this.state.quotestart = i;
+            this.state.parsingword = true;
             break;
         case '\\':
             if (!this.peek()) {
@@ -96,37 +87,49 @@ define(function () {
             }
             // inside and outside quoting: next char is a literal
             this.onliteral(this.popc());
+            this.state.parsingword = true;
             break;
         case ' ':
-            if (this.state.quotetype) {
-                this.onliteral(c);
-            } else {
-                // Word boundary
-                if (this.state.parsingword) {
-                    this.onboundary();
-                }
-                // treat multiple consecutive spaces as one
-                while (this.peek() == ' ') {
-                    this.popc();
-                }
+            // Word boundary
+            if (this.state.parsingword) {
+                this.onboundary();
+                this.state.parsingword = false;
             }
             break;
         case '*':
-            if (this.state.quotetype) {
-                this.onliteral(c);
-            } else {
-                this.onglobStar(i);
-            }
+            this.onglobStar(i);
+            this.state.parsingword = true;
             break;
         case '?':
-            if (this.state.quotetype) {
-                this.onliteral(c);
+            this.onglobQuestionmark(i);
+            this.state.parsingword = true;
+            break;
+        case '|':
+            if (this.state.parsingword) {
+                this.onboundary();
+                this.state.parsingword = false;
+            }
+            this.onpipe1();
+            break;
+        case '2':
+            // stderr pipe (importantd 2| mail -s ohnoes root)
+            if (this.peek() == '|' &&
+                i > 0 &&
+                /\s/.test(this.state.raw[i-1]))
+            {
+                if (this.state.parsingword) {
+                    this.onboundary();
+                    this.state.parsingword = false;
+                }
+                this.popc();
+                this.onpipe2();
             } else {
-                this.onglobQuestionmark(i);
+                this.onliteral(c);
             }
             break;
         default:
             this.onliteral(c);
+            this.state.parsingword = true;
             break;
         }
     };
@@ -139,9 +142,10 @@ define(function () {
             // Index of opening quote
             quotestart: -1,
             // when true the next boundary will trigger an "onboundary" event.
-            // idea behind this: set to true at every non-space char, on every
-            // space char generate an onboundary event if this is false then
-            // set it to false. also generate the event at end of input.
+            // idea behind this: set to true at every char that is part of a
+            // word (non-space, non-special like pipe), on every space char (or
+            // other special char) generate an onboundary event if this is false
+            // then set it to false. also generate the event at end of input.
             parsingword: false,
         };
         if (this.oninit) {
@@ -152,6 +156,15 @@ define(function () {
         }
         if (!this.onboundary) {
             this.onboundary = function () {};
+        }
+        if (!this.onpipe1) {
+            this.onpipe1 = this.onliteral.bind(this, '|');
+        }
+        if (!this.onpipe1) {
+            this.onpipe1 = function () {
+                this.onliteral('2');
+                this.onliteral('|');
+            };
         }
         // if no callback specified for ? treat it as literal
         if (!this.onglobQuestionmark) {
