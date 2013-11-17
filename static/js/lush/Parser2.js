@@ -158,7 +158,9 @@ define(function () {
             this.onboundary = function () {};
         }
         if (!this.onpipe1) {
-            this.onpipe1 = this.onliteral.bind(this, '|');
+            this.onpipe1 = function () {
+                this.onliteral('|');
+            };
         }
         if (!this.onpipe1) {
             this.onpipe1 = function () {
