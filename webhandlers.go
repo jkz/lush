@@ -233,24 +233,31 @@ func handleGetFiles(ctx *web.Context) error {
 func handleWsCtrl(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	ws := ctx.WebsockConn
-	// subscribe to ctrl events dont care about removing
+	// Subscribe this ws client to all future control events. Will be removed
+	// automatically when the first Write fails (flexiblewriter). Therefore, no
+	// need to worry about removing: client disconnects -> next Write fails ->
+	// removed.
 	s.ctrlclients.AddWriter(ws)
 	for {
 		buf := make([]byte, 5000)
 		n, err := ws.Read(buf)
+		if err != nil {
+			return fmt.Errorf("Websocket read error: %v", err)
+		}
 		if n == cap(buf) {
 			// TODO: Obviously ridiculous, flexible size plz!
 			return fmt.Errorf("Websocket event too big (max: %d bytes)", n)
 		}
-		if n > 0 {
-			msg := buf[:n]
-			err2 := parseAndHandleWsEvent(s, msg)
-			if err2 != nil {
-				return fmt.Errorf("error handling WS event: %v", err2)
-			}
+		if n == 0 {
+			// TODO: tbh Im not sure why I wrote this if... why do I want to
+			// ignore empty messages? shouldn't that be an error? yay for not
+			// commenting weird code -.-
+			return nil
 		}
+		msg := buf[:n]
+		err = parseAndHandleWsEvent(s, msg)
 		if err != nil {
-			return fmt.Errorf("WS event connection dropped: %v", err)
+			return fmt.Errorf("error handling WS event: %v", err)
 		}
 	}
 	return errors.New("unreachable")
