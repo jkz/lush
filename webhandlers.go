@@ -234,7 +234,10 @@ func handleWsCtrl(ctx *web.Context) error {
 	s := ctx.User.(*server)
 	ws := newWsClient(ctx.WebsockConn)
 	// tell the client about its Id
-	fmt.Fprint(ws, "clientid;", ws.Id)
+	_, err := fmt.Fprint(ws, "clientid;", ws.Id)
+	if err != nil {
+		return fmt.Errorf("Websocket write error: %v", err)
+	}
 	// Subscribe this ws client to all future control events. Will be removed
 	// automatically when the first Write fails (FlexibleMultiWriter).
 	// Therefore, no need to worry about removing: client disconnects -> next
