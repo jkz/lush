@@ -111,7 +111,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
     // command (after parsing etc).
     var Cli = function (processCmd) {
         var cli = this;
-        this._rawtxt = "";
+        cli._rawtxt = "";
         cli.processCmd = processCmd;
         cli.parser = new Parser();
         cli.parser.oninit = function () {
@@ -150,27 +150,29 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
 
     // the user updated the prompt: call this method to notify the cli object
     Cli.prototype.setprompt = function (txt) {
-        if (txt == this._rawtxt) {
+        var cli = this;
+        if (txt == cli._rawtxt) {
             // nothing changed; ignore
             return;
         }
-        this._rawtxt = txt;
-        if (this._cmd === undefined) {
-            this._prepareCmd();
-        } else if (this.cmd !== null) {
-            this.parser.parse(txt);
-            this._cmd.update({
+        cli._rawtxt = txt;
+        if (cli._cmd === undefined) {
+            cli._prepareCmd();
+        } else if (cli.cmd !== null) {
+            cli.parser.parse(txt);
+            cli._cmd.update({
                 name: txt,
-                cmd: this.argv[0],
-                args: this.argv.slice(1),
-            }, this.guid);
+                cmd: cli.argv[0],
+                args: cli.argv.slice(1),
+            }, cli.guid);
         }
     };
 
     // try to report an error to the user
     Cli.prototype._error = function (errmsg) {
-        if (this.onerror) {
-            this.onerror(errmsg);
+        var cli = this;
+        if (cli.onerror) {
+            cli.onerror(errmsg);
         } else {
             console.log("Terminal error: " + errmsg);
         }
@@ -178,39 +180,40 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
 
     // commit the current prompt ([enter] button)
     Cli.prototype.commit = function (txt) {
-        if (!this._cmd) {
+        var cli = this;
+        if (!cli._cmd) {
             throw "cmd not ready";
         }
-        var cmd = this._cmd;
-        this._cmd = undefined;
-        this._prepareCmd();
+        var cmd = cli._cmd;
+        cli._cmd = undefined;
+        cli._prepareCmd();
         // need to re-parse because jQuery terminal triggers the "clear command
         // line" event on [enter] before the "handle command" event.
-        this.parser.parse(txt);
-        if (this.argv.length == 0) {
+        cli.parser.parse(txt);
+        if (cli.argv.length == 0) {
             return;
         }
         cmd.update({
             name: txt,
-            cmd: this.argv[0],
-            args: this.argv.slice(1),
+            cmd: cli.argv[0],
+            args: cli.argv.slice(1),
             userdata: {
                 autoarchive: true,
-                starter: this.guid,
+                starter: cli.guid,
             }
-        }, this.guid);
+        }, cli.guid);
         cmd.start();
     }
 
     Cli.prototype._prepareCmd = function () {
-        if (this._cmd === null) {
+        var cli = this;
+        if (cli._cmd === null) {
             throw "command is already being prepared for cli";
-        } else if (this.cmd !== undefined) {
+        } else if (cli.cmd !== undefined) {
             throw "there is already a command associated with this cli";
         }
-        this._cmd = null; // ok I'm working on this!
-        var cli = this;
-        this.processCmd({userdata: {creator: 'prompt'}}, function (cmd) {
+        cli._cmd = null; // ok I'm working on this!
+        cli.processCmd({userdata: {creator: 'prompt'}}, function (cmd) {
             cli._cmd = cmd;
             // when the command is started, the cli will need a new placeholder
             // command.
