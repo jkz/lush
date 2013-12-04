@@ -39,97 +39,114 @@ define(function () {
         }
     };
 
-    // pop a character off the input
+    // pop a character off the input. returns undefined when end of input has
+    // been reached
     Parser.prototype.popc = function () {
-        if (!this.peek()) {
-            throw "parser error: reached end of input";
+        var parser = this;
+        if (parser.state.idx < parser.state.raw.length) {
+            var c = parser.state.raw[parser.state.idx];
+            parser.state.idx++;
+            return c;
         }
-        var c = this.state.raw[this.state.idx];
-        this.state.idx++;
-        return c;
     };
 
-    Parser.prototype.parsec = function (c, i) {
-        // in quoting mode, only look for closing quote
-        switch (this.state.quotetype) {
-        case QUOTE_SINGLE:
-            if (c == "'") {
-                this.state.quotetype = QUOTE_NONE;
-            } else {
-                this.onliteral(c);
+    // in single quote mode, only a ' changes state
+    function parse_char_quote_single(parser, c, i) {
+        if (c == "'") {
+            return parse_char_normal;
+        }
+        parser.onliteral(c);
+    }
+
+    // in double quote mode, only a " changes state
+    function parse_char_quote_double(parser, c, i) {
+        if (c == '"') {
+            return parse_char_normal;
+        }
+        parser.onliteral(c);
+    }
+
+    function parse_char_escaped(parser, c, i) {
+        if (c === undefined) {
+            throw "parser error: backslash at end of input";
+        }
+        parser.onliteral(c);
+        // escaping only lasts one char
+        return parse_char_normal;
+    }
+
+    // encountered a lone 2 literal. could be for a stderr pipe (importantd 2|
+    // mail -s ohnoes root). the 2 literal is expected to not have been part of
+    // another word.
+    function parse_char_2literal(parser, c, i) {
+        if (c == '|') {
+            if (parser.state.parsingword) {
+                parser.onboundary();
+                parser.state.parsingword = false;
             }
-            return;
-        case QUOTE_DOUBLE:
-            if (c == '"') {
-                this.state.quotetype = QUOTE_NONE;
-            } else {
-                this.onliteral(c);
+            parser.onpipe2();
+        } else {
+            // was just a normal 2
+            parser.onliteral('2');
+            parser.onliteral(c);
+        }
+        return parse_char_normal;
+    }
+
+    function parse_char_normal(parser, c, i) {
+        if (c === undefined) {
+            if (parser.state.parsingword) {
+                parser.onboundary();
             }
             return;
         }
-        // not quoted, these chars have special meaning
+        // these chars have special meaning
         switch (c) {
         case "'":
             // Start new single quoted block
-            this.state.quotetype = QUOTE_SINGLE;
-            this.state.quotestart = i;
-            this.state.parsingword = true;
-            break;
+            parser.state.quotestart = i;
+            parser.state.parsingword = true;
+            return parse_char_quote_single;
         case '"':
             // Start new double quoted block
-            this.state.quotetype = QUOTE_DOUBLE;
-            this.state.quotestart = i;
-            this.state.parsingword = true;
-            break;
+            parser.state.quotestart = i;
+            parser.state.parsingword = true;
+            return parse_char_quote_double;
         case '\\':
-            if (!this.peek()) {
-                throw "parser error: backslash at end of input";
-            }
-            // inside and outside quoting: next char is a literal
-            this.onliteral(this.popc());
-            this.state.parsingword = true;
-            break;
+            parser.state.parsingword = true;
+            return parse_char_escaped;
         case ' ':
             // Word boundary
-            if (this.state.parsingword) {
-                this.onboundary();
-                this.state.parsingword = false;
+            if (parser.state.parsingword) {
+                parser.onboundary();
+                parser.state.parsingword = false;
             }
             break;
         case '*':
-            this.onglobStar(i);
-            this.state.parsingword = true;
+            parser.onglobStar(i);
+            parser.state.parsingword = true;
             break;
         case '?':
-            this.onglobQuestionmark(i);
-            this.state.parsingword = true;
+            parser.onglobQuestionmark(i);
+            parser.state.parsingword = true;
             break;
         case '|':
-            if (this.state.parsingword) {
-                this.onboundary();
-                this.state.parsingword = false;
+            if (parser.state.parsingword) {
+                parser.onboundary();
+                parser.state.parsingword = false;
             }
-            this.onpipe1();
+            parser.onpipe1();
             break;
         case '2':
-            // stderr pipe (importantd 2| mail -s ohnoes root)
-            if (this.peek() == '|' &&
-                i > 0 &&
-                /\s/.test(this.state.raw[i-1]))
-            {
-                if (this.state.parsingword) {
-                    this.onboundary();
-                    this.state.parsingword = false;
-                }
-                this.popc();
-                this.onpipe2();
-            } else {
-                this.onliteral(c);
+            if (i > 0 && /\s/.test(parser.state.raw[i-1])) {
+                return parse_char_2literal;
             }
+            parser.onliteral('2');
+            parser.state.parsingword = true;
             break;
         default:
-            this.onliteral(c);
-            this.state.parsingword = true;
+            parser.onliteral(c);
+            parser.state.parsingword = true;
             break;
         }
     };
@@ -162,8 +179,8 @@ define(function () {
                 this.onliteral('|');
             };
         }
-        if (!this.onpipe1) {
-            this.onpipe1 = function () {
+        if (!this.onpipe2) {
+            this.onpipe2 = function () {
                 this.onliteral('2');
                 this.onliteral('|');
             };
@@ -181,14 +198,15 @@ define(function () {
             };
         }
         this.state.raw = raw;
-        while (this.peek()) {
+        var f = parse_char_normal; // ISA state as function
+        var c;
+        // do while so that a last c === undefined still gets handled (notify
+        // state func of EOF)
+        do {
             var i = this.state.idx;
-            var c = this.popc();
-            this.parsec(c, i);
-        }
-        if (this.state.parsingword) {
-            this.onboundary();
-        }
+            c = this.popc();
+            f = f(this, c, i) || f;
+        } while (c !== undefined);
     };
 
     return Parser;
