@@ -80,6 +80,9 @@ func (mw *FlexibleMultiWriter) RemoveWriter(w io.Writer) bool {
 	return false
 }
 
+// Return reference to the underlying slice of io.Writer instances. Not a copy,
+// so *aboslutely not safe for concurrency!* Prevent any access to this
+// FlexibleMultiWriter until you are done using this slice.
 func (mw *FlexibleMultiWriter) Writers() []io.Writer {
 	mw.l.Lock()
 	defer mw.l.Unlock()

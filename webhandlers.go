@@ -29,11 +29,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"code.google.com/p/go.net/websocket"
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
+
+// number of total websocket connections, current and past, for this session
+var numWSConnections int32 = 0
 
 func redirect(ctx *web.Context, loc *url.URL) {
 	if _, ok := ctx.Params["noredirect"]; ok {
@@ -229,14 +234,27 @@ func handleGetFiles(ctx *web.Context) error {
 	return json.NewEncoder(ctx).Encode(paths)
 }
 
+// number of connected ws clients, current and past
+var totalWsClients uint32
+
+type wsClient struct {
+	id uint32
+	*websocket.Conn
+}
+
 // websocket control connection (all are considered equal)
 func handleWsCtrl(ctx *web.Context) error {
 	s := ctx.User.(*server)
-	ws := ctx.WebsockConn
+	// Assign a (session-local) unique ID to this connection
+	id := atomic.AddUint32(&totalWsClients, 1)
+	ws := wsClient{id, ctx.WebsockConn} // thats right, byval
+	// tell the client about that id
+	fmt.Fprint(ws, "clientid;", id)
+	// Give every connected client an ID
 	// Subscribe this ws client to all future control events. Will be removed
-	// automatically when the first Write fails (flexiblewriter). Therefore, no
-	// need to worry about removing: client disconnects -> next Write fails ->
-	// removed.
+	// automatically when the first Write fails (FlexibleMultiWriter).
+	// Therefore, no need to worry about removing: client disconnects -> next
+	// Write fails -> removed.
 	s.ctrlclients.AddWriter(ws)
 	for {
 		buf := make([]byte, 5000)
