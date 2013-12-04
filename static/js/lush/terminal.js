@@ -23,7 +23,13 @@
 
 // TERMINAL HANDLING
 
-define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"], function ($, Parser) {
+define(["jquery",
+        "lush/Parser2",
+        "lush/Pool",
+        "lush/utils",
+        "jquery.terminal",
+        "jquery.ui"],
+       function ($, Parser, Pool) {
     // Print text to this terminal. Ensures the text always ends in newline.
     $.fn.termPrintln = function (text, finalize) {
         // term.echo will always append newline so strip one off if exists
@@ -111,8 +117,8 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
     // command (after parsing etc).
     var Cli = function (processCmd) {
         var cli = this;
+        // Parser init
         cli._rawtxt = "";
-        cli.processCmd = processCmd;
         cli.parser = new Parser();
         cli.parser.oninit = function () {
             // updated after each call to setprompt()
@@ -145,7 +151,22 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             }
             cli.newarg = '';
         };
+        // Locally identify this specific command line
         cli.guid = guid();
+        // Prepared commands pool for quicker turn-around after hitting enter
+        cli._cmdpool = new Pool();
+        cli._processCmd = processCmd;
+        // Pre-fetch five commands for the pool
+        cli._prefetchCmd();
+        cli._prefetchCmd();
+        cli._prefetchCmd();
+        cli._prefetchCmd();
+        cli._prefetchCmd();
+    };
+
+    Cli.prototype._prefetchCmd = function () {
+        var cli = this;
+        cli._processCmd({userdata: {creator: 'prompt'}}, cli._cmdpool.add.bind(cli._cmdpool));
     };
 
     // the user updated the prompt: call this method to notify the cli object
@@ -205,6 +226,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
         cmd.start();
     }
 
+    // connect the prompt to a command (taken from the prefetch pool)
     Cli.prototype._prepareCmd = function () {
         var cli = this;
         if (cli._cmd === null) {
@@ -213,7 +235,7 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             throw "there is already a command associated with this cli";
         }
         cli._cmd = null; // ok I'm working on this!
-        cli.processCmd({userdata: {creator: 'prompt'}}, function (cmd) {
+        cli._cmdpool.consume(function (cmd) {
             cli._cmd = cmd;
             // when the command is started, the cli will need a new placeholder
             // command.
@@ -236,6 +258,8 @@ define(["jquery", "lush/Parser2", "lush/utils", "jquery.terminal", "jquery.ui"],
             });
             $(cli).trigger('prepared', [cmd]);
         });
+        // put a new one in the pool
+        cli._prefetchCmd();
     };
 
     // set up the terminal window
