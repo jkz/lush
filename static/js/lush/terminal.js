@@ -166,7 +166,13 @@ define(["jquery",
 
     Cli.prototype._prefetchCmd = function () {
         var cli = this;
-        cli._processCmd({userdata: {creator: 'prompt'}}, function (cmd) {
+        var options = {
+            userdata: {
+                creator: "prompt",
+                //creatorId: moi,
+            }
+        };
+        cli._processCmd(options, function (cmd) {
             cli._cmdpool.add(cmd);
         });
     };

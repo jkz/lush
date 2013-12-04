@@ -30,11 +30,26 @@ define(["jquery", "lush/utils"], function ($) {
         ctrl.ws = new WebSocket(wsURI('/ctrl'));
         ctrl.streamhandlers = {};
         ctrl.ws.onmessage = function (e) {
-            var x = e.data.splitn(';', 2);
-            var cmd = x[0];
-            var rest = x[1];
-            // transform to jquery event on control stream object
-            $(ctrl).trigger(cmd, rest);
+            // First message MUST be a clientid event
+            if (!/^clientid;\d+/.test(e.data)) {
+                ctrl.ws.close(1002, "First websocket event must be clientid");
+                // TODO: Chrome complains about this 1002 code, but look:
+                //
+                // https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
+                //
+                // and
+                //
+                // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
+                //
+                // clearly lists 1002 as CLOSE_PROTOCOL_ERROR
+                //
+                // so what the dilly? is MDN wrong or Chrome? Either way, I'm
+                // not. And that's what counts.
+                return;
+            }
+            ctrl._handleWsOnMessage(e);
+            // first event handled, no need for further checks
+            ctrl.ws.onmessage = Ctrl.prototype._handleWsOnMessage.bind(ctrl);
         };
         ctrl.ws.onopen = function () {
             $(ctrl).trigger('open')
@@ -43,6 +58,15 @@ define(["jquery", "lush/utils"], function ($) {
             $('body').attr('data-status', 'connection_error');
         };
     }
+
+    Ctrl.prototype._handleWsOnMessage = function(e) {
+        var ctrl = this;
+        var x = e.data.splitn(';', 2);
+        var cmd = x[0];
+        var rest = x[1];
+        // transform to jquery event on control stream object
+        $(ctrl).trigger(cmd, rest);
+    };
 
     Ctrl.prototype.send = function () {
         var ctrl = this;

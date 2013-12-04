@@ -157,7 +157,7 @@ define(["jquery",
     var term;
 
     // sometimes i just dont know who i am anymore...
-    var moi = guid();
+    var moi;
 
     // command detail area
     var confwin;
@@ -311,9 +311,11 @@ define(["jquery",
         $('.selected').removeClass('selected');
         $('#cmd' + nid).addClass('selected');
         confwin.associateCmd(cmds[nid]);
-    };
+    }
 
-    $(document).ready(function () {
+    function main_aux(ctrl_, myid) {
+        ctrl = ctrl_; // set global as late as possible
+        moi = myid;
         confwin = new CmdConfig();
         // associate clicked command widget with confwin
         $('#cmds').on('click', '.cmdwidget', function (e) {
@@ -321,11 +323,6 @@ define(["jquery",
             selectCommand(+nid);
         });
         var historyw = new HistoryWidget();
-        // Control stream (Websocket)
-        ctrl = new Ctrl();
-        ctrl.ws.onerror = function () {
-            console.log('Websocket connection error');
-        };
         // build the command objects without triggering update handlers
         $.each(cmds_init, function (nid) {
             nid = +nid;
@@ -422,6 +419,22 @@ define(["jquery",
         // I hate this class
         $('.ui-widget').removeClass('ui-widget');
         $('body').attr('data-status', 'ok');
+    }
+
+    function main() {
+        // Control stream (Websocket)
+        var ctrl = new Ctrl();
+        ctrl.ws.onerror = function () {
+            console.log('Websocket connection error');
+        };
+        // wait for the server
+        $(ctrl).one('clientid', function (_, myid) {
+            main_aux(ctrl, myid);
+        });
+    }
+
+    $(document).ready(function () {
+        main();
     });
 
 });
