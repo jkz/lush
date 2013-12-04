@@ -33,9 +33,26 @@ import (
 	"io"
 	"log"
 	"strings"
+	"sync/atomic"
 
+	"code.google.com/p/go.net/websocket"
 	"github.com/hraban/lush/liblush"
 )
+
+// websocket client (value-struct). implements io.Writer
+type wsClient struct {
+	Id uint32
+	*websocket.Conn
+}
+
+// number of connected ws clients, current and past
+var totalWsClients uint32
+
+func newWsClient(conn *websocket.Conn) wsClient {
+	// Assign a (session-local) unique ID to this connection
+	id := atomic.AddUint32(&totalWsClients, 1)
+	return wsClient{id, conn}
+}
 
 // subscribe all websocket clients to stream data
 // eg subscribe;3;stdout
