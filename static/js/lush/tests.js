@@ -23,7 +23,8 @@
 define(["jquery",
         "lush/Parser2",
         "lush/Command",
-        "lush/utils"], function ($, Parser, Command) {
+        "lush/Pool",
+        "lush/utils"], function ($, Parser, Command, Pool) {
     test("lcp(): longest common prefix", function () {
         equal(lcp(["abcd", "abab", "abba"]), "ab");
         equal(lcp([]), "", "common prefix of 0 strings");
@@ -348,5 +349,17 @@ define(["jquery",
         equal(stderr, "then err", 'updated.stderr event for full stderr data');
         equal(stdout, cmd.stdout, "updated.stdout event data and cmd.stdout member in sync");
         equal(stderr, cmd.stderr, "updated.stderr event data and cmd.stderr member in sync");
+    });
+
+    test("pool", function () {
+        var testar = [];
+        var consumer = function (x) { testar.push(x); };
+        var pool = new Pool();
+        pool.add(1);
+        pool.consume(consumer);
+        deepEqual(testar, [1], "consume from non-empty pool");
+        pool.consume(consumer);
+        pool.add(2);
+        deepEqual(testar, [1,2], "consume from empty pool, then add element");
     });
 });
