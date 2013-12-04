@@ -236,9 +236,12 @@ func handleWsCtrl(ctx *web.Context) error {
 	// subscribe to ctrl events dont care about removing
 	s.ctrlclients.AddWriter(ws)
 	for {
-		// if a message from client is longer than 1999 bytes this bums
-		buf := make([]byte, 2000)
+		buf := make([]byte, 5000)
 		n, err := ws.Read(buf)
+		if n == cap(buf) {
+			// TODO: Obviously ridiculous, flexible size plz!
+			return fmt.Errorf("Websocket event too big (max: %d bytes)", n)
+		}
 		if n > 0 {
 			msg := buf[:n]
 			err2 := parseAndHandleWsEvent(s, msg)
