@@ -440,6 +440,19 @@ func wseventSetprop(s *server, reqstr string) error {
 	return wseventGetprop(s, reqstr)
 }
 
+// json array containing list of all connected client ids (and maybe some stale
+// ones)
+func wseventAllclients(s *server, reqstr string) error {
+	clients := s.ctrlclients.Writers()
+	// yup. who needs map(), right?
+	ids := make([]uint32, len(clients))
+	// yeah. MUCH more readable. especially if you are new to Go.
+	for i, client := range clients {
+		ids[i] = client.(wsClient).Id
+	}
+	return writePrefixedJson(&s.ctrlclients, "allclients;", ids)
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
@@ -455,6 +468,7 @@ var wsHandlers = map[string]wsHandler{
 	"release":     wseventRelease,
 	"getprop":     wseventGetprop,
 	"setprop":     wseventSetprop,
+	"allclients":  wseventAllclients,
 	// obsolete
 	//"updatecmd":   wseventUpdatecmd,
 }

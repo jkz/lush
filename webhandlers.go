@@ -235,12 +235,14 @@ func handleWsCtrl(ctx *web.Context) error {
 	ws := newWsClient(ctx.WebsockConn)
 	// tell the client about its Id
 	fmt.Fprint(ws, "clientid;", ws.Id)
-	// Give every connected client an ID
 	// Subscribe this ws client to all future control events. Will be removed
 	// automatically when the first Write fails (FlexibleMultiWriter).
 	// Therefore, no need to worry about removing: client disconnects -> next
 	// Write fails -> removed.
 	s.ctrlclients.AddWriter(ws)
+	// notify all other clients that a new client has connected
+	wseventAllclients(s, "") // pretend somebody generated this event
+	// TODO: keep clients updated about disconnects, too
 	for {
 		buf := make([]byte, 5000)
 		n, err := ws.Read(buf)
