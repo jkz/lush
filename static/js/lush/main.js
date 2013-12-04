@@ -150,18 +150,6 @@ define(["jquery",
                  terminal,
                  path) {
 
-    // websocket connection for control events
-    var ctrl;
-
-    // jQuery terminal plugin object
-    var term;
-
-    // sometimes i just dont know who i am anymore...
-    var moi;
-
-    // command detail area
-    var confwin;
-
     var chdir = function (dir) {
         // this here is some tricky code dupe
         $.post("/chdir", {dir: dir})
@@ -196,7 +184,7 @@ define(["jquery",
             if (!options.hasOwnProperty('stderrScrollback')) {
                 options.stderrScrollback = 1000;
             }
-            options.userdata.god = moi;
+            options.userdata.god = globals.moi;
             if (callback !== undefined) {
                 // subscribe to the "newcmdcallback" event in a unique
                 // namespace. every new command will trigger the
@@ -229,12 +217,12 @@ define(["jquery",
                     // wish I could assert($(window).handlers(cbid).length == 0)
                 }, 10000);
             }
-            ctrl.send("new", JSON.stringify(options));
+            globals.ctrl.send("new", JSON.stringify(options));
         }
     };
 
     // Handle what comes after the # on page load
-    var processHash = function (h) {
+    var processHash = function (h, term) {
         var i = h.indexOf(';');
         var rest = h.slice(i + 1);
         switch (h.slice(0, i)) {
@@ -268,7 +256,7 @@ define(["jquery",
         var srcid = parseTrailingInteger(info.sourceId);
         var trgtid = parseTrailingInteger(info.targetId);
         var stream = info.connection.endpoints[0].getParameter("stream");
-        requestConnect(srcid, trgtid, stream, ctrl);
+        requestConnect(srcid, trgtid, stream, globals.ctrl);
         // if server accepts, it will generate an event that will cause binding
         // in the UI. don't bind here.
         return false;
@@ -277,7 +265,7 @@ define(["jquery",
     // complete initialization of a command given its nid. Expects
     // initialization data for this command and all possible child commands to
     // be in cmds_init. will also init all child commands.
-    function initCommand(nid, ctrl, historyw) {
+    function initCommand(nid, historyw) {
         if (typeof nid !== "number") {
             throw "nid must be a number";
         }
@@ -290,15 +278,15 @@ define(["jquery",
         }
         // init children first
         if (init.stdoutto && !(init.stdoutto in cmds)) {
-            initCommand(init.stdoutto, ctrl, historyw);
+            initCommand(init.stdoutto, historyw);
         }
         if (init.stderrto && !(init.stderrto in cmds)) {
-            initCommand(init.stderrto, ctrl, historyw);
+            initCommand(init.stderrto, historyw);
         }
         delete cmds_init[nid];
-        var cmd = new Command(ctrl, init, moi);
+        var cmd = new Command(globals.ctrl, init, globals.moi);
         cmds[nid] = cmd;
-        var widget = new Widget(cmd, ctrl);
+        var widget = new Widget(cmd, globals.ctrl);
         historyw.addCommand(cmd);
         // some UI parts are not initialized, just hooked into updated handlers.
         // TODO: NOT MY PROBLEM -- or so I wish :( that should change
@@ -307,28 +295,31 @@ define(["jquery",
         return cmd;
     };
 
-    function selectCommand(nid) {
+    function selectCommand(nid, confwin) {
         $('.selected').removeClass('selected');
         $('#cmd' + nid).addClass('selected');
         confwin.associateCmd(cmds[nid]);
     }
 
-    function main_aux(ctrl_, myid) {
-        ctrl = ctrl_; // set global as late as possible
-        moi = myid;
-        confwin = new CmdConfig();
+    // server is ready: init client. only this function may assign to globals.
+    function main_aux(ctrl, moi) {
+        globals.ctrl = ctrl;
+        globals.moi = moi;
+        var confwin = new CmdConfig();
         // associate clicked command widget with confwin
         $('#cmds').on('click', '.cmdwidget', function (e) {
             var nid = /\d+$/.exec(this.id)[0];
-            selectCommand(+nid);
+            selectCommand(+nid, confwin);
         });
+        // jQuery terminal plugin object
+        var term = terminal(processCmd);
         var historyw = new HistoryWidget();
         // build the command objects without triggering update handlers
         $.each(cmds_init, function (nid) {
             nid = +nid;
             // parents automatically init children, don't reinit
             if (nid in cmds_init) {
-                initCommand(nid, ctrl, historyw);
+                initCommand(nid, historyw);
             }
         });
         jsPlumb.importDefaults({
@@ -348,7 +339,7 @@ define(["jquery",
             var historyw = e.data.historyw;
             var init = JSON.parse(cmdjson);
             cmds_init[init.nid] = init;
-            var cmd = initCommand(init.nid, ctrl, historyw);
+            var cmd = initCommand(init.nid, historyw);
             if (cmd.imadethis()) {
                 // i made this!
                 // capture all stdout and stderr to terminal
@@ -386,9 +377,8 @@ define(["jquery",
             delete cmds[nid];
         });
         path($('form#path'), ctrl);
-        term = terminal(processCmd);
         if (window.location.hash) {
-            processHash(window.location.hash.slice(1));
+            processHash(window.location.hash.slice(1), term);
         }
         // proxy the stream event to the command object
         // comes in as: stream;1;stdout;foo bar
