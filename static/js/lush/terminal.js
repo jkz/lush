@@ -166,7 +166,9 @@ define(["jquery",
 
     Cli.prototype._prefetchCmd = function () {
         var cli = this;
-        cli._processCmd({userdata: {creator: 'prompt'}}, cli._cmdpool.add.bind(cli._cmdpool));
+        cli._processCmd({userdata: {creator: 'prompt'}}, function (cmd) {
+            cli._cmdpool.add(cmd);
+        });
     };
 
     // the user updated the prompt: call this method to notify the cli object
