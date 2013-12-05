@@ -170,6 +170,8 @@ define(["jquery",
             userdata: {
                 // set to false once command is taken out of pool
                 unused: true,
+                // set to false once command starts being used
+                archived: true,
                 creator: "prompt",
             }
         };
@@ -194,7 +196,13 @@ define(["jquery",
                 // the prompt. don't worry about race conditions: as long as
                 // this session is in the server's allclients set this command
                 // won't be pruned.
-                cli._cmd.update({userdata: {unused: false}});
+                var updata = {
+                    userdata: {
+                        unused: false,
+                        archived: false,
+                    }
+                };
+                cli._cmd.update(updata);
             }
             cli.parser.parse(txt);
             cli._cmd.update({
