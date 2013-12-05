@@ -376,6 +376,44 @@ define(["jquery",
             cmd.processRelease();
             delete cmds[nid];
         });
+        // Every new client prunes the list of pooled commands, removing
+        // commands that were greedily prepared by clients that have
+        // disconnected without cleaning up their mess (you naughty clients
+        // you). Prune only once to prevent concurrent pruning when multiple
+        // clients connect.
+        //
+        // Still race sensitive if another client connects while this one is not
+        // done pruning. TODO I guess. :(
+        $(ctrl).one("allclients", function (_, payload) {
+            var clients_ar = JSON.parse(payload);
+            // require set access
+            var clients = {};
+            clients_ar.forEach(function (nid) { clients[nid] = 58008; });
+            $.each(cmds, function (nid, cmd) {
+                // someone left an unused prepared command lying around
+                if (cmd.userdata.creator == "prompt" &&
+                    cmd.userdata.unused &&
+                    !(cmd.userdata.god in clients))
+                {
+                    // damnit JS I had to jump through five mental hoops to find
+                    // out the name of this method I know intellisense is not
+                    // your responsibility but your untyped drama is not making
+                    // it any easier for people to make one! TYPED JAVASCRIPT
+                    // PLS
+                    cmd.release();
+                    // (typescript != javasript + types; typescript ==
+                    // lang_with_javascript_semantics + types, i.e. diff
+                    // tooling, lower adoption, docs, unfamiliar to many, etc)
+                    // (wow I finally understand the semi-colon as a statement
+                    // delimiter.. this... this is beautiful.)
+                };
+            });
+        })
+        // also, excuse me, but was that sexy or was that sexy? I think that was
+        // sexy. maybe not ThatGirlFromRioIMetInBelem-sexy, but still quite
+        // sexy.
+        // ...
+        // Oh man.. she was so hot..
         path($('form#path'), ctrl);
         if (window.location.hash) {
             processHash(window.location.hash.slice(1), term);

@@ -168,8 +168,9 @@ define(["jquery",
         var cli = this;
         var options = {
             userdata: {
+                // set to false once command is taken out of pool
+                unused: true,
                 creator: "prompt",
-                //creatorId: moi,
             }
         };
         cli._processCmd(options, function (cmd) {
@@ -187,7 +188,14 @@ define(["jquery",
         cli._rawtxt = txt;
         if (cli._cmd === undefined) {
             cli._prepareCmd();
-        } else if (cli.cmd !== null) {
+        } else if (cli._cmd !== null) {
+            if (cli._cmd.userdata.unused) {
+                // only mark as used once the user actually types something in
+                // the prompt. don't worry about race conditions: as long as
+                // this session is in the server's allclients set this command
+                // won't be pruned.
+                cli._cmd.update({userdata: {unused: false}});
+            }
             cli.parser.parse(txt);
             cli._cmd.update({
                 name: txt,
@@ -239,7 +247,7 @@ define(["jquery",
         var cli = this;
         if (cli._cmd === null) {
             throw "command is already being prepared for cli";
-        } else if (cli.cmd !== undefined) {
+        } else if (cli._cmd !== undefined) {
             throw "there is already a command associated with this cli";
         }
         cli._cmd = null; // ok I'm working on this!
