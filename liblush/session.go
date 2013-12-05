@@ -77,7 +77,7 @@ func (s *session) GetCommandIds() []CmdId {
 func (s *session) ReleaseCommand(id CmdId) error {
 	c := s.cmds[id]
 	if c == nil {
-		return fmt.Errorf("no such command: %s", id)
+		return fmt.Errorf("no such command: %d", id)
 	}
 	err := c.release()
 	if err != nil {
