@@ -495,7 +495,7 @@ func wseventDelprop(s *server, reqstr string) error {
 	// maintainable Go for this project. it bores me to tears and I have better
 	// things to do than fight with the code dupe hungry beast that is the Go
 	// spec. give me macros or suffer ctrl c v.
-	return writePrefixedJson(s.ctrlclients, "deletedprop;", r)
+	return writePrefixedJson(&s.ctrlclients, "deletedprop;", r)
 	// Ill accept generics as a peace offering.
 }
 
