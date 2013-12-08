@@ -368,6 +368,13 @@ type getPropResponse struct {
 	Userdata string `json:"userdata,omitempty"`
 }
 
+// equal semantics:
+
+type setPropRequest getPropResponse
+type setPropResponse getPropResponse
+type delPropRequest getPropRequest
+type delPropResponse getPropRequest
+
 func wseventGetprop(s *server, reqstr string) error {
 	var r getPropResponse
 	var err error
@@ -415,7 +422,6 @@ func wseventGetprop(s *server, reqstr string) error {
 }
 
 func wseventSetprop(s *server, reqstr string) error {
-	type setPropRequest getPropResponse
 	var r setPropRequest
 	var err error
 	err = json.Unmarshal([]byte(reqstr), &r)
@@ -438,6 +444,59 @@ func wseventSetprop(s *server, reqstr string) error {
 		return errors.New("setprop: unknown object name: " + r.Objname)
 	}
 	return wseventGetprop(s, reqstr)
+}
+
+func wseventDelprop(s *server, reqstr string) error {
+	var r delPropRequest
+	var err error
+	err = json.Unmarshal([]byte(reqstr), &r)
+	if err != nil {
+		return fmt.Errorf("delprop: decoding request failed: %v", err)
+	}
+	switch {
+	case strings.HasPrefix(r.Objname, "cmd"):
+		idstr := r.Objname[3:]
+		id, _ := liblush.ParseCmdId(idstr)
+		c := s.session.GetCommand(id)
+		if c == nil {
+			return errors.New("no such command: " + idstr)
+		}
+		switch r.Propname {
+		case "stdoutto":
+			fwd := pipedcmd(c.Stdout())
+			if fwd == nil {
+				return errors.New(idstr + " already without stdoutto")
+			}
+			ok := c.Stdout().RemoveWriter(fwd.Stdin())
+			if !ok {
+				// TODO: yeah so ehh well this is just not supposed to happen
+				panic("Couldn't remove forwarded stdout writer")
+			}
+			break
+		case "stderrto":
+			fwd := pipedcmd(c.Stderr())
+			if fwd == nil {
+				return errors.New(idstr + " already without stderrto")
+			}
+			ok := c.Stderr().RemoveWriter(fwd.Stdin())
+			if !ok {
+				// TODO: yeah so ehh well this is just not supposed to happen
+				panic("Couldn't remove forwarded stderr writer")
+			}
+			break
+		default:
+			return errors.New("delprop: unknown property: " + r.Propname)
+		}
+		break
+	default:
+		return errors.New("delprop: unknown object name: " + r.Objname)
+	}
+	// in case it wasn't clear by now; I have completely given up on
+	// maintainable Go for this project. it bores me to tears and I have better
+	// things to do than fight with the code dupe hungry beast that is the Go
+	// spec. give me macros or suffer ctrl c v.
+	return writePrefixedJson(s.ctrlclients, "deletedprop;", r)
+	// Ill accept generics as a peace offering.
 }
 
 // json array containing list of all connected client ids (and maybe some stale
@@ -468,6 +527,7 @@ var wsHandlers = map[string]wsHandler{
 	"release":     wseventRelease,
 	"getprop":     wseventGetprop,
 	"setprop":     wseventSetprop,
+	"delprop":     wseventDelprop,
 	"allclients":  wseventAllclients,
 	// obsolete
 	//"updatecmd":   wseventUpdatecmd,
