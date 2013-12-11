@@ -117,45 +117,13 @@ define(["jquery",
     // command (after parsing etc).
     var Cli = function (processCmd) {
         var cli = this;
-        // Parser init
-        cli._rawtxt = "";
-        cli.parser = new Parser();
-        cli.parser.oninit = function () {
-            // updated after each call to setprompt()
-            cli.argv = [];
-            // building the next argument
-            cli.newarg = '';
-            // true when newarg contains a globbing char
-            cli.hasglob = false;
-        };
-        cli.parser.onliteral = function (c) {
-            // internal representation is escaped
-            cli.newarg += pescape(c);
-        };
-        cli.parser.onglobQuestionmark = function () {
-            cli.hasglob = true;
-            cli.newarg += '?';
-        };
-        cli.parser.onglobStar = function () {
-            cli.hasglob = true;
-            cli.newarg += '*';
-        };
-        cli.parser.onboundary = function () {
-            if (cli.hasglob) {
-                var matches = glob(cli.newarg);
-                // TODO: error if matches is empty
-                cli.argv.push.apply(cli.argv, matches);
-            } else {
-                // undo internal escape representation
-                cli.argv.push(punescape(cli.newarg));
-            }
-            cli.newarg = '';
-        };
         // Locally identify this specific command line
         cli.guid = guid();
+        // cmds in live sync mode
+        cli._sync = { };
+        cli._processCmd = processCmd;
         // Prepared commands pool for quicker turn-around after hitting enter
         cli._cmdpool = new Pool();
-        cli._processCmd = processCmd;
         // Pre-fetch five commands for the pool
         cli._prefetchCmd();
         cli._prefetchCmd();
@@ -163,6 +131,72 @@ define(["jquery",
         cli._prefetchCmd();
         cli._prefetchCmd();
     };
+
+    Cli.prototype._initParser = function () {
+        var cli = this;
+        cli._parserctx = {};
+        var ctx = cli._parserctx; // shorthand
+        ctx.parser = new Parser();
+        var newAst = function () {
+            return {
+                // updated after each call to setprompt()
+                argv: [],
+                // building the next argument
+                _newarg: '',
+                // true when _newarg contains a globbing char
+                _hasglob: false,
+            };
+        };
+        ctx.parser.oninit = function () {
+            ctx.ast = newAst();
+        };
+        ctx.parser.onliteral = function (c) {
+            // internal representation is escaped
+            ctx.ast._newarg += pescape(c);
+        };
+        ctx.parser.onglobQuestionmark = function () {
+            ctx.ast._hasglob = true;
+            ctx.ast._newarg += '?';
+        };
+        ctx.parser.onglobStar = function () {
+            ctx.ast._hasglob = true;
+            ctx.ast._newarg += '*';
+        };
+        ctx.parser.onboundary = function () {
+            if (ctx.ast._hasglob) {
+                var matches = glob(ctx.ast._newarg);
+                // TODO: error if matches is empty
+                ctx.ast.argv.push.apply(ctx.ast.argv, matches);
+            } else {
+                // undo internal escape representation
+                ctx.ast.argv.push(punescape(ctx.ast._newarg));
+            }
+            ctx.ast._newarg = '';
+        };
+        ctx.parser.onpipe1 = function () {
+            var outast = newAst();
+            var curast = ctx.ast;
+            ctx.parser.onpipe1 = function () {
+                // haha
+                throw "chaining multiple commands not supported yet!";
+            };
+            var old2handler 
+            ctx.parser.onpipe2 = function () {
+                asdf
+            ctx.ast.stdout = outcmd;
+            ctx.ast = outcmd;
+        }
+    }
+
+    function assertLegalType(type) {
+        switch (type) {
+        case "stderr":
+        case "stdout":
+        case "main":
+            return;
+        }
+        throw "invalid command type: " + type;
+    }
 
     Cli.prototype._prefetchCmd = function () {
         var cli = this;
@@ -180,6 +214,157 @@ define(["jquery",
         });
     };
 
+    function isTree(t) {
+        return t === undefined || $.isFunction(t.left) && $.isFunction(t.right);
+    }
+
+    function allTrue(ar) {
+        var and = function (x, y) { return x && y; };
+        return ar.reduce(and, true);
+    }
+
+    function attrgetter(name) {
+        return function (x) { return x[name]; };
+    }
+
+    function mapTree(f, tree) {
+        if (!$.isFunction(f)) {
+            throw "first argument to mapTree must be a function";
+        }
+        if (!isTree(tree)) {
+            throw "non-tree second argument passed to mapTree";
+        }
+        if (tree === undefined) {
+            return;
+        }
+        f(tree);
+        mapTree(f, tree.left());
+        mapTree(f, tree.right());
+    }
+
+    function Node(cmd, ast, _dad, _stream) {
+        if (cmd !== undefined && !(cmd instanceof Command) {
+            throw "cmd param must be a Command object";
+        }
+        if (_dad !== undefined && !(_dad instanceof Node) {
+            throw "_dad param must be a Node object";
+        }
+        if (cmd === undefined && ast === undefined) {
+            return undefined;
+        }
+        this.ast = ast;
+        this.cmd = cmd;
+        this.dad = _dad;
+        this.stream = _stream;
+    }
+
+    Node.prototype.left = function () {
+        return new Node(cmd.stdoutto, ast, cmd, 'stdout');
+    };
+
+    Node.prototype.right = function () {
+        return new Node(cmd.stderrto, ast, cmd, 'stderr'); },
+    };
+
+    function parseast2tree(ast) {
+        return {
+            ast: ast,
+            left: ast.stdout,
+            right: ast.stderr,
+        };
+    }
+
+    function compareNodes(astnode, cmdnode) {
+        if (astnode === undefined && cmdnode === undefined) {
+            throw "at least one node must be defined";
+        } else if (astnode === undefined) {
+            // used to be prepared, is not anymore
+            cmd.release();
+        } else if (cmdnode === undefined) {
+
+    // propagate changes in the prompt to the given cmd tree.
+    // continuation passed as third arg will be called with a new cmd object for
+    // this ast, or undefined if N/A.
+    //
+    // this method is so messed up..
+    Cli.prototype._syncPrompt = function (ast, cmd, passCmdWhenDone) {
+        var cli = this;
+        if (!$.isFunction(passCmdWhenDone)) {
+            throw "_syncPrompt requires continuation as third param";
+        }
+        if (cmd === undefined && ast === undefined) {
+            // perfect! don't touch anything.
+            passCmdWhenDone(undefined);
+            return;
+        } else if (cmd === undefined) {
+            // no command object associated with this level yet. request a new
+            // one and retry
+            cli.pool.consume(function (cmd) {
+                cli._syncPrompt(ast, cmd, passCmdWhenDone);
+            });
+            return;
+        } else if (ast === undefined) {
+            // there used to be some tree structure in the command that was
+            // typed, so command(s) (this one, and transitively its children)
+            // were allocated to reflect that. the user changed his mind and
+            // removed that part of the tree. many things can be done with the
+            // pre-allocated but now-unnecessary command objects, but by far the
+            // easiest is to just ditch them all. this is easy to understand for
+            // the user, easy to program and wasteful of resources (there is
+            // probably a choose-2 joke there).
+            function Node(cmd) {
+                this.cmd = cmd;
+            }
+            Node.prototype.left = function () {
+                var cmd = this.cmd.stdoutCmd();
+                if (cmd !=== undefined) {
+                    return new Node(cmd);
+                }
+            };
+            Node.prototype.right = function () {
+                var cmd = this.cmd.stderrCmd();
+                if (cmd !=== undefined) {
+                    return new Node(cmd);
+                }
+            };
+            mapTree(function (n) { n.cmd.release(); }, new Node(cmd));
+            // inform caller that his child died.
+            passCmdWhenDone(undefined, "so sorry for your loss.");
+            // pray to the GC gods
+            return;
+        } else {
+            // update an existing synced command object
+            if (!$.isArray(ast.argv) || !ast.hasOwnProperty("txt")) {
+                throw "Illegal ast node, expected argv and txt keys";
+            }
+            cmd.update({
+                cmd: ast.argv[0],
+                args: ast.argv.slice(1),
+                name: ast.txt,
+            }, cli.guid)
+            // continue to the children
+            cmd._syncPrompt(ast.stdout, cmd.stdoutCmd(), function (outChild) {
+                // outChild is a new child for stdoutto
+                if (outChild === undefined) {
+                    cmd.update({stoudtto: 0});
+                } else {
+                    cmd.update({stdoutto: outChild.nid});
+                }
+            });
+            cmd._syncPrompt(ast.stderr, cmd.stderrCmd(), function (errChild) {
+                // errChild is a new child for stderrto
+                if (errChild === undefined) {
+                    cmd.update({stoudtto: 0});
+                } else {
+                    cmd.update({stderrto: errChild.nid});
+                }
+            });
+            passCmdWhenDone(cmd);
+            return;
+        }
+        throw "hraban done messed up";
+    };
+
     // the user updated the prompt: call this method to notify the cli object
     Cli.prototype.setprompt = function (txt) {
         var cli = this;
@@ -189,7 +374,7 @@ define(["jquery",
         }
         cli._rawtxt = txt;
         if (cli._cmd === undefined) {
-            cli._prepareCmd();
+            cli._prepareCmdForSync();
         } else if (cli._cmd !== null) {
             if (cli._cmd.userdata.unused) {
                 // only mark as used once the user actually types something in
@@ -231,7 +416,7 @@ define(["jquery",
         }
         var cmd = cli._cmd;
         cli._cmd = undefined;
-        cli._prepareCmd();
+        cli._prepareCmdForSync();
         // need to re-parse because jQuery terminal triggers the "clear command
         // line" event on [enter] before the "handle command" event.
         cli.parser.parse(txt);
@@ -250,37 +435,57 @@ define(["jquery",
         cmd.start();
     }
 
-    // connect the prompt to a command (taken from the prefetch pool)
-    Cli.prototype._prepareCmd = function () {
+    // connect this part of the prompt tree with a command.
+    //
+    // the point here is to take a fresh command (from the pool, but that is
+    // irrelevant for this logic) and "connect" it to a certain part of the
+    // command tree being typed in at the prompt.
+    //
+    // e.g.: cat /etc/hosts | grep -F 127.0.0.1
+    //
+    // this represents a tree with one root (cat) and one leaf node (grep,
+    // tagged stdout):
+    //
+    // PATH     CMD
+    // /        cat
+    // /stdout  grep
+    //
+    // _prepareCmdForSync is called twice:
+    //
+    // cli._prepareCmdForSync('/')
+    // cli._prepareCmdForSync('/stdout')
+    //
+    Cli.prototype._prepareCmdForSync = function (path) {
         var cli = this;
-        if (cli._cmd === null) {
-            throw "command is already being prepared for cli";
-        } else if (cli._cmd !== undefined) {
-            throw "there is already a command associated with this cli";
+        assertLegalPath(path);
+        var cmd = cli._sync[path];
+        if (cmd === null) {
+            throw 'command "' + path + '" is already being prepared for cli';
+        } else if (cmd !== undefined) {
+            throw 'there is already a command associated with "' + path + '"';
         }
-        cli._cmd = null; // ok I'm working on this!
+        cli._sync[path] = null; // ok I'm working on this!
         cli._cmdpool.consume(function (cmd) {
-            cli._cmd = cmd;
-            // when the command is started, the cli will need a new placeholder
-            // command.
+            cli._sync[path] = cmd;
+            // when /any/
             $(cmd).on('updated.status.terminal', function (e) {
                 var cmd = this;
-                // if currently bound command is started externally
-                if (cmd.status.code > 0 &&
-                    cmd.userdata.starter != cli.guid &&
-                    cli._cmd == cmd)
-                {
-                    // unbind me from the cli
-                    cli._cmd = undefined;
-                    // prepare a new one
-                    cli._prepareCmd();
-                }
-                // once started, every terminal event handler is useless
+                // if currently bound command is started
                 if (cmd.status.code > 0) {
-                    $(cmd).unbind('.terminal');
+                    // once started, every terminal event handler is useless
+                    $(cmd).off('.terminal');
+                    // if it was started externally
+                    if (cmd.userdata.starter != cli.guid &&
+                        cli._sync[path] == cmd)
+                    {
+                        // unbind me from the cli
+                        cli._cmd = undefined;
+                        // prepare a new one
+                        cli._prepareCmdForSync();
+                    }
                 }
             });
-            $(cli).trigger('prepared', [cmd]);
+            $(cli).trigger('prepared', [cmd, path]);
         });
         // put a new one in the pool
         cli._prefetchCmd();

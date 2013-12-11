@@ -321,6 +321,9 @@ define(["jquery",
         // about
         equal(JSON.stringify(cmd), JSON.stringify(updatedWithSimpleSemantics),
                 "No extra fluff is introduced by command updating");
+
+        cmd.update(updata, "batman");
+        equal(updatedNameEventCount, 1, "ignore update() with NOP semantics");
     });
 
     test("stream events", function () {

@@ -205,6 +205,26 @@ define(["jquery"], function ($) {
         }
     };
 
+    function isNonNegativeInt(n) {
+        return (typeof val === "number") && val >= 0 && val % 1 === 0;
+    }
+
+    function isString(x) {
+        return typeof x === "string";
+    }
+
+    function arraysEqual(ar1, ar2) {
+        if (ar1.length !== ar2.length) {
+            return false;
+        }
+        for (var i = 0; i < ar1.length; i++) {
+            if (ar1[i] != ar2[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // request an update. the first argument is an object containing the
     // properties that should be updated and their new values. because the
     // command object is not opaque (its signature is defined) the properties
@@ -221,32 +241,70 @@ define(["jquery"], function ($) {
     Command.prototype.update = function (updata, by) {
         var cmd = this;
         $.each(updata, function (key, val) {
-            // allowed update keys
-            switch (key) {
-            case "userdata":
-            case "name":
-            case "cmd":
-            case "args":
-            case "stdoutScrollback":
-            case "stderrScrollback":
-                break;
-            default:
-                throw "updating illegal prop: " + key;
-            }
             var req = {
                 name: cmd.htmlid,
                 prop: key,
                 userdata: by,
+                value: val,
             };
-            // (client-side) special case for updating userdata: extend
-            if (key == "userdata") {
+            // allowed update keys
+            switch (key) {
+            case "args":
+                if (!$.isArray(val)) {
+                    throw "args must be an array, is: " + val;
+                }
+                if (!allTrue(val.forEach(isString))) {
+                    throw "every member of args must be a string";
+                }
+                if (arraysEqual(cmd.args, val)) {
+                    return;
+                }
+                break;
+            case "userdata":
+                if (!$.isPlainObject(val)) {
+                    throw "userdata must be a plain object, is: " + val;
+                }
+                // (client-side) special case for updating userdata: extend
                 req.value = $.extend({}, cmd.userdata, updata.userdata);
-            } else {
-                req.value = val;
+                // TODO: more sanitation for fail-fast (not security obviously)
+                break;
+            case "stdoutScrollback":
+            case "stderrScrollback":
+            case "stdoutto":
+            case "stderrto":
+                if (!isNonNegativeInt(val)) {
+                    throw "illegal value for " + key + ": " + val;
+                }
+                if (val == cmd[key]) {
+                    return;
+                }
+                break;
+            case "name":
+            case "cmd":
+                if (!isString(val)) {
+                    throw "illegal value for " + key + ": " + val;
+                }
+                if (val == cmd[key]) {
+                    return;
+                }
+                break;
+            default:
+                throw "updating illegal prop: " + key;
             }
             cmd.ctrl.send('setprop', JSON.stringify(req));
         });
     };
+
+    Command.prototype.delprop = function (propname, by) {
+        var cmd = this;
+        var req = {
+            name: cmd.htmlid,
+            prop: propname,
+            userdata: by,
+        };
+        cmd.ctrl.send('delprop', JSON.stringify(req));
+        return;
+    }
 
     Command.prototype.getArgv = function () {
         var argv = [this.cmd];
@@ -311,6 +369,20 @@ define(["jquery"], function ($) {
 
     Command.prototype.isRoot = function () {
         return this.gid == this.nid;
+    };
+
+    Command.prototype.stdoutCmd = function () {
+        var cmd = this;
+        if (cmd.stdoutto !== undefined) {
+            return cmds[cmd.stdoutto];
+        }
+    };
+
+    Command.prototype.stderrCmd = function () {
+        var cmd = this;
+        if (cmd.stderrto !== undefined) {
+            return cmds[cmd.stderrto];
+        }
     };
 
     return Command;
