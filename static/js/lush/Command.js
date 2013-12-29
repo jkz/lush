@@ -205,8 +205,12 @@ define(["jquery"], function ($) {
         }
     };
 
+    function isInt(n) {
+        return (typeof n === "number") && n % 1 === 0;
+    }
+
     function isNonNegativeInt(n) {
-        return (typeof val === "number") && val >= 0 && val % 1 === 0;
+        return isInt(n) && n >= 0;
     }
 
     function isString(x) {
@@ -219,6 +223,15 @@ define(["jquery"], function ($) {
         }
         for (var i = 0; i < ar1.length; i++) {
             if (ar1[i] != ar2[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function allTrue(ar) {
+        for (el in ar) {
+            if (!el) {
                 return false;
             }
         }
@@ -295,8 +308,10 @@ define(["jquery"], function ($) {
         });
     };
 
+    // DEPRECATED because using update with a zero value simplifies the code
     Command.prototype.delprop = function (propname, by) {
         var cmd = this;
+        console.log("DEPRECATED: Command.delprop (use update to zero-value)");
         var req = {
             name: cmd.htmlid,
             prop: propname,
@@ -304,7 +319,7 @@ define(["jquery"], function ($) {
         };
         cmd.ctrl.send('delprop', JSON.stringify(req));
         return;
-    }
+    };
 
     Command.prototype.getArgv = function () {
         var argv = [this.cmd];
@@ -373,7 +388,12 @@ define(["jquery"], function ($) {
 
     Command.prototype.stdoutCmd = function () {
         var cmd = this;
-        if (cmd.stdoutto !== undefined) {
+        if (cmd.stdoutto !== 0) {
+            if (cmd.stdoutto === undefined) {
+                // TODO: ensure this path cannot be reached and delete it
+                console.log("Deprecation warning: stoudtto should always be a number");
+                return;
+            }
             return cmds[cmd.stdoutto];
         }
     };

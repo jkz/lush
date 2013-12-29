@@ -93,6 +93,8 @@ type cmdOptions struct {
 	StdoutScrollback int
 	StderrScrollback int
 	UserData         interface{}
+	Stdoutto         liblush.CmdId
+	Stderrto         liblush.CmdId
 }
 
 func cmdId2Json(id liblush.CmdId) string {
@@ -202,6 +204,12 @@ func wseventUpdatecmd(s *server, cmdmetaJSON string) error {
 			return fmt.Errorf("failed to update args: %v", err)
 		}
 	}
+	if cm["stdoutto"] != nil {
+		connectCmdsById(s, options.Id, options.Stdoutto, "stdout")
+	}
+	if cm["stderrto"] != nil {
+		connectCmdsById(s, options.Id, options.Stderrto, "stderr")
+	}
 	// obsolete:
 	// broadcast command update to all connected websocket clients
 	//w := newPrefixedWriter(&s.ctrlclients, []byte("updatecmd;"))
@@ -248,22 +256,36 @@ func wseventGetuserdata(s *server, key string) error {
 }
 
 func wseventConnect(s *server, optionsJSON string) error {
+	var err error
 	var options struct {
 		From, To liblush.CmdId
 		Stream   string
 	}
 	// parse structurally
-	err := json.Unmarshal([]byte(optionsJSON), &options)
+	err = json.Unmarshal([]byte(optionsJSON), &options)
 	if err != nil {
 		return fmt.Errorf("malformed JSON: %v", err)
 	}
-	from := s.session.GetCommand(options.From)
-	to := s.session.GetCommand(options.To)
-	if from == nil || to == nil {
-		return errors.New("unknown command in to or from")
+	err = connectCmdsById(s, options.From, options.To, options.Stream)
+	if err != nil {
+		return err
 	}
+	// notify all channels of the update
+	return notifyPropertyUpdate(&s.ctrlclients, getPropResponse{
+		Objname:  cmdId2Json(options.From),
+		Propname: options.Stream + "to",
+		Value:    fmt.Sprintf("%d", options.To),
+	})
+}
+
+func connectCmdsById(s *server, fromId, toId liblush.CmdId, streamname string) error {
 	var stream liblush.OutStream
-	switch options.Stream {
+	var to, from liblush.Cmd
+	from = s.session.GetCommand(fromId)
+	if from == nil {
+		return errors.New("unknown command in from")
+	}
+	switch streamname {
 	case "stdout":
 		stream = from.Stdout()
 	case "stderr":
@@ -271,13 +293,29 @@ func wseventConnect(s *server, optionsJSON string) error {
 	default:
 		return errors.New("unknown stream")
 	}
+	if toId == 0 {
+		return disconnectStream(stream)
+	}
+	to = s.session.GetCommand(toId)
+	if to == nil {
+		return errors.New("unknown command in to")
+	}
 	stream.AddWriter(to.Stdin())
-	// notify all channels of the update
-	return notifyPropertyUpdate(&s.ctrlclients, getPropResponse{
-		Objname:  cmdId2Json(options.From),
-		Propname: options.Stream + "to",
-		Value:    fmt.Sprintf("%d", options.To),
-	})
+	return nil
+}
+
+func disconnectStream(stream liblush.OutStream) error {
+	var fwd liblush.Cmd
+	fwd = pipedcmd(stream)
+	if fwd == nil {
+		return errors.New("no connected command found")
+	}
+	ok := stream.RemoveWriter(fwd.Stdin())
+	if !ok {
+		// TODO: yeah so ehh well this is just not supposed to happen
+		panic("Couldn't remove forwarded stdout writer")
+	}
+	return nil
 }
 
 // start a command
@@ -463,25 +501,17 @@ func wseventDelprop(s *server, reqstr string) error {
 		}
 		switch r.Propname {
 		case "stdoutto":
-			fwd := pipedcmd(c.Stdout())
-			if fwd == nil {
-				return errors.New(idstr + " already without stdoutto")
-			}
-			ok := c.Stdout().RemoveWriter(fwd.Stdin())
-			if !ok {
-				// TODO: yeah so ehh well this is just not supposed to happen
-				panic("Couldn't remove forwarded stdout writer")
+			err := disconnectStream(c.Stdout())
+			if err != nil {
+				return fmt.Errorf("failed to disconnect %d stdout: %v",
+					idstr, err)
 			}
 			break
 		case "stderrto":
-			fwd := pipedcmd(c.Stderr())
-			if fwd == nil {
-				return errors.New(idstr + " already without stderrto")
-			}
-			ok := c.Stderr().RemoveWriter(fwd.Stdin())
-			if !ok {
-				// TODO: yeah so ehh well this is just not supposed to happen
-				panic("Couldn't remove forwarded stderr writer")
+			err := disconnectStream(c.Stderr())
+			if err != nil {
+				return fmt.Errorf("failed to disconnect %d stderr: %v",
+					idstr, err)
 			}
 			break
 		default:

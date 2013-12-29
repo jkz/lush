@@ -75,24 +75,6 @@ define(function () {
         return parse_char_normal;
     }
 
-    // encountered a lone 2 literal. could be for a stderr pipe (importantd 2|
-    // mail -s ohnoes root). the 2 literal is expected to not have been part of
-    // another word.
-    function parse_char_2literal(parser, c, i) {
-        if (c == '|') {
-            if (parser.state.parsingword) {
-                parser.onboundary();
-                parser.state.parsingword = false;
-            }
-            parser.onpipe2();
-        } else {
-            // was just a normal 2
-            parser.onliteral('2');
-            parser.onliteral(c);
-        }
-        return parse_char_normal;
-    }
-
     function parse_char_normal(parser, c, i) {
         if (c === undefined) {
             if (parser.state.parsingword) {
@@ -135,14 +117,7 @@ define(function () {
                 parser.onboundary();
                 parser.state.parsingword = false;
             }
-            parser.onpipe1();
-            break;
-        case '2':
-            if (i > 0 && /\s/.test(parser.state.raw[i-1])) {
-                return parse_char_2literal;
-            }
-            parser.onliteral('2');
-            parser.state.parsingword = true;
+            parser.onpipe();
             break;
         default:
             parser.onliteral(c);
@@ -174,14 +149,8 @@ define(function () {
         if (!this.onboundary) {
             this.onboundary = function () {};
         }
-        if (!this.onpipe1) {
-            this.onpipe1 = function () {
-                this.onliteral('|');
-            };
-        }
-        if (!this.onpipe2) {
-            this.onpipe2 = function () {
-                this.onliteral('2');
+        if (!this.onpipe) {
+            this.onpipe = function () {
                 this.onliteral('|');
             };
         }
