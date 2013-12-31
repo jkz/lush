@@ -204,6 +204,18 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         });
     };
 
+    // execute f on cmd and all its children
+    function mapCmdTree(cmd, f) {
+        if (cmd === undefined) {
+            return;
+        }
+        if (!(cmd instanceof Command)) {
+            throw "mapCmdTree: cmd must be a Command instance";
+        }
+        f(cmd);
+        mapCmdTree(cmd.stdoutCmd(), f);
+    }
+
     // propagate changes in the prompt to the given cmd tree.  continuation
     // passed as third arg will be called with a new cmd object for this ast.
     //
@@ -260,10 +272,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             // inform the parent that his child died
             passCmdWhenDone(undefined, "so sorry for your loss");
             // clean up the mess
-            while (cmd !== undefined) {
-                cmd.release();
-                cmd = cmd.stdoutCmd();
-            }
+            mapCmdTree(cmd, function (cmd) { cmd.release(); });
             return;
         } else {
             if (ast.argv.length == 0) {
@@ -338,9 +347,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     }
 
     function stopMonitoringTree(root) {
-        for (var c = root; c !== undefined; c = c.stdoutCmd()) {
-            stopMonitoringCmd(c);
-        }
+        mapCmdTree(root, stopMonitoringCmd);
     }
 
     // (One-way) sync a command to this cli object: cmd changes -> update me.
@@ -463,7 +470,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         if (!cli._cmd) {
             throw "cmd not ready";
         }
-        cli._cmd.start();
+        mapCmdTree(cli._cmd, function (cmd) { cmd.start(); });
         cli._cmd = undefined;
     }
 
