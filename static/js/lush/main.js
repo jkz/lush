@@ -297,6 +297,9 @@ define(["jquery",
         $('#cmds').on('click', '.cmdwidget', function (e) {
             var nid = /\d+$/.exec(this.id)[0];
             selectCommand(+nid, confwin);
+        }).on('click', 'button.archivegroup', function (e) {
+            var gid = /\d+$/.exec(this.parentNode.id)[0];
+            cmds[+gid].setArchivalState(true);
         });
         // jQuery terminal plugin object
         var term = terminal(processCmd);

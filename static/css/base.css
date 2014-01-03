@@ -53,9 +53,15 @@ div.rootcontainer {
     float: left;
     padding: 2px;
     background-color: #d3d3cf;
+    padding-top: 26px;
 }
 
-div.rootcontainer:empty,
+button.archivegroup {
+    margin-top: -24px;
+    float: right;
+}
+
+div.rootcontainer.empty,
 div.rootcontainer.archived {
     display: none;
 }

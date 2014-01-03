@@ -128,24 +128,21 @@ define(["jquery",
         if (cmd === undefined || ctrl === undefined) {
             throw "missing argument(s) to Widget constructor";
         }
-        // Fresh command widget in view mode
-        widget.groupnode = $('#groupwidget_template')
-              .clone()
-              .attr("id", "group" + cmd.nid)[0];
-        widget.node = $(widget.groupnode).find('.cmdwidget')
-              .attr("id", cmd.htmlid)
-              .data('activetab', "view")[0];
-        widget.cmd = cmd;
-        widget._initDom();
-        widget._initCloseButton();
         // container for the widget when it is root. widget container will always
         // reside as a direct child of <div id=cmds>, the widget will move
         // around depending on its hierarchy. if it is root, it is here, if it
         // is a child, it is in another element's <div class=children>.
-        var rootnode = $('<div class=rootcontainer id=root' + cmd.nid + '>')
-            .append(widget.groupnode)
-            .appendTo('#cmds')[0];
-        syncPositionWithServer(rootnode, ctrl);
+        widget.rootnode = $('#rootcontainer_template')
+              .clone()
+              .attr('id', 'root' + cmd.nid)
+              .appendTo('#cmds')[0];
+        widget.groupnode = $(widget.rootnode).find('.groupwidget')
+              .attr("id", "group" + cmd.nid)[0];
+        widget.node = $(widget.groupnode).find('.cmdwidget')
+              .attr("id", cmd.htmlid)[0];
+        widget.cmd = cmd;
+        widget._initDom();
+        widget._initCloseButton();
         widget._initJsPlumb(ctrl);
         $(cmd).on('archival', function (_, archived) {
             var cmd = this;
@@ -167,6 +164,7 @@ define(["jquery",
             $('#group' + childid)
                 .appendTo('#group' + cmd.nid + ' > .children')
                 .attr('data-parent-stream', streamname);
+            $('#root' + childid).addClass('empty');
         }
         $(cmd).on('updated.stdoutto', function () {
             var cmd = this;
@@ -186,6 +184,7 @@ define(["jquery",
             // (NOP if already root)
             $('#group' + cmd.nid).appendTo('#root' + cmd.nid)
                                  .removeAttr('data-parent-stream');
+            $('root' + cmd.nid).removeClass('empty');
         });
     };
 
