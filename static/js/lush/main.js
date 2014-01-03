@@ -150,15 +150,6 @@ define(["jquery",
                  terminal,
                  path) {
 
-    var chdir = function (dir) {
-        // this here is some tricky code dupe
-        $.post("/chdir", {dir: dir})
-            .fail(function (_, status, error) {
-                // TODO: obviously wrong UI
-                alert(status + ": " + error);
-            });
-    };
-
     // print text to this terminal's output and mark it as coming from this
     // command. sets a class in the div that holds the output in the terminal.
     var termPrintlnCmd = function (term, sysid, data) {
@@ -171,54 +162,50 @@ define(["jquery",
     // ask the server to create a new command. if second argument is passed, it
     // is called with the new command as the argument once the server responds
     var processCmd = function (options, callback) {
-        if (options.cmd == "cd") {
-            chdir(options.args[0]);
-        } else {
-            // ensure userdata is an object (rest of the code depends on this)
-            if (!$.isPlainObject(options.userdata)) {
-                options.userdata = {};
-            }
-            if (!options.hasOwnProperty('stdoutScrollback')) {
-                options.stdoutScrollback = 1000;
-            }
-            if (!options.hasOwnProperty('stderrScrollback')) {
-                options.stderrScrollback = 1000;
-            }
-            options.userdata.god = globals.moi;
-            if (callback !== undefined) {
-                // subscribe to the "newcmdcallback" event in a unique
-                // namespace. every new command will trigger the
-                // "newcmdcallback" event (without namespace), which will
-                // trigger all callbacks, including this one.
-                var cbid = 'newcmdcallback.' + guid();
-                options.userdata.callback = cbid;
-                $(window).on(cbid, function (e, cmd) {
-                    if (cmd === undefined) {
-                        console.log('new commmand callback time-out: ' + JSON.stringify(options));
-                        $(window).unbind(e);
-                        // TODO: inform the callback about timeout
-                    }
-                    // namespaced jquery event, can be triggered spuriously.
-                    // make sure that this command corresponds to this
-                    // callback.
-                    else if (cmd.userdata.callback == cbid) {
-                        callback(cmd);
-                        $(window).unbind(e); // make the timeout trigger a NOP
-                    }
-                });
-                // clear the callback after ten seconds. this means that the
-                // server has ten seconds to generate a newcmd event, which
-                // will trigger the newcmdcallback event. after that, the
-                // callback is deleted.
-                setTimeout(function () {
-                    // clearing is done by triggering the event without a cmd
-                    // object. the handler will then unhook itself.
-                    $(window).trigger(cbid);
-                    // wish I could assert($(window).handlers(cbid).length == 0)
-                }, 10000);
-            }
-            globals.ctrl.send("new", JSON.stringify(options));
+        // ensure userdata is an object (rest of the code depends on this)
+        if (!$.isPlainObject(options.userdata)) {
+            options.userdata = {};
         }
+        if (!options.hasOwnProperty('stdoutScrollback')) {
+            options.stdoutScrollback = 1000;
+        }
+        if (!options.hasOwnProperty('stderrScrollback')) {
+            options.stderrScrollback = 1000;
+        }
+        options.userdata.god = globals.moi;
+        if (callback !== undefined) {
+            // subscribe to the "newcmdcallback" event in a unique
+            // namespace. every new command will trigger the
+            // "newcmdcallback" event (without namespace), which will
+            // trigger all callbacks, including this one.
+            var cbid = 'newcmdcallback.' + guid();
+            options.userdata.callback = cbid;
+            $(window).on(cbid, function (e, cmd) {
+                if (cmd === undefined) {
+                    console.log('new commmand callback time-out: ' + JSON.stringify(options));
+                    $(window).unbind(e);
+                    // TODO: inform the callback about timeout
+                }
+                // namespaced jquery event, can be triggered spuriously.
+                // make sure that this command corresponds to this
+                // callback.
+                else if (cmd.userdata.callback == cbid) {
+                    callback(cmd);
+                    $(window).unbind(e); // make the timeout trigger a NOP
+                }
+            });
+            // clear the callback after ten seconds. this means that the
+            // server has ten seconds to generate a newcmd event, which
+            // will trigger the newcmdcallback event. after that, the
+            // callback is deleted.
+            setTimeout(function () {
+                // clearing is done by triggering the event without a cmd
+                // object. the handler will then unhook itself.
+                $(window).trigger(cbid);
+                // wish I could assert($(window).handlers(cbid).length == 0)
+            }, 10000);
+        }
+        globals.ctrl.send("new", JSON.stringify(options));
     };
 
     // Handle what comes after the # on page load

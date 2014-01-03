@@ -366,7 +366,7 @@ func wseventStop(s *server, idstr string) error {
 //
 //     cmd_released;3
 //
-// can not be executed while command is running.
+// cannot be executed while command is running.
 func wseventRelease(s *server, idstr string) error {
 	id, _ := liblush.ParseCmdId(idstr)
 	err := s.session.ReleaseCommand(id)
@@ -547,6 +547,14 @@ func wseventAllclients(s *server, reqstr string) error {
 	return writePrefixedJson(&s.ctrlclients, "allclients;", ids)
 }
 
+func wseventChdir(s *server, dir string) error {
+	err := s.session.Chdir(dir)
+	if err != nil {
+		return err
+	}
+	return writePrefixedJson(&s.ctrlclients, "chdir;", dir)
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
@@ -564,6 +572,7 @@ var wsHandlers = map[string]wsHandler{
 	"setprop":     wseventSetprop,
 	"delprop":     wseventDelprop,
 	"allclients":  wseventAllclients,
+	"chdir":       wseventChdir,
 	// obsolete
 	//"updatecmd":   wseventUpdatecmd,
 }

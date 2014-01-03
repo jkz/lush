@@ -342,28 +342,42 @@ define(["jquery"], function ($) {
     };
 
     Command.prototype.start = function () {
-        this.ctrl.send('start', this.nid);
+        var cmd = this;
+        if (cmd.cmd == "cd") {
+            // TODO: This should be a different type, not Command but
+            // ShellInstruction. Along with export, for example.
+            var dir = cmd.args.length > 0 ? cmd.args[0] : "";
+            cmd.ctrl.send('chdir', dir);
+            // not really a command: releasing is the best we can do to prevent
+            // weird feedback to user ("repeat?")
+            cmd.release();
+        } else {
+            cmd.ctrl.send('start', cmd.nid);
+        }
     };
 
     Command.prototype.stop = function () {
-        this.ctrl.send('stop', this.nid);
+        var cmd = this;
+        cmd.ctrl.send('stop', cmd.nid);
     };
 
     Command.prototype.release = function () {
-        this.ctrl.send('release', this.nid);
+        var cmd = this;
+        cmd.ctrl.send('release', cmd.nid);
     };
 
     // called by the control stream when the server indicated that this command
     // was released. generates the jquery 'wasreleased' event on this command
     // object.
     Command.prototype.processRelease = function () {
-        $(this).trigger('wasreleased')
-               .off(); // unbind all jquery event handlers
-        delete this.cmd;
-        delete this.args;
-        delete this.userdata;
-        delete this._moi;
-        delete this.ctrl;
+        var cmd = this;
+        // jQuery event handlers no longer needed: unbind
+        $(cmd).trigger('wasreleased').off();
+        delete cmd.cmd;
+        delete cmd.args;
+        delete cmd.userdata;
+        delete cmd._moi;
+        delete cmd.ctrl;
     };
 
     // Called by control stream object (ctrl) when the command generated data
