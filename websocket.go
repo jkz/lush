@@ -54,6 +54,16 @@ func newWsClient(conn *websocket.Conn) wsClient {
 	return wsClient{id, conn}
 }
 
+func getCmd(s *server, idstr string) (liblush.Cmd, error) {
+	var err error
+	id, _ := liblush.ParseCmdId(idstr)
+	c := s.session.GetCommand(id)
+	if c == nil {
+		err = errors.New("no such command: " + idstr)
+	}
+	return c, err
+}
+
 // subscribe all websocket clients to stream data
 // eg subscribe;3;stdout
 func wseventSubscribe(s *server, options string) error {
@@ -63,10 +73,9 @@ func wseventSubscribe(s *server, options string) error {
 	}
 	idstr := args[0]
 	streamname := args[1]
-	id, _ := liblush.ParseCmdId(idstr)
-	c := s.session.GetCommand(id)
-	if c == nil {
-		return errors.New("no such command: " + idstr)
+	c, err := getCmd(s, idstr)
+	if err != nil {
+		return err
 	}
 	var stream liblush.OutStream
 	switch streamname {
@@ -321,12 +330,11 @@ func disconnectStream(stream liblush.OutStream) error {
 // start a command
 // eg start;3
 func wseventStart(s *server, idstr string) error {
-	id, _ := liblush.ParseCmdId(idstr)
-	c := s.session.GetCommand(id)
-	if c == nil {
-		return errors.New("no such command: " + idstr)
+	c, err := getCmd(s, idstr)
+	if err != nil {
+		return err
 	}
-	err := c.Start()
+	err = c.Start()
 	if err != nil {
 		return fmt.Errorf("Couldn't start command: %v", err)
 	}
@@ -337,12 +345,11 @@ func wseventStart(s *server, idstr string) error {
 // kill a running command
 // eg stop;3
 func wseventStop(s *server, idstr string) error {
-	id, _ := liblush.ParseCmdId(idstr)
-	c := s.session.GetCommand(id)
-	if c == nil {
-		return errors.New("no such command: " + idstr)
+	c, err := getCmd(s, idstr)
+	if err != nil {
+		return err
 	}
-	err := c.Signal(StopSignal)
+	err = c.Signal(StopSignal)
 	if err != nil {
 		// TODO: what to do with this error?
 		log.Println("Error sending signal:", err)
@@ -423,10 +430,9 @@ func wseventGetprop(s *server, reqstr string) error {
 	switch {
 	case strings.HasPrefix(r.Objname, "cmd"):
 		var idstr string = r.Objname[3:]
-		id, _ := liblush.ParseCmdId(idstr)
-		c := s.session.GetCommand(id)
-		if c == nil {
-			return errors.New("no such command: " + idstr)
+		c, err := getCmd(s, idstr)
+		if err != nil {
+			return err
 		}
 		switch r.Propname {
 		case "name":
@@ -494,10 +500,9 @@ func wseventDelprop(s *server, reqstr string) error {
 	switch {
 	case strings.HasPrefix(r.Objname, "cmd"):
 		idstr := r.Objname[3:]
-		id, _ := liblush.ParseCmdId(idstr)
-		c := s.session.GetCommand(id)
-		if c == nil {
-			return errors.New("no such command: " + idstr)
+		c, err := getCmd(s, idstr)
+		if err != nil {
+			return err
 		}
 		switch r.Propname {
 		case "stdoutto":

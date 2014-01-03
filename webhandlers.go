@@ -49,7 +49,7 @@ func cmdloc(c liblush.Cmd) *url.URL {
 	return &url.URL{Path: fmt.Sprintf("/%d/", c.Id())}
 }
 
-func getCmd(s liblush.Session, idstr string) (liblush.Cmd, error) {
+func getCmdWeb(s liblush.Session, idstr string) (liblush.Cmd, error) {
 	id, _ := liblush.ParseCmdId(idstr)
 	c := s.GetCommand(id)
 	if c == nil {
