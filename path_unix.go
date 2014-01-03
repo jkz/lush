@@ -22,15 +22,4 @@
 
 package main
 
-import (
-	"os"
-	"strings"
-)
-
-func setPath(path []string) error {
-	return os.Setenv("PATH", strings.Join(path, ":"))
-}
-
-func getPath() []string {
-	return strings.Split(os.Getenv("PATH"), ":")
-}
+const PATHSEP = ":"

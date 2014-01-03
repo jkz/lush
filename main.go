@@ -23,20 +23,7 @@ package main
 import (
 	"flag"
 	"log"
-	"runtime"
 )
-
-// Create new PATH envvar value by adding dir to existing PATH
-func appendPath(oldpath, dir string) string {
-	if oldpath == "" {
-		return dir
-	}
-	sep := ":"
-	if runtime.GOOS == "windows" {
-		sep = ";"
-	}
-	return oldpath + sep + dir
-}
 
 func main() {
 	listenaddr := flag.String("l", "localhost:8081", "listen address")

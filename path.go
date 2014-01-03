@@ -20,4 +20,23 @@
 
 package main
 
-const PATHSEP = ";"
+import (
+	"os"
+	"strings"
+)
+
+func setPath(path []string) error {
+	return os.Setenv("PATH", strings.Join(path, PATHSEP))
+}
+
+func getPath() []string {
+	return strings.Split(os.Getenv("PATH"), PATHSEP)
+}
+
+// Create new PATH envvar value by adding dir to existing PATH
+func appendPath(oldpath, dir string) string {
+	if oldpath == "" {
+		return dir
+	}
+	return oldpath + PATHSEP + dir
+}
