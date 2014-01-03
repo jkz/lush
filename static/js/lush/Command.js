@@ -112,9 +112,8 @@ define(["jquery"], function ($) {
         });
         $(cmd).on('updated.status', function (e) {
             var cmd = this;
-            if (cmd.status.code > 1)
-            {
-                $(cmd).trigger('done');
+            if (cmd.status.code > 1) {
+                $(cmd).trigger('done', cmd.status);
                 $(cmd).off(e); // no need for me anymore
             }
         });
@@ -188,17 +187,6 @@ define(["jquery"], function ($) {
                 $(cmd).trigger('childAdded', [mod.to, stream]);
             }
         });
-        // If the status just updated to "successfully completed", and I am
-        // god, and root, inform the server I wish to be archived.
-        if (cmd.userdata.autoarchive &&
-            prop == 'status' &&
-            value.code == 2 &&
-            cmd.isRoot() &&
-            // only god archives a command, the rest will follow indirectly
-            cmd.imadethis())
-        {
-            cmd.setArchivalState(true);
-        }
         if (archivalStateChanged) {
             // if the server tells me that I've been (de)archived, generate an
             // "archival" jQuery event

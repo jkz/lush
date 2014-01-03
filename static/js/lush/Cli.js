@@ -474,8 +474,29 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         if (!cli._cmd) {
             throw "cmd not ready";
         }
-        mapCmdTree(cli._cmd, function (cmd) { cmd.start(); });
+        var root = cli._cmd;
         cli._cmd = undefined;
+        var runningCmds = 0;
+        // archive when everybody completes succesfully
+        var cmdDone = function (e, status) {
+            if (status.code == 2) {
+                // success!
+                runningCmds -= 1;
+            } else {
+                // ohnoes!
+                // setting to -1 will prevent the counter from ever reaching 0
+                runningCmds = -1;
+            }
+            if (runningCmds == 0) {
+                // all commands in this pipeline have completed succesfully
+                root.setArchivalState(true);
+            }
+        };
+        mapCmdTree(root, function (cmd) {
+            cmd.start();
+            runningCmds += 1;
+            $(cmd).one('done', cmdDone);
+        });
     }
 
     // Exported errors
