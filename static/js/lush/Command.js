@@ -157,10 +157,10 @@ define(["jquery"], function ($) {
     }
 
     Command.prototype.processUpdate = function (response) {
+        var cmd = this;
         var prop = response.prop;
         var value = response.value;
         var updatedby = response.userdata;
-        var cmd = this;
         // map(streamname => map({from, to} => [Command | null]))
         var childMod = {};
         if (prop == "stdoutto") {
@@ -170,6 +170,10 @@ define(["jquery"], function ($) {
             childMod.stderr = 
                 makeChildModObject(cmd.stderrto, value);
         }
+        var archivalStateChanged = (
+                prop == "userdata" &&
+                value.archived !== undefined &&
+                value.archived !== cmd.userdata.archived);
         cmd[prop] = value;
         // per-property update event
         $(cmd).trigger('updated.' + prop, [updatedby]);
@@ -195,9 +199,9 @@ define(["jquery"], function ($) {
         {
             cmd.setArchivalState(true);
         }
-        // if the server tells me that I've been (de)archived, generate an
-        // "archival" jQuery event
-        if (prop == 'userdata' && value.archived !== undefined) {
+        if (archivalStateChanged) {
+            // if the server tells me that I've been (de)archived, generate an
+            // "archival" jQuery event
             if (!cmd.isRoot()) {
                 throw "Received archival event on non-root node " + cmd.nid;
             }
@@ -276,6 +280,16 @@ define(["jquery"], function ($) {
             case "userdata":
                 if (!$.isPlainObject(val)) {
                     throw "userdata must be a plain object, is: " + val;
+                }
+                // prune unchanged userdata keys
+                for (key in val) {
+                    // easiest is to use ==, this "feature" shouldn't exist
+                    // anyway so might as well make it suck
+                    if (val[key] == cmd.userdata[key]) {
+                        delete val[key];
+                    }
+                    // ps the problem is not == semantics but the untypedness of
+                    // the userdata field. YAY JAVASCRIPT. har dee friggin har.
                 }
                 // (client-side) special case for updating userdata: extend
                 req.value = $.extend({}, cmd.userdata, updata.userdata);

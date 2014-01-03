@@ -78,6 +78,9 @@ define(["jquery", "lush/Cli", "lush/utils", "jquery.terminal", "jquery.ui"],
             prompt: '$ ',
             tabcompletion: true,
             onCommandChange: function (txt) {
+                if (cli === undefined) {
+                    return;
+                }
                 try {
                     cli.setprompt(txt);
                 } catch (e) {

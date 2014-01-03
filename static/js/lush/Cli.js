@@ -188,6 +188,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         return ctx.firstast;
     };
 
+    // ask the server for a new command and put it in "CLI mode"
     Cli.prototype._prefetchCmd = function () {
         var cli = this;
         var options = {
@@ -201,6 +202,20 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         };
         cli._processCmd(options, function (cmd) {
             cli._cmdpool.add(cmd);
+        });
+    };
+
+    // Ask server for a "CLI mode" command and pass it to callback. Will work
+    // synchronously if the command pool is populated.
+    Cli.prototype._getCmdFromPool = function (callback) {
+        var cli = this;
+        if (!$.isFunction(callback)) {
+            throw "_getCmdFromPool requires a callback argument";
+        }
+        cli._prefetchCmd();
+        cli._cmdpool.consume(function (cmd) {
+            cli._prepareCmdForSync(cmd);
+            callback(cmd);
         });
     };
 
@@ -228,7 +243,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // split off to a non-method function to make it very clear that this does
     // not change the CLI object internally; responsibility is really with the
     // caller to handle the resulting command.
-    function syncPromptToCmd(ast, cmd, passCmdWhenDone, updateGUID, pool, prefetch) {
+    function syncPromptToCmd(ast, cmd, passCmdWhenDone, updateGUID, getCmd) {
         // sanity checks
         if (!$.isFunction(passCmdWhenDone)) {
             throw "syncPromptToCmd requires continuation as third param";
@@ -239,11 +254,8 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         if (cmd !== undefined && !(cmd instanceof Command)) {
             throw "Illegal command object";
         }
-        if (!(pool instanceof Pool)) {
-            throw "pool argument to syncPromptToCmd must be a Pool instance";
-        }
-        if (!$.isFunction(prefetch)) {
-            throw "syncPromptToCmd needs a prefetch parameter";
+        if (!$.isFunction(getCmd)) {
+            throw "syncPromptToCmd needs a callable getCmd parameter";
         }
 
         if (cmd === undefined && ast === undefined) {
@@ -253,11 +265,9 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         } else if (cmd === undefined) {
             // no command object associated with this level yet. request a new
             // one and retry
-            pool.consume(function (cmd) {
-                syncPromptToCmd(ast, cmd, passCmdWhenDone, updateGUID, pool, prefetch);
+            getCmd(function (cmd) {
+                syncPromptToCmd(ast, cmd, passCmdWhenDone, updateGUID, getCmd);
             });
-            // refill the pool
-            prefetch();
             return;
         } else if (ast === undefined) {
             // the pipeline used to contain more commands.  the user changed his
@@ -275,29 +285,20 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             mapCmdTree(cmd, function (cmd) { cmd.release(); });
             return;
         } else {
-            if (ast.argv.length == 0) {
-                throw new SemanticError("empty program");
-            }
             // update an existing synced command object
             cmd.update({
-                cmd: ast.argv[0],
+                cmd: ast.argv[0] || "",
                 args: ast.argv.slice(1),
                 name: ast.getName(),
-            }, updateGUID)
-            // TODO: should not need if() {} once cmd.update() ignores dupes
-            if (cmd.userdata.unused) {
                 // only mark as used once the user actually types something in
                 // the prompt. don't worry about race conditions: as long as
                 // this session is in the server's allclients set this command
                 // won't be pruned.
-                var updata = {
-                    userdata: {
-                        unused: false,
-                        archived: false,
-                    }
-                };
-                cmd.update(updata, updateGUID);
-            }
+                userdata: {
+                    unused: false,
+                    archived: false,
+                }
+            }, updateGUID);
             // continue to the children
             syncPromptToCmd(ast.stdout, cmd.stdoutCmd(), function (outChild) {
                 var stdoutto;
@@ -308,7 +309,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                     stdoutto = outChild.nid;
                 }
                 cmd.update({stdoutto: stdoutto}, updateGUID);
-            }, updateGUID, pool, prefetch);
+            }, updateGUID, getCmd);
             passCmdWhenDone(cmd);
             return;
         }
@@ -324,18 +325,21 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                 throw "No root command parsed";
             }
             cli._cmd = cmd;
-        }, cli._guid, cli._cmdpool, cli._prefetchCmd.bind(cli));
+        }, cli._guid, cli._getCmdFromPool.bind(cli));
     };
 
     // serialize a pipeline
     function cmdChainToPrompt(cmd) {
-        var txt = cmd.getArgv().map(pescape).join(' ');
-        var child = cmd.stdoutCmd();
-        if (child !== undefined) {
-            // you know what they say about efficiency
-            txt += " | " + cmdChainToPrompt(child);
-        }
-        return txt;
+        var argvs = [];
+        // couldn't resist.
+        mapCmdTree(cmd, function (cmd) {
+            var argv = cmd.getArgv().map(pescape);
+            argvs.push.apply(argvs, argv);
+            if (cmd.stdoutto > 0) {
+                argvs.push('|');
+            }
+        });
+        return argvs.join(' ');
     }
 
     function stopMonitoringCmd(cmd) {
