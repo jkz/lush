@@ -132,13 +132,13 @@ define(["jquery",
         // reside as a direct child of <div id=cmds>, the widget will move
         // around depending on its hierarchy. if it is root, it is here, if it
         // is a child, it is in another element's <div class=children>.
-        widget.rootnode = $('#rootcontainer_template')
-              .clone()
-              .attr('id', 'root' + cmd.nid)
-              .appendTo('#cmds')[0];
-        widget.groupnode = $(widget.rootnode).find('.groupwidget')
-              .attr("id", "group" + cmd.nid)[0];
-        widget.node = $(widget.groupnode).find('.cmdwidget')
+        var groupnode = $('#rootcontainer_template')
+            .clone()
+            .attr('id', 'root' + cmd.nid)
+            .appendTo('#cmds')
+            .find('.groupwidget')
+                .attr("id", "group" + cmd.nid)[0];
+        widget.node = $(groupnode).find('.cmdwidget')
               .attr("id", cmd.htmlid)[0];
         widget.cmd = cmd;
         widget._initDom();
@@ -153,9 +153,8 @@ define(["jquery",
             }
         });
         $(cmd).on('wasreleased', function () {
-            $(widget.groupnode).remove();
-            $(widget.rootnode).remove();
-            delete widget.groupnode;
+            var cmd = this;
+            $('#root' + cmd.nid + ', #group' + cmd.nid).remove();
             delete widget.node;
             delete widget.cmd;
         });
