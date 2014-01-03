@@ -85,6 +85,9 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // called with a string as the argument every time a command is changed from
     // the outside. The argument is the new command prompt.
     //
+    // requires ANOTHER function to be tacked on: .onerror. is passed an error
+    // string as the first argument whenever one arises.
+    //
     // This model is constantly updated by a terminal with the latest user input
     // (the prompt), live as the user types. The cli model will parse the
     // prompt, live, and allocate command objects as necessary. These command
@@ -92,6 +95,9 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // command objects are updated (by the cli model). If any of the command
     // objects change, the onUpdatedPrompt function is called with the new
     // prompt string.
+    //
+    // why not jQuery events? because this is simpler, and because it causes an
+    // error if caller forgets to set the callbacks.
     var Cli = function (processCmd) {
         var cli = this;
         cli._rawtxt = "";
@@ -486,6 +492,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                 // ohnoes!
                 // setting to -1 will prevent the counter from ever reaching 0
                 runningCmds = -1;
+                cli.onerror(status.err);
             }
             if (runningCmds == 0) {
                 // all commands in this pipeline have completed succesfully
