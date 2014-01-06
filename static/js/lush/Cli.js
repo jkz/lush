@@ -238,7 +238,8 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     }
 
     // propagate changes in the prompt to the given cmd tree.  continuation
-    // passed as third arg will be called with a new cmd object for this ast.
+    // passed as third arg will be called with a (possibly fresh) cmd object for
+    // this ast when the command and its entire subtree has been updated.
     //
     // this method is so messed up..
     //
@@ -292,6 +293,8 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             return;
         } else {
             // update an existing synced command object
+            // TODO: Can be merged in continuation, only makes sense when
+            // setprops ws event exists
             cmd.update({
                 cmd: ast.argv[0] || "",
                 args: ast.argv.slice(1),
@@ -314,9 +317,8 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                 } else {
                     stdoutto = outChild.nid;
                 }
-                cmd.update({stdoutto: stdoutto}, updateGUID);
+                cmd.update({stdoutto: stdoutto}, updateGUID, passCmdWhenDone);
             }, updateGUID, getCmd);
-            passCmdWhenDone(cmd);
             return;
         }
         throw "hraban done messed up"; // shouldnt reach
@@ -447,11 +449,19 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // happy times.
     //
     // :(
-    Cli.prototype.setprompt = function (txt) {
+    Cli.prototype.setprompt = function (txt, _magic, _callback) {
         var cli = this;
         if (txt == cli._rawtxt) {
             // nothing changed; ignore.
             return;
+        }
+        if (_magic !== undefined)
+            if (_magic !== "hello it's me") {
+                throw "don't use the extra arguments from outside this file!";
+            }
+            if (!$.isFunction(_callback)) {
+                throw "_callback must be a function";
+            }
         }
         // because of the way jQuery.terminal works, when a user hits enter this
         // happens:
