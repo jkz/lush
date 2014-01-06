@@ -136,6 +136,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             firstast: undefined,
             // The command currently being parsed
             ast: undefined,
+            ignoreErrors: false,
         };
         var ctx = cli._parserctx; // shorthand
         ctx.parser.oninit = function () {
@@ -172,12 +173,33 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             ctx.ast.stdout = newast;
             // haiku
             ctx.ast = newast;
-        }
+        };
+        ctx.parser.onerror = function (err, type) {
+            if (!ctx.ignoreErrors) {
+                throw err;
+            }
+            switch (err.type) {
+            case Parser.errcodes.UNBALANCED_SINGLE_QUOTE:
+                // ignore. can only happen at end of input, so finish up:
+                ctx.parser.onboundary();
+                break;
+            case Parser.errcodes.UNBALANCED_DOUBLE_QUOTE:
+                // ignore
+                ctx.parser.onboundary();
+                break;
+            case Parser.errcodes.TERMINATING_BACKSLASH:
+                // ignore!
+                ctx.parser.onboundary();
+                break;
+            default:
+                throw "unknown parser error: " + err;
+            }
+        };
     };
 
-    Cli.prototype._parse = function (txt) {
+    Cli.prototype._parse = function (txt, ignoreParseError) {
         var cli = this;
-        if (txt === undefined) {
+        if (typeof txt !== "string") {
             throw "_parse requires text to parse";
         }
         var ctx = cli._parserctx;
@@ -320,10 +342,12 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // Update the synchronized command tree to reflect changes to the prompt.
     // Returns a deferred that is resolved when the command tree is synced with
     // this prompt.
-    Cli.prototype._syncPrompt = function (txt) {
+    Cli.prototype._syncPrompt = function (ast) {
+        if (!(ast instanceof Ast)) {
+            throw "ast argument must be an Ast instance";
+        }
         var cli = this;
         var doneDeferred = $.Deferred();
-        var ast = cli._parse(txt);
         var getCmd = cli._getCmdFromPool.bind(cli);
         return syncPromptToCmd(ast, cli._cmd, cli._guid, getCmd).then(function (cmd) {
             if (cmd === undefined) {
@@ -450,9 +474,16 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // happy times.
     //
     // :(
-    Cli.prototype.setprompt = function (txt) {
+    //
+    // if ignoreParseError is true parse errors will be ignored when updating
+    // the synced commands.
+    Cli.prototype.setprompt = function (txt, ignoreParseError) {
         var cli = this;
-        cli._syncingPrompt = cli._syncPrompt(txt);
+        if (!(typeof txt == "string")) {
+            throw "argument to setprompt must be the raw prompt, as a string";
+        }
+        var ast = cli._parse(txt, ignoreParseError);
+        cli._syncingPrompt = cli._syncPrompt(ast);
     };
 
     // commit the current prompt ([enter] button)
@@ -487,6 +518,32 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                 runningCmds += 1;
                 $(cmd).one('done', cmdDone);
             });
+        });
+    };
+
+    // user hit <tab>. assumes pointer is at end of input, as previously set
+    // with setprompt(). oo! bery easy!
+    Cli.prototype.complete = function (callback) {
+        var cli = this;
+        var cmd = cli._cmd;
+        if (!cmd) {
+            // TODO: prettier
+            throw "cmd not ready for tab completion";
+        }
+        var ctx = cli._parserctx;
+        var argv = ctx.ast.argv;
+        if (argv.length < 2) {
+            // only works on filenames
+            // TODO: also on executables plz
+            return;
+        }
+        var partial = argv.pop();
+        var pattern = punescape(partial) + "*";
+        $.get('/files.json', {pattern: pattern}).done(function (options) {
+            // also pass the partial to the callback here because he needs it.
+            // TODO should that stuff not be handled here then? too tired and
+            // hungry to think about that
+            callback(partial, options.map(pescape));
         });
     };
 

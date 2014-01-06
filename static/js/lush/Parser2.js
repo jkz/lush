@@ -32,11 +32,24 @@ define(function () {
     var Parser = function () {
     };
 
-    function makeParseError(msg) {
-        var err = new Error(msg);
-        err.name = "ParseError";
-        return err;
+    Parser.errcodes = {
+        UNBALANCED_SINGLE_QUOTE: 1,
+        UNBALANCED_DOUBLE_QUOTE: 2,
+        TERMINATING_BACKSLASH: 3,
+    };
+
+    function makeParseError(msg, errobj) {
+        return $.extend(new Error(msg), {name: "ParseError"}, errobj);
     }
+
+    function defaultOnError(err) {
+        throw err;
+    }
+
+    Parser.prototype._callOnError = function (errobj) {
+        var parser = this;
+        (parser.onerror || defaultOnError)(makeParseError(errobj));
+    };
 
     // the next char that will be popped. undefined at end of input
     Parser.prototype.peek = function () {
@@ -59,7 +72,9 @@ define(function () {
     // in single quote mode, only a ' changes state
     function parse_char_quote_single(parser, c, i) {
         if (c === undefined) {
-            throw makeParseError("unbalanced single quotes");
+            parser._callOnError("unbalanced single quotes",
+                                Parser.errcodes.UNBALANCED_SINGLE_QUOTE);
+            return;
         }
         if (c == "'") {
             return parse_char_normal;
@@ -70,7 +85,9 @@ define(function () {
     // in double quote mode, only a " changes state
     function parse_char_quote_double(parser, c, i) {
         if (c === undefined) {
-            throw makeParseError("unbalanced double quotes");
+            parser._callOnError("unbalanced double quotes",
+                                Parser.errcodes.UNBALANCED_DOUBLE_QUOTE);
+            return;
         }
         if (c == '"') {
             return parse_char_normal;
@@ -80,7 +97,9 @@ define(function () {
 
     function parse_char_escaped(parser, c, i) {
         if (c === undefined) {
-            throw makeParseError("backslash at end of input");
+            parser._callOnError("backslash at end of input",
+                                Parser.errcodes.TERMINATING_BACKSLASH);
+            return;
         }
         parser.onliteral(c);
         // escaping only lasts one char
@@ -177,6 +196,10 @@ define(function () {
             this.onglobStar = function () {
                 this.onliteral('*');
             };
+        }
+        // only called for parse errors
+        if (!this.onerror) {
+            this.onerror = defaultOnError;
         }
         this.state.raw = raw;
         var f = parse_char_normal; // ISA state as function

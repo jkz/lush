@@ -52,8 +52,7 @@ define(["jquery",
     // Called with array of filenames to populate a partially completed command
     // line word as a file. The "partial" argument is the snippet the user is
     // trying to tab complete
-    var tabcompleteCallback = function (term, parser, partial, files) {
-        files = $.map(files, pescape);
+    var tabcompleteCallback = function (term, partial, files) {
         if (files.length == 0) {
             return;
         }
@@ -134,22 +133,9 @@ define(["jquery",
             },
             // completion for files only (broken)
             completion: function (term) {
-                // temporarily disabled
-                // TODO: move this logic to Cli
-                var argv = parser.parse(term.get_command());
-                if (!$.isArray(argv)) {
-                    // parse error
-                    return;
-                }
-                if (argv.length < 2) {
-                    // only works on filenames
-                    return;
-                }
-                var partial = argv.pop().text;
-                var pattern = punescape(partial) + "*";
-                // home-grown callback function
-                var callback = curry(tabcompleteCallback, term, parser, partial);
-                $.get('/files.json', {pattern: pattern}, callback);
+                cli.complete(function (partial, options) {
+                    tabcompleteCallback(term, partial, options);
+                });
             },
             exit: false,
         });
