@@ -263,7 +263,7 @@ func handleWsCtrl(ctx *web.Context) error {
 			return nil
 		}
 		msg := buf[:n]
-		err = parseAndHandleWsEvent(s, msg)
+		err = parseAndHandleWsEvent(s, msg, ws)
 		if err != nil {
 			return fmt.Errorf("error handling WS event: %v", err)
 		}

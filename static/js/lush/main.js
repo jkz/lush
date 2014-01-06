@@ -303,6 +303,10 @@ define(["jquery",
         });
         // jQuery terminal plugin object
         var term = terminal(processCmd, ctrl);
+        $(ctrl).on('error', function (e, json) {
+            var msg = JSON.parse(json);
+            term.error(msg);
+        });
         var historyw = new HistoryWidget();
         // build the command objects without triggering update handlers
         $.each(cmds_init, function (nid) {

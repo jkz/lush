@@ -549,10 +549,15 @@ func wseventAllclients(s *server, reqstr string) error {
 	return writePrefixedJson(&s.ctrlclients, "allclients;", ids)
 }
 
+type lushError struct {
+	// human-readable error for the lush client
+	error
+}
+
 func wseventChdir(s *server, dir string) error {
 	err := s.session.Chdir(dir)
 	if err != nil {
-		return err
+		return lushError{err}
 	}
 	return writePrefixedJson(&s.ctrlclients, "chdir;", dir)
 }
@@ -587,7 +592,7 @@ var wsHandlers = map[string]wsHandler{
 	//"updatecmd":   wseventUpdatecmd,
 }
 
-func parseAndHandleWsEvent(s *server, msg []byte) error {
+func parseAndHandleWsEvent(s *server, msg []byte, sender io.WriteCloser) error {
 	argv := strings.SplitN(string(msg), ";", 2)
 	if len(argv) != 2 {
 		return errors.New("parse error")
@@ -596,5 +601,11 @@ func parseAndHandleWsEvent(s *server, msg []byte) error {
 	if !ok {
 		return errors.New("unknown command")
 	}
-	return handler(s, argv[1])
+	err := handler(s, argv[1])
+	if err != nil {
+		if le, ok := err.(lushError); ok {
+			err = writePrefixedJson(sender, "error;", le.Error())
+		}
+	}
+	return err
 }
