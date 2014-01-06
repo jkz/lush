@@ -336,9 +336,16 @@ define(["jquery",
                 var printer = function (_, data) {
                     termPrintlnCmd(term, cmd.nid, data);
                 };
-                // TODO: should only print when not piped to other cmd
                 $(cmd).on('stdout.stream', printer);
                 $(cmd).on('stderr.stream', printer);
+                $(cmd).on('childAdded', function (e, child, stream) {
+                    var cmd = this;
+                    $(cmd).off(stream + '.stream');
+                });
+                $(cmd).on('childRemoved', function (e, child, stream) {
+                    var cmd = this;
+                    $(cmd).on(stream + '.stream', printer);
+                });
                 // subscribe to stream data
                 ctrl.send('subscribe', cmd.nid, 'stdout');
                 ctrl.send('subscribe', cmd.nid, 'stderr');

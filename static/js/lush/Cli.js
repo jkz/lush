@@ -281,8 +281,19 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             //
             // so.
             //
-            // clean up the mess
-            mapCmdTree(cmd, function (cmd) { cmd.release(); });
+            // clean up the mess using lazy cleaning. why not .remove()? well, I
+            // used to do that, but then what happens is the parent node briefly
+            // has his stdoutto value pointing to a non-existant command. this
+            // is a problem, e.g. for update({stdoutto: 0}), which is supposed
+            // to yield a childRemoved event, but that relies on the old child
+            // still existing. even if you fix that somehow, it's nice to leave
+            // this child hanging around until the parent has completely
+            // detached. this is a bit much maybe, but definitely the easiest
+            // correct solution, still.
+            mapCmdTree(cmd, function (cmd) {
+                cmd.update({userdata: {unused: true}});
+            });
+            cmd.update({userdata: {archived: true}});
             // inform the parent that his child died
             return $.Deferred().resolve(undefined, "so sorry for your loss");
         } else {

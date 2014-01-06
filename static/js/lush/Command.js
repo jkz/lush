@@ -145,18 +145,10 @@ define(["jquery"], function ($) {
         cmd.update({userdata: {archived: state}});
     }
 
-    // return a cmd object if argument is not undefined
-    function getCmd(nid) {
-        // :( pattern matching
-        if (nid !== undefined) {
-            return cmds[nid];
-        }
-    }
-
     function makeChildModObject(fromid, toid) {
         return {
-            from: getCmd(fromid),
-            to: getCmd(toid),
+            from: cmds[fromid],
+            to: cmds[toid],
         };
     }
 
