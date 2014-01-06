@@ -91,7 +91,6 @@ define(["jquery",
                 o.name += ' ' + args[i];
             }
             o.userdata = $(this).data();
-            o.userdata.autoarchive = this.autoarchive.checked;
             cmd.update(o);
         });
     };
@@ -137,10 +136,6 @@ define(["jquery",
         $(cmd).on('updated.stderrScrollback.cmdconfig', function () {
             var cmd = this;
             $editm.find('[name=stderrScrollback]').val(cmd.stderrScrollback)
-        });
-        $(cmd).on('updated.userdata.cmdconfig', function () {
-            var cmd = this;
-            $editm.find('[name=autoarchive]')[0].checked = cmd.userdata.autoarchive;
         });
         $(cmd).on('done.cmdconfig', function () {
             // no need for editing anymore, release all closures
