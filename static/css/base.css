@@ -38,7 +38,7 @@ body {
  * must be sized appropriately */
 div#cmds {
     position: absolute;
-    left: 506px; /* .terminalwrap.width + some */
+    left: 592px; /* .terminalwrap.width + some */
     bottom: 212px;
     top: 6px;
     width: 5000px; /* how do you stretch width to contents, past viewport? */
@@ -95,7 +95,7 @@ div.cmdwidget button.close {
     left: 6px;
     top: 6px;
     bottom: 212px;
-    width: 494px;
+    width: 580px;
 }
 .terminalwrap2 {
     position: relative;
