@@ -260,7 +260,7 @@ define(["jquery"], function ($) {
         }
         // actual function is hooked up to this command client-side, an id local
         // to this function is sent to server instead
-        var callbackId = $.isFunction(callback) ? guid() : null;
+        var callbackId = callback ? guid() : null;
         var reqs = [];
         $.each(updata, function (key, val) {
             var req = {
@@ -330,14 +330,21 @@ define(["jquery"], function ($) {
         });
         // only after every update is acknowledged may the callback run
         var updatecount = reqs.length;
-        $(cmd).on('callback.' + callbackId, function (e) {
-            var cmd = this;
-            updatecount -= 1;
-            if (updatecount == 0) {
+        if (callback) P
+            if (updatecount > 0) {
+                $(cmd).on('callback.' + callbackId, function (e) {
+                    var cmd = this;
+                    updatecount -= 1;
+                    if (updatecount == 0) {
+                        callback(cmd);
+                        $(cmd).off(e);
+                    }
+                });
+            } else {
+                // short-circuit
                 callback(cmd);
-                $(cmd).off(e);
             }
-        });
+        }
         reqs.forEach(function (req) {
             cmd.ctrl.send('setprop', JSON.stringify(req));
         });
