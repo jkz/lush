@@ -491,7 +491,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             return;
         }
         cli._rawtxt = txt;
-        cli._syncingPrompt = cli._syncPrompt(txt).done(console.log.bind(console, "done!"));
+        cli._syncingPrompt = cli._syncPrompt(txt);
     };
 
     // commit the current prompt ([enter] button)
