@@ -113,6 +113,9 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         cli._prefetchCmd();
         cli._prefetchCmd();
         cli._prefetchCmd();
+        // a Deferred that resolves when the command tree is synced with the
+        // latest call to setprompt()
+        cli._syncingPrompt = $.Deferred().resolve();
     };
 
     // An Ast node represents the (rich) argv of one command. the complete
@@ -211,18 +214,18 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         });
     };
 
-    // Ask server for a "CLI mode" command and pass it to callback. Will work
-    // synchronously if the command pool is populated.
-    Cli.prototype._getCmdFromPool = function (callback) {
+    // Ask server for a "CLI mode" command. Returns a Deferred which will be
+    // passed the command when it is received. Returns a resolved Deferred if
+    // the command pool is populated.
+    Cli.prototype._getCmdFromPool = function () {
         var cli = this;
-        if (!$.isFunction(callback)) {
-            throw "_getCmdFromPool requires a callback argument";
-        }
+        var def = $.Deferred();
         cli._prefetchCmd();
         cli._cmdpool.consume(function (cmd) {
             cli._prepareCmdForSync(cmd);
-            callback(cmd);
+            def.resolve(cmd);
         });
+        return def;
     };
 
     // execute f on cmd and all its children
@@ -237,24 +240,18 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         mapCmdTree(cmd.stdoutCmd(), f);
     }
 
-    // propagate changes in the prompt to the given cmd tree.  continuation
-    // passed as third arg will be called with a (possibly fresh) cmd object for
-    // this ast when the command and its entire subtree has been updated.
+    // propagate changes in the prompt to the given cmd tree.
+    //
+    // returns a Deferred that will be called with a (possibly fresh) cmd object
+    // for this ast when the command and its entire subtree has been updated.
     //
     // this method is so messed up..
-    //
-    // the reason the return value is passed to a callback and not actually
-    // returned is this method might need to wait an asynchronous operation
-    // (fetching a container command from the pool if there is none).
     //
     // split off to a non-method function to make it very clear that this does
     // not change the CLI object internally; responsibility is really with the
     // caller to handle the resulting command.
-    function syncPromptToCmd(ast, cmd, passCmdWhenDone, updateGUID, getCmd) {
+    function syncPromptToCmd(ast, cmd, updateGUID, getCmd) {
         // sanity checks
-        if (!$.isFunction(passCmdWhenDone)) {
-            throw "syncPromptToCmd requires continuation as third param";
-        }
         if (ast !== undefined && !(ast instanceof Ast)) {
             throw "Illegal ast node";
         }
@@ -267,15 +264,13 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
 
         if (cmd === undefined && ast === undefined) {
             // perfect! don't touch anything.
-            passCmdWhenDone(undefined);
-            return;
+            return $.Deferred().resolve(undefined);
         } else if (cmd === undefined) {
             // no command object associated with this level yet. request a new
             // one and retry
-            getCmd(function (cmd) {
-                syncPromptToCmd(ast, cmd, passCmdWhenDone, updateGUID, getCmd);
+            return getCmd().then(function (cmd) {
+                return syncPromptToCmd(ast, cmd, updateGUID, getCmd);
             });
-            return;
         } else if (ast === undefined) {
             // the pipeline used to contain more commands.  the user changed his
             // mind and removed one (or more). many things can be done with the
@@ -286,11 +281,10 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             //
             // so.
             //
-            // inform the parent that his child died
-            passCmdWhenDone(undefined, "so sorry for your loss");
             // clean up the mess
             mapCmdTree(cmd, function (cmd) { cmd.release(); });
-            return;
+            // inform the parent that his child died
+            return $.Deferred().resolve(undefined, "so sorry for your loss");
         } else {
             // update an existing synced command object
             // TODO: Can be merged in continuation, only makes sense when
@@ -309,7 +303,8 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                 }
             }, updateGUID);
             // continue to the children
-            syncPromptToCmd(ast.stdout, cmd.stdoutCmd(), function (outChild) {
+            return syncPromptToCmd(ast.stdout, cmd.stdoutCmd(), updateGUID, getCmd).then(function (outChild) {
+                // the subtree has been synced, update me
                 var stdoutto;
                 // outChild is a new child for stdoutto
                 if (outChild === undefined) {
@@ -317,23 +312,35 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                 } else {
                     stdoutto = outChild.nid;
                 }
-                cmd.update({stdoutto: stdoutto}, updateGUID, passCmdWhenDone);
-            }, updateGUID, getCmd);
-            return;
+                var def = $.Deferred();
+                cmd.update({stdoutto: stdoutto}, updateGUID, function (cmd) {
+                    // I have been synced, let my caller know
+                    def.resolve(cmd);
+                });
+                return def;
+            });
         }
         throw "hraban done messed up"; // shouldnt reach
     }
 
-    // Update the synchronized command tree to reflect changes to the prompt
+    // Update the synchronized command tree to reflect changes to the prompt.
+    // Returns a deferred that is resolved when the command tree is synced with
+    // this prompt.
     Cli.prototype._syncPrompt = function (txt) {
         var cli = this;
+        var doneDeferred = $.Deferred();
         var ast = cli._parse(txt);
-        syncPromptToCmd(ast, cli._cmd, function (cmd) {
+        var getCmd = cli._getCmdFromPool.bind(cli);
+        return syncPromptToCmd(ast, cli._cmd, cli._guid, getCmd).then(function (cmd) {
             if (cmd === undefined) {
+                // not rejecting the Deferred here because this is a heavy
+                // assert()-fail; don't expect anything to work anymore anyway.
                 throw "No root command parsed";
             }
             cli._cmd = cmd;
-        }, cli._guid, cli._getCmdFromPool.bind(cli));
+            // do not pass the command to the next handler
+            return undefined;
+        });
     };
 
     // serialize a pipeline
@@ -449,19 +456,11 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // happy times.
     //
     // :(
-    Cli.prototype.setprompt = function (txt, _magic, _callback) {
+    Cli.prototype.setprompt = function (txt) {
         var cli = this;
         if (txt == cli._rawtxt) {
             // nothing changed; ignore.
             return;
-        }
-        if (_magic !== undefined)
-            if (_magic !== "hello it's me") {
-                throw "don't use the extra arguments from outside this file!";
-            }
-            if (!$.isFunction(_callback)) {
-                throw "_callback must be a function";
-            }
         }
         // because of the way jQuery.terminal works, when a user hits enter this
         // happens:
@@ -481,11 +480,11 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             return;
         }
         cli._rawtxt = txt;
-        cli._syncPrompt(txt);
+        cli._syncingPrompt = cli._syncPrompt(txt).done(console.log.bind(console, "done!"));
     };
 
     // commit the current prompt ([enter] button)
-    Cli.prototype.commit = function (txt) {
+    Cli.prototype.commit = function () {
         var cli = this;
         if (!cli._cmd) {
             throw "cmd not ready";
@@ -509,12 +508,15 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                 root.setArchivalState(true);
             }
         };
-        mapCmdTree(root, function (cmd) {
-            cmd.start();
-            runningCmds += 1;
-            $(cmd).one('done', cmdDone);
+        cli._syncingPrompt.done(function () {
+            // when the prompt has been set, all commands can be started.
+            mapCmdTree(root, function (cmd) {
+                cmd.start();
+                runningCmds += 1;
+                $(cmd).one('done', cmdDone);
+            });
         });
-    }
+    };
 
     // Exported errors
     Cli.ParseError = ParseError;
