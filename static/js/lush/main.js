@@ -302,7 +302,7 @@ define(["jquery",
             cmds[+gid].setArchivalState(true);
         });
         // jQuery terminal plugin object
-        var term = terminal(processCmd);
+        var term = terminal(processCmd, ctrl);
         var historyw = new HistoryWidget();
         // build the command objects without triggering update handlers
         $.each(cmds_init, function (nid) {

@@ -32,8 +32,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"code.google.com/p/go.net/websocket"
 	"github.com/hraban/lush/liblush"
@@ -555,6 +557,13 @@ func wseventChdir(s *server, dir string) error {
 	return writePrefixedJson(&s.ctrlclients, "chdir;", dir)
 }
 
+func wseventExit(s *server, _ string) error {
+	s.ctrlclients.Write([]byte("exiting;"))
+	time.Sleep(100 * time.Millisecond) // why not
+	os.Exit(0)
+	return nil
+}
+
 type wsHandler func(*server, string) error
 
 var wsHandlers = map[string]wsHandler{
@@ -573,6 +582,7 @@ var wsHandlers = map[string]wsHandler{
 	"delprop":     wseventDelprop,
 	"allclients":  wseventAllclients,
 	"chdir":       wseventChdir,
+	"exit":        wseventExit,
 	// obsolete
 	//"updatecmd":   wseventUpdatecmd,
 }

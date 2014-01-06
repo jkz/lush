@@ -388,6 +388,10 @@ define(["jquery"], function ($) {
             // not really a command: releasing is the best we can do to prevent
             // weird feedback to user ("repeat?")
             cmd.release();
+        } else if (cmd.cmd == "exit") {
+            // TODO again! dude this is NOT the time nor the place!
+            cmd.ctrl.send('exit');
+            cmd.release();
         } else {
             cmd.ctrl.send('start', cmd.nid);
         }

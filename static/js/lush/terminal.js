@@ -23,8 +23,13 @@
 
 // TERMINAL HANDLING
 
-define(["jquery", "lush/Cli", "lush/utils", "jquery.terminal", "jquery.ui"],
-       function ($, Cli) {
+define(["jquery",
+        "lush/Cli",
+        "lush/Ctrl",
+        "lush/utils",
+        "jquery.terminal",
+        "jquery.ui"],
+       function ($, Cli, Ctrl) {
     // Print text to this terminal. Ensures the text always ends in newline.
     $.fn.termPrintln = function (text, finalize) {
         // term.echo will always append newline so strip one off if exists
@@ -68,7 +73,10 @@ define(["jquery", "lush/Cli", "lush/utils", "jquery.terminal", "jquery.ui"],
 
 
     // set up the terminal window
-    return function (processCmd) {
+    return function (processCmd, ctrl) {
+        if (!(ctrl instanceof Ctrl)) {
+            throw "second argument to terminal.js main function must be a Ctrl";
+        }
         var cli = new Cli(processCmd);
         var latestParseError, lastTxt;
         var $term = $('.terminal').terminal(function (x) {
@@ -143,6 +151,7 @@ define(["jquery", "lush/Cli", "lush/utils", "jquery.terminal", "jquery.ui"],
                 var callback = curry(tabcompleteCallback, term, parser, partial);
                 $.get('/files.json', {pattern: pattern}, callback);
             },
+            exit: false,
         });
         cli.onerror = $term.error;
         cli.onUpdatedPrompt = function (txt) {
