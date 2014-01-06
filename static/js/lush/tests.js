@@ -306,6 +306,24 @@ define(["jquery",
         equal(updatedNameEventCount, 1, "ignore update() with NOP semantics");
     });
 
+    test("command update callbacks", function () {
+        var cmd = buildMockCommand({nid: 7, name: "goku"});
+        var i = 0;
+        cmd.update({name: "krillin"}, "the universe", function (cmdarg) {
+            equal(cmdarg, cmd, "command instance passed to callback equals original command");
+            i += 1;
+        });
+        equal(i, 1, "callback passed to update method called");
+        cmd.update({name: "still krillin", args: ["something something darkside"]},
+                   "Merkel", function (_, by) {
+            equal(by, "Merkel", "by passed to callback");
+            i += 1;
+        });
+        equal(i, 2, "callback function called exactly once per update");
+        cmd.update({name: "still krillin"}, "", function () { i += 1; });
+        equal(i, 3, "callback function also called when no properties are updated");
+    });
+
     test("stream events", function () {
         var cmd = buildMockCommand({nid: 1, name: "echo"});
 
