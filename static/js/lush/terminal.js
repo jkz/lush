@@ -70,7 +70,11 @@ define(["jquery", "lush/Cli", "lush/utils", "jquery.terminal", "jquery.ui"],
     // set up the terminal window
     return function (processCmd) {
         var cli = new Cli(processCmd);
+        var latestParseError, lastTxt;
         var $term = $('.terminal').terminal(function (x) {
+                if (latestParseError) {
+                    throw latestParseError;
+                }
                 cli.commit(x);
             }, {
             greetings: 'Welcome to Luyat shell',
@@ -81,14 +85,44 @@ define(["jquery", "lush/Cli", "lush/utils", "jquery.terminal", "jquery.ui"],
                 if (cli === undefined) {
                     return;
                 }
+                if (txt == lastTxt) {
+                    return;
+                }
+                // because of the way jQuery.terminal works, when a user hits
+                // enter this happens:
+                //
+                // 1. cli.setprompt("");
+                // 2. cli.commit("original commandline");
+                //
+                // this is a problem. the cli, upon seeing setprompt(""), thinks
+                // the user removed everything he typed. it will thus remove the
+                // entire prepared command tree.
+                //
+                // the easiest way to deal with this is to always ignore
+                // onCommandChange("").  it's not that big a deal, really.
+                // because of other jQuery.terminal bugs, this is actually what
+                // happens anyway (it does not call setprompt() when the user
+                // hits backspace).
+                //
+                // doesnt ignore the first onCommandChange("") (hence the
+                // lastTxt !== undefined) to allow initializing the cli with the
+                // empty string.
+                if (lastTxt !== undefined && txt == "") {
+                    return;
+                }
                 try {
                     cli.setprompt(txt);
                 } catch (e) {
-                    // ignore ParseErrors
-                    if (!(e instanceof Cli.ParseError)) {
+                    // ignore ParseErrors until command is actually committed
+                    if (e instanceof Error && e.name == "ParseError") {
+                        latestParseError = e;
+                        return;
+                    } else {
                         throw e;
                     }
                 }
+                latestParseError = undefined;
+                lastTxt = txt;
             },
             // completion for files only (broken)
             completion: function (term) {

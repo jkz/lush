@@ -32,17 +32,6 @@
 define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
        function ($, Command, Parser, Pool) {
 
-    function ParseError() {
-    }
-
-    ParseError.prototype = new Error();
-
-    function SemanticError(msg) {
-        this.msg = msg;
-    }
-
-    SemanticError.prototype = new ParseError();
-
     // prefix all special chars in arg by backslash
     function pescape(txt) {
         return txt.replace(/([\\?*\s"'])/g, "\\$1");
@@ -100,7 +89,6 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // error if caller forgets to set the callbacks.
     var Cli = function (processCmd) {
         var cli = this;
-        cli._rawtxt = "";
         // Locally identify this specific command line
         cli._guid = guid();
         cli._processCmd = processCmd;
@@ -281,20 +269,15 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             //
             // so.
             //
-            // clean up the mess using lazy cleaning. why not .remove()? well, I
-            // used to do that, but then what happens is the parent node briefly
-            // has his stdoutto value pointing to a non-existant command. this
-            // is a problem, e.g. for update({stdoutto: 0}), which is supposed
-            // to yield a childRemoved event, but that relies on the old child
-            // still existing. even if you fix that somehow, it's nice to leave
-            // this child hanging around until the parent has completely
-            // detached. this is a bit much maybe, but definitely the easiest
-            // correct solution, still.
-            mapCmdTree(cmd, function (cmd) {
-                cmd.update({userdata: {unused: true}});
+            // clean up the mess once this command is detached from its parent.
+            // can't clean up earlier because a child must exist at the moment
+            // of detaching.
+            $(cmd).one('parentRemoved', function () {
+                var cmd = this;
+                mapCmdTree(cmd, function (cmd) { cmd.release(); });
             });
-            cmd.update({userdata: {archived: true}});
-            // inform the parent that his child died
+            // inform the parent that his child died (hopefully he will
+            // disconnect) (otherwise we're in trouble)
             return $.Deferred().resolve(undefined, "so sorry for your loss");
         } else {
             // update an existing synced command object
@@ -469,28 +452,6 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     // :(
     Cli.prototype.setprompt = function (txt) {
         var cli = this;
-        if (txt == cli._rawtxt) {
-            // nothing changed; ignore.
-            return;
-        }
-        // because of the way jQuery.terminal works, when a user hits enter this
-        // happens:
-        //
-        // 1. cli.setprompt("");
-        // 2. cli.commit("original commandline");
-        //
-        // this is a problem. the cli, upon seeing setprompt(""), thinks the
-        // user removed everything he typed. it will thus remove the entire
-        // prepared command tree.
-        //
-        // the easiest way to deal with this is to always ignore setprompt("").
-        // it's not that big a deal, really. because of other jQuery.terminal
-        // bugs, this is actually what happens anyway (it does not call
-        // setprompt() when the user hits backspace).
-        if (txt == "") {
-            return;
-        }
-        cli._rawtxt = txt;
         cli._syncingPrompt = cli._syncPrompt(txt);
     };
 
@@ -528,9 +489,6 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             });
         });
     };
-
-    // Exported errors
-    Cli.ParseError = ParseError;
 
     return Cli;
 });

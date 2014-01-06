@@ -32,6 +32,12 @@ define(function () {
     var Parser = function () {
     };
 
+    function makeParseError(msg) {
+        var err = new Error(msg);
+        err.name = "ParseError";
+        return err;
+    }
+
     // the next char that will be popped. undefined at end of input
     Parser.prototype.peek = function () {
         if (this.state.idx < this.state.raw.length) {
@@ -52,6 +58,9 @@ define(function () {
 
     // in single quote mode, only a ' changes state
     function parse_char_quote_single(parser, c, i) {
+        if (c === undefined) {
+            throw makeParseError("unbalanced single quotes");
+        }
         if (c == "'") {
             return parse_char_normal;
         }
@@ -60,6 +69,9 @@ define(function () {
 
     // in double quote mode, only a " changes state
     function parse_char_quote_double(parser, c, i) {
+        if (c === undefined) {
+            throw makeParseError("unbalanced double quotes");
+        }
         if (c == '"') {
             return parse_char_normal;
         }
@@ -68,7 +80,7 @@ define(function () {
 
     function parse_char_escaped(parser, c, i) {
         if (c === undefined) {
-            throw "parser error: backslash at end of input";
+            throw makeParseError("backslash at end of input");
         }
         parser.onliteral(c);
         // escaping only lasts one char
