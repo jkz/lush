@@ -92,6 +92,8 @@ define(["jquery", "lush/Cli", "lush/utils", "jquery.terminal", "jquery.ui"],
             },
             // completion for files only (broken)
             completion: function (term) {
+                // temporarily disabled
+                // TODO: move this logic to Cli
                 var argv = parser.parse(term.get_command());
                 if (!$.isArray(argv)) {
                     // parse error
@@ -103,7 +105,7 @@ define(["jquery", "lush/Cli", "lush/utils", "jquery.terminal", "jquery.ui"],
                 }
                 var partial = argv.pop().text;
                 var pattern = punescape(partial) + "*";
-                // home grown callback function
+                // home-grown callback function
                 var callback = curry(tabcompleteCallback, term, parser, partial);
                 $.get('/files.json', {pattern: pattern}, callback);
             },

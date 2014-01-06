@@ -410,7 +410,7 @@ type getPropResponse struct {
 	Objname  string `json:"name"`
 	Propname string `json:"prop"`
 	// opaque value to return to client in corresponding request
-	Userdata string `json:"userdata,omitempty"`
+	Userdata interface{} `json:"userdata,omitempty"`
 }
 
 // equal semantics:
