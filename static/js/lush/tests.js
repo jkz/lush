@@ -20,11 +20,14 @@
 
 "use strict";
 
+var cmds = {};
+
 define(["jquery",
         "lush/Parser2",
+        "lush/Cli",
         "lush/Command",
         "lush/Pool",
-        "lush/utils"], function ($, Parser, Command, Pool) {
+        "lush/utils"], function ($, Parser, Cli, Command, Pool) {
     test("lcp(): longest common prefix", function () {
         equal(lcp(["abcd", "abab", "abba"]), "ab");
         equal(lcp([]), "", "common prefix of 0 strings");
@@ -257,7 +260,8 @@ define(["jquery",
         };
     }
 
-    function buildMockCommand(init) {
+    var uniqueIds = 0;
+    function buildMockCommand(init, callback) {
         // simulate server-side websocket event handlers
         var handlers = {
             setprop: function (reqjson) {
@@ -265,9 +269,16 @@ define(["jquery",
                 cmd.processUpdate(req);
             }
         };
+        if (!init.nid) {
+            init.nid = ++uniqueIds;
+        }
         var ctrl = buildMockCtrl(handlers);
         var cmd = new Command(ctrl, init, "foo");
-        return cmd;
+        if (callback) {
+            callback(cmd);
+        } else {
+            return cmd;
+        }
     }
 
     test("command update events", function () {
@@ -362,5 +373,42 @@ define(["jquery",
         pool.consume(consumer);
         pool.add(2);
         deepEqual(testar, [1,2], "consume from empty pool, then add element");
+    });
+
+    asyncTest("command-line interface model", function () {
+        expect(8);
+        var cli = new Cli(buildMockCommand);
+        var updatedPrompt;
+        cli.onUpdatedPrompt = function (txt) {
+            equal(typeof txt, "string", "prompt updated with string");
+            updatedPrompt = txt;
+        };
+        var errmsg;
+        cli.onerror = function (x) {
+            equal(typeof x, "string", "error message is of type string");
+            error = x;
+        };
+        cli.setprompt("one two three").then(function () {
+            ok(cli._cmd instanceof Command, "synchronized command with prompt");
+            equal(cli._cmd.cmd, "one", "command name of synced command");
+            deepEqual(cli._cmd.args, ["two", "three"], "args of synced command");
+            ok(!cli._cmd.stdoutto, "synced command has no child");
+            var def = $.Deferred();
+            cli._cmd.update({args: ["tzö", "tzree"]}, "lebatman", function () {
+                def.resolve(); // let's settle this, batman
+            })
+            return def;
+        }).then(function () {
+            // you know what's a good movie? that one movie about the cop that
+            // tu--Prince Of The City! that's the name. great movie. people say
+            // it's too long but I think it's great. good dialogues.
+            equal(updatedPrompt, "one tzö tzree", "updating synced command syncs prompt");
+            return cli.setprompt("blabla");
+        }).then(function () {
+            equal(cli._cmd.cmd, "blabla", "updated entire prompt: command");
+            deepEqual(cli._cmd.args, [], "updated entire prompt: args");
+            cli.setprompt("foodoofafa | haia | parapapapa");
+            // ... wait---how do I test this?
+        }).always(start); // qunit
     });
 });

@@ -348,7 +348,9 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         }
         var cli = this;
         var doneDeferred = $.Deferred();
-        var getCmd = cli._getCmdFromPool.bind(cli);
+        var getCmd = function (x) {
+            return cli._getCmdFromPool(x);
+        }
         return syncPromptToCmd(ast, cli._cmd, cli._guid, getCmd).then(function (cmd) {
             if (cmd === undefined) {
                 // not rejecting the Deferred here because this is a heavy
@@ -483,7 +485,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             throw "argument to setprompt must be the raw prompt, as a string";
         }
         var ast = cli._parse(txt, ignoreParseError);
-        cli._syncingPrompt = cli._syncPrompt(ast);
+        return (cli._syncingPrompt = cli._syncPrompt(ast));
     };
 
     // commit the current prompt ([enter] button)
@@ -494,6 +496,9 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         }
         var root = cli._cmd;
         cli._cmd = undefined;
+        // ++ for every cmd started, -- for every command that finishes, = -1
+        // for any error. == 0? HOLY UNEXPECTED SWEETNESS! quick, archive it
+        // before He changes His mind.
         var runningCmds = 0;
         // archive when everybody completes succesfully
         var cmdDone = function (e, status) {
@@ -511,7 +516,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
                 root.setArchivalState(true);
             }
         };
-        cli._syncingPrompt.done(function () {
+        return cli._syncingPrompt.done(function () {
             // when the prompt has been set, all commands can be started.
             mapCmdTree(root, function (cmd) {
                 cmd.start();
