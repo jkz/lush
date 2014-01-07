@@ -31,7 +31,7 @@
 <script src="/js/lush.js"></script>
 
 </head>
-<body>
+<body data-status=connection_error>
 
 <p><b><a href="/">lush</a></b></p>
 
@@ -105,6 +105,8 @@ connect to:
 
 <h2>stderr</h2>
 <pre class=monitor-stream data-stream=stderr data-sysid={{.Cmd.Id}}>{{.Stderr}}</pre>
+
+<p id=connection_error>this page is unsupported (for now)
 
 <script>
 requirejs(["lush/cmd"]);
