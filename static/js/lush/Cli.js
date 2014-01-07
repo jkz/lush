@@ -484,8 +484,16 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         if (!(typeof txt == "string")) {
             throw "argument to setprompt must be the raw prompt, as a string";
         }
-        var ast = cli._parse(txt, ignoreParseError);
-        return (cli._syncingPrompt = cli._syncPrompt(ast));
+        cli._latestPromptInput = txt;
+        cli._syncingPrompt = cli._syncingPrompt.then(function () {
+            if (cli._latestPromptInput == cli._lastParsedPrompt) {
+                return;
+            }
+            var ast = cli._parse(cli._latestPromptInput, ignoreParseError);
+            cli._lastParsedPrompt = cli._latestPromptInput;
+            return cli._syncPrompt(ast);
+        });
+        return cli._syncingPrompt;
     };
 
     // commit the current prompt ([enter] button)

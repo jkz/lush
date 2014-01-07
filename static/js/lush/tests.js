@@ -409,6 +409,11 @@ define(["jquery",
             deepEqual(cli._cmd.args, [], "updated entire prompt: args");
             cli.setprompt("foodoofafa | haia | parapapapa");
             // ... wait---how do I test this?
+            // TODO: test pipeline
+            // TODO: start the cmd through the cli (also icm w pipeline)
+            // TODO: start the cmd externally
+            // TODO: start random command in a synced pipeline
+            // &c! (Cli object is friggin' complex man)
         }).always(start); // qunit
     });
 });
