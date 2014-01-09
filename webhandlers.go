@@ -28,12 +28,49 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/hraban/lush/liblush"
 	"github.com/hraban/web"
 )
+
+var masterAddr string
+
+var addrRegexp = regexp.MustCompile(":\\d+$")
+
+// "1.2.3.4:60102" -> "1.2.3.4"
+// "[::1]:123" -> "[::1]"
+// anything else -> undefined
+func fullAddrToBare(addrPlusIp string) (onlyAddr string) {
+	return addrRegexp.ReplaceAllString(addrPlusIp, "")
+}
+
+func remoteAddr(ctx *web.Context) string {
+	return fullAddrToBare(ctx.Request.RemoteAddr)
+}
+
+// claim that I am master. returns false if someone else already did
+func claimMaster(ctx *web.Context) bool {
+	remote := remoteAddr(ctx)
+	if remote != masterAddr {
+		if masterAddr == "" {
+			masterAddr = remote
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+// would prefer this as a wrapper but yeah MACROS PLZ
+func errorIfNotMaster(ctx *web.Context) error {
+	if !claimMaster(ctx) {
+		return web.WebError{403, "go away you not master"}
+	}
+	return nil
+}
 
 func redirect(ctx *web.Context, loc *url.URL) {
 	if _, ok := ctx.Params["noredirect"]; ok {
@@ -133,6 +170,9 @@ func handleGetCmdInfo(ctx *web.Context, idstr string) error {
 }
 
 func handlePostSend(ctx *web.Context, idstr string) error {
+	if err := errorIfNotMaster(ctx); err != nil {
+		return err
+	}
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
@@ -151,6 +191,9 @@ func handlePostSend(ctx *web.Context, idstr string) error {
 }
 
 func handlePostClose(ctx *web.Context, idstr string) error {
+	if err := errorIfNotMaster(ctx); err != nil {
+		return err
+	}
 	id, _ := liblush.ParseCmdId(idstr)
 	s := ctx.User.(*server)
 	c := s.session.GetCommand(id)
@@ -169,6 +212,9 @@ func handlePostClose(ctx *web.Context, idstr string) error {
 }
 
 func handleGetNewNames(ctx *web.Context) error {
+	if err := errorIfNotMaster(ctx); err != nil {
+		return err
+	}
 	var bins []string
 	term := ctx.Params["term"]
 	for _, d := range strings.Split(os.Getenv("PATH"), string(os.PathListSeparator)) {
@@ -218,6 +264,9 @@ func handlePostChdir(ctx *web.Context) error {
 
 // List of files nice for tab completion
 func handleGetFiles(ctx *web.Context) error {
+	if err := errorIfNotMaster(ctx); err != nil {
+		return err
+	}
 	ctx.ContentType("json")
 	paths, err := filepath.Glob(ctx.Params["pattern"])
 	if err != nil {
@@ -246,6 +295,7 @@ func handleWsCtrl(ctx *web.Context) error {
 	// notify all other clients that a new client has connected
 	wseventAllclients(s, "") // pretend somebody generated this event
 	// TODO: keep clients updated about disconnects, too
+	var isMaster = claimMaster(ctx)
 	for {
 		buf := make([]byte, 5000)
 		n, err := ws.Read(buf)
@@ -263,7 +313,7 @@ func handleWsCtrl(ctx *web.Context) error {
 			return nil
 		}
 		msg := buf[:n]
-		err = parseAndHandleWsEvent(s, msg, ws)
+		err = parseAndHandleWsEvent(s, msg, ws, isMaster)
 		if err != nil {
 			return fmt.Errorf("error handling WS event: %v", err)
 		}
@@ -271,37 +321,47 @@ func handleWsCtrl(ctx *web.Context) error {
 	return errors.New("unreachable")
 }
 
-func handleGetEnviron(ctx *web.Context) map[string]string {
+func handleGetEnviron(ctx *web.Context) (map[string]string, error) {
+	if err := errorIfNotMaster(ctx); err != nil {
+		return nil, err
+	}
 	ctx.ContentType("json")
 	s := ctx.User.(*server)
-	return s.session.Environ()
+	return s.session.Environ(), nil
 }
 
-func handlePostSetenv(ctx *web.Context) {
+func handlePostSetenv(ctx *web.Context) error {
+	if err := errorIfNotMaster(ctx); err != nil {
+		return err
+	}
 	s := ctx.User.(*server)
 	s.session.Setenv(ctx.Params["key"], ctx.Params["value"])
-	return
+	return nil
 }
 
-func handlePostUnsetenv(ctx *web.Context) {
+func handlePostUnsetenv(ctx *web.Context) error {
+	if err := errorIfNotMaster(ctx); err != nil {
+		return err
+	}
 	s := ctx.User.(*server)
 	s.session.Unsetenv(ctx.Params["key"])
-	return
+	return nil
 }
 
 func init() {
 	serverinitializers = append(serverinitializers, func(s *server) {
 		s.userdata = map[string]string{}
+		// public handlers
 		s.web.Get(`/`, handleGetRoot)
 		s.web.Get(`/(\d+)/`, handleGetCmd)
 		s.web.Get(`/(\d+)/info.json`, handleGetCmdInfo)
+		s.web.Websocket(`/ctrl`, handleWsCtrl)
+		s.web.Websocket(`/(\d+)/stream/(\w+).bin`, handleWsStream)
+		// only master
 		s.web.Post(`/(\d+)/send`, handlePostSend)
 		s.web.Post(`/(\d+)/close`, handlePostClose)
 		s.web.Get(`/new/names.json`, handleGetNewNames)
-		s.web.Websocket(`/(\d+)/stream/(\w+).bin`, handleWsStream)
-		s.web.Post(`/chdir`, handlePostChdir)
 		s.web.Get(`/files.json`, handleGetFiles)
-		s.web.Websocket(`/ctrl`, handleWsCtrl)
 		s.web.Get(`/environ.json`, handleGetEnviron)
 		s.web.Post(`/setenv`, handlePostSetenv)
 		s.web.Post(`/unsetenv`, handlePostUnsetenv)

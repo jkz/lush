@@ -571,37 +571,55 @@ func wseventExit(s *server, _ string) error {
 
 type wsHandler func(*server, string) error
 
-var wsHandlers = map[string]wsHandler{
+// for everybodeh
+var wsPublicHandlers = map[string]wsHandler{
 	"subscribe":   wseventSubscribe,
-	"new":         wseventNew,
-	"setpath":     wseventSetpath,
 	"getpath":     wseventGetpath,
-	"setuserdata": wseventSetuserdata,
 	"getuserdata": wseventGetuserdata,
+	"getprop":     wseventGetprop,
+	"allclients":  wseventAllclients,
+}
+
+// only master!
+var wsMasterHandlers = map[string]wsHandler{
+	"new":         wseventNew,
+	"setuserdata": wseventSetuserdata,
+	"setpath":     wseventSetpath,
 	"connect":     wseventConnect,
 	"start":       wseventStart,
 	"stop":        wseventStop,
 	"release":     wseventRelease,
-	"getprop":     wseventGetprop,
 	"setprop":     wseventSetprop,
 	"delprop":     wseventDelprop,
-	"allclients":  wseventAllclients,
 	"chdir":       wseventChdir,
 	"exit":        wseventExit,
 	// obsolete
 	//"updatecmd":   wseventUpdatecmd,
 }
 
-func parseAndHandleWsEvent(s *server, msg []byte, sender io.WriteCloser) error {
+func parseAndHandleWsEvent(s *server, msg []byte, sender io.WriteCloser, isMaster bool) error {
 	argv := strings.SplitN(string(msg), ";", 2)
 	if len(argv) != 2 {
 		return errors.New("parse error")
 	}
-	handler, ok := wsHandlers[argv[0]]
-	if !ok {
-		return errors.New("unknown command")
+	handler := wsPublicHandlers[argv[0]]
+	if handler == nil && isMaster {
+		handler = wsMasterHandlers[argv[0]]
 	}
-	err := handler(s, argv[1])
+	var err error
+	if handler == nil {
+		var errmsg string
+		if isMaster {
+			errmsg = "unknown command"
+		} else {
+			errmsg = "unknown command (you're not master, maybe that's it?)"
+		}
+		// TODO: slightly different from lush error (shouldnt be displayed to
+		// user)
+		err = lushError{errors.New(errmsg)}
+	} else {
+		err = handler(s, argv[1])
+	}
 	if err != nil {
 		if le, ok := err.(lushError); ok {
 			err = writePrefixedJson(sender, "error;", le.Error())
