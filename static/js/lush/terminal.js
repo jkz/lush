@@ -149,6 +149,8 @@ define(["jquery",
             $term.set_command(txt);
             cli = tempcli;
         };
+        globals.cli = cli;
+        globals.terminal = $term;
         return $term;
     };
 });
