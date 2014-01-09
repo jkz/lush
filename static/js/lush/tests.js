@@ -95,16 +95,13 @@ define(["jquery",
             };
         };
         parser.onliteral = function (c) {
-            if (c == '*' || c == '?') {
-                c = '_';
-            }
             ctx.newarg += c;
         };
         parser.onglobQuestionmark = function () {
-            ctx.newarg += '?';
+            ctx.newarg += 'GLOB_QM';
         };
         parser.onglobStar = function () {
-            ctx.newarg += '*';
+            ctx.newarg += 'GLOB_STAR';
         };
         parser.onboundary = function () {
             ctx.argv.push(ctx.newarg);
@@ -113,14 +110,15 @@ define(["jquery",
             parser.parse(raw);
             deepEqual(ctx.argv, out, name);
         };
-        t('*', ['*'], 'recognize bare globbing char');
-        t('\\*', ['_'], 'ignore escaped globbing char');
-        t('"*"', ['_'], 'ignore quoted globbing char');
-        t('foo*', ['foo*'], 'composite: word + glob');
-        t('foo\\*', ['foo_'], 'composite word + literal');
-        t('foo\\*bar*', ['foo_bar*'], 'composite word + glob + literal');
+        t('*', ['GLOB_STAR'], 'recognize bare globbing char (*)');
+        t('?', ['GLOB_QM'], 'recognize bare globbing char (?)');
+        t('\\*', ['*'], 'ignore escaped globbing char');
+        t('"*"', ['*'], 'ignore quoted globbing char');
+        t('foo*', ['fooGLOB_STAR'], 'composite: word + glob');
+        t('foo\\*', ['foo*'], 'composite word + literal');
+        t('foo\\*bar*', ['foo*barGLOB_STAR'], 'composite word + glob + literal');
     });
-    
+
     // test the indexing of globbing character positions
     test("parser: globbing char indexing", function() {
         var ctx;
