@@ -38,20 +38,17 @@ func makeTestServer(t *testing.T) (*server, <-chan error) {
 	go func() {
 		errc <- s.web.Run("localhost:15846")
 	}()
-	// wait \sum_{i=1}^{6} i^2 = 91 ms for the server to start
-	for i := 1; i < 7; i++ {
-		// is the server ready yet?
-		time.Sleep(time.Duration(i*i) * time.Millisecond)
-		rec := httptest.NewRecorder()
-		req, err := http.NewRequest("GET", "/ping", nil)
-		if err != nil {
-			// forget about it.
-			panic("failed to create ping request for testing")
-		}
-		s.web.ServeHTTP(rec, req)
-		if rec.Code == 200 {
-			return s, errc
-		}
+	// wait arbitrary time for server to start
+	time.Sleep(time.Second)
+	rec := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/ping", nil)
+	if err != nil {
+		// forget about it.
+		panic("failed to create ping request for testing")
+	}
+	s.web.ServeHTTP(rec, req)
+	if rec.Code == 200 {
+		return s, errc
 	}
 	// forget about testing anything
 	s.web.Close()
