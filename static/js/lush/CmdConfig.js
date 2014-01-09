@@ -93,6 +93,20 @@ define(["jquery",
             o.userdata = $(this).data();
             cmd.update(o);
         });
+        $('#cmdstdout .forwarded a').click(function (e) {
+            e.preventDefault();
+            var cmd = conf._cmd;
+            if (cmd !== undefined) {
+                cmd.update({stdoutto: 0});
+            }
+        });
+        $('#cmdstderr .forwarded a').click(function (e) {
+            e.preventDefault();
+            var cmd = conf._cmd;
+            if (cmd !== undefined) {
+                cmd.update({stderrto: 0});
+            }
+        });
     };
 
     CmdConfig.prototype.disassociate = function () {
@@ -104,6 +118,7 @@ define(["jquery",
         $(cmd).off('.cmdconfig');
         conf._cmd = undefined;
         conf._disassocEdit();
+        $('.forwarded').hide();
     };
 
     CmdConfig.prototype._disassocEdit = function () {
@@ -155,6 +170,15 @@ define(["jquery",
             var cmd = this;
             $('#cmdstdout .streamdata').text(cmd.stdout);
         });
+        $(cmd).on('updated.stdoutto.cmdconfig', function () {
+            var cmd = this;
+            if (cmd.stdoutto) {
+                $('#stdouttoid').text(cmd.stdoutto);
+                $('#cmdstdout .forwarded').show();
+            } else {
+                $('#cmdstdout .forwarded').hide();
+            }
+        });
     };
 
     CmdConfig.prototype._assocStderr = function () {
@@ -163,6 +187,15 @@ define(["jquery",
         $(cmd).on('updated.stderr.cmdconfig', function () {
             var cmd = this;
             $('#cmdstderr .streamdata').text(cmd.stderr);
+        });
+        $(cmd).on('updated.stderrto.cmdconfig', function () {
+            var cmd = this;
+            if (cmd.stderrto) {
+                $('#stderrtoid').text(cmd.stderrto);
+                $('#cmdstderr .forwarded').show();
+            } else {
+                $('#cmdstderr .forwarded').hide();
+            }
         });
     };
 

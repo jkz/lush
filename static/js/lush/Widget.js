@@ -93,6 +93,8 @@ define(["jquery",
         case 3:
             content = '✗';
             break;
+        default:
+            throw "illegal status code";
         }
         return $node.empty().append(content);
     };
