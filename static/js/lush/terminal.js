@@ -79,6 +79,9 @@ define(["jquery",
         var cli = new Cli(processCmd);
         var latestParseError;
         var $term = $('.terminal').terminal(function (x) {
+            if (x.trim() == "") {
+                return;
+            }
             cli.setprompt(x).done(function () {
                 cli.commit();
             }).fail(function (e) {
