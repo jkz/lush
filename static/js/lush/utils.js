@@ -325,7 +325,11 @@ function noConcurrentCalls(f) {
         var d = $.Deferred();
         pendingf = function () {
             var exe = $.Deferred();
-            var cd = closure().always(function () { exe.resolve(); });
+            var cd = closure();
+            if (!cd || !$.isFunction(cd.always)) {
+                throw "Return value of wrapped function must be a deferred";
+            }
+            cd = cd.always(function () { exe.resolve(); });
             pipeDeferred(cd, d);
             return exe;
         };

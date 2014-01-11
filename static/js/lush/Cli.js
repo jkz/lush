@@ -502,8 +502,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         try {
             ast = cli._parse(cli._latestPromptInput, ignoreParseError);
         } catch (e) {
-            d.reject(e);
-            return;
+            return d.reject(e);
         }
         pipeDeferred(cli._syncPrompt(ast), d);
         return d;
