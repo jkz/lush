@@ -295,7 +295,7 @@ func handleWsCtrl(ctx *web.Context) error {
 	// notify all other clients that a new client has connected
 	wseventAllclients(s, "") // pretend somebody generated this event
 	// TODO: keep clients updated about disconnects, too
-	var isMaster = claimMaster(ctx)
+	ws.isMaster = claimMaster(ctx)
 	for {
 		buf := make([]byte, 5000)
 		n, err := ws.Read(buf)
@@ -313,7 +313,7 @@ func handleWsCtrl(ctx *web.Context) error {
 			return nil
 		}
 		msg := buf[:n]
-		err = parseAndHandleWsEvent(s, msg, ws, isMaster)
+		err = parseAndHandleWsEvent(s, ws, msg)
 		if err != nil {
 			return fmt.Errorf("error handling WS event: %v", err)
 		}

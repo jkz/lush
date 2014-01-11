@@ -43,7 +43,8 @@ import (
 
 // websocket client (value-struct). implements io.Writer
 type wsClient struct {
-	Id uint32
+	Id       uint32
+	isMaster bool
 	*websocket.Conn
 }
 
@@ -53,7 +54,7 @@ var totalWsClients uint32
 func newWsClient(conn *websocket.Conn) wsClient {
 	// Assign a (session-local) unique ID to this connection
 	id := atomic.AddUint32(&totalWsClients, 1)
-	return wsClient{id, conn}
+	return wsClient{id, false, conn}
 }
 
 func getCmd(s *server, idstr string) (liblush.Cmd, error) {
@@ -597,23 +598,24 @@ var wsMasterHandlers = map[string]wsHandler{
 	//"updatecmd":   wseventUpdatecmd,
 }
 
-func parseAndHandleWsEvent(s *server, msg []byte, sender io.WriteCloser, isMaster bool) error {
+func parseAndHandleWsEvent(s *server, client wsClient, msg []byte) error {
 	argv := strings.SplitN(string(msg), ";", 2)
 	if len(argv) != 2 {
 		return errors.New("parse error")
 	}
 	handler := wsPublicHandlers[argv[0]]
-	if handler == nil && isMaster {
+	if handler == nil && client.isMaster {
 		handler = wsMasterHandlers[argv[0]]
 	}
 	var err error
 	if handler == nil {
 		var errmsg string
-		if isMaster {
+		if client.isMaster {
 			errmsg = "unknown command"
 		} else {
 			errmsg = "unknown command (you're not master, maybe that's it?)"
 		}
+		s.web.Logger.Printf("ws client %d unknown event: %q", client.Id, argv[0])
 		// TODO: slightly different from lush error (shouldnt be displayed to
 		// user)
 		err = lushError{errors.New(errmsg)}
@@ -622,7 +624,7 @@ func parseAndHandleWsEvent(s *server, msg []byte, sender io.WriteCloser, isMaste
 	}
 	if err != nil {
 		if le, ok := err.(lushError); ok {
-			err = writePrefixedJson(sender, "error;", le.Error())
+			err = writePrefixedJson(client, "error;", le.Error())
 		}
 	}
 	return err
