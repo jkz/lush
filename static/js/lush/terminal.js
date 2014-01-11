@@ -79,12 +79,12 @@ define(["jquery",
         var cli = new Cli(processCmd);
         var latestParseError;
         var $term = $('.terminal').terminal(function (x) {
-                cli.setprompt(x).done(function () {
-                    cli.commit();
-                }).fail(function (e) {
-                    $term.error('Parse error: ' + e.message);
-                });
-            }, {
+            cli.setprompt(x).done(function () {
+                cli.commit();
+            }).fail(function (e) {
+                $term.error('Parse error: ' + e.message);
+            });
+        }, {
             greetings: 'Welcome to Luyat shell',
             name: 'lush',
             prompt: '$ ',

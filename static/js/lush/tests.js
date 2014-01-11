@@ -23,7 +23,7 @@
 var cmds = {};
 
 define(["jquery",
-        "lush/Parser2",
+        "lush/Parser",
         "lush/Cli",
         "lush/Command",
         "lush/Pool",

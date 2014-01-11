@@ -1,4 +1,4 @@
-// Copyright © 2013 Hraban Luyat <hraban@0brg.net>
+// Copyright © 2013, 2014 Hraban Luyat <hraban@0brg.net>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -24,180 +24,198 @@
 // PROMPT PARSING
 
 define(function () {
+    // Quote flag state in parsing
+    var QUOTE_NONE = 0;
+    var QUOTE_SINGLE = 1;
+    var QUOTE_DOUBLE = 2;
 
-    var Parser = function (glob) {
-        this.glob = glob;
+    var Parser = function () {
+    };
+
+    Parser.errcodes = {
+        UNBALANCED_SINGLE_QUOTE: 1,
+        UNBALANCED_DOUBLE_QUOTE: 2,
+        TERMINATING_BACKSLASH: 3,
+    };
+
+    function makeParseError(msg, type) {
+        var e = new Error(msg);
+        e.name = "ParseError";
+        e.type = type;
+        return e;
     }
 
-    // First level of prompt parsing: strip quotes.
-    // Returns parsed argument vector as array on success, error object on failure
-    var parseLvl1 = function (text) {
-        // array of word objects: {text: string, pos: int}
-        var argv = [];
-        // Quote flag state in parsing
-        var QUOTE_NONE = 0;
-        var QUOTE_SINGLE = 1;
-        var QUOTE_DOUBLE = 2;
-        var quote = {
-            type: QUOTE_NONE,
+    function defaultOnError(err) {
+        throw err;
+    }
+
+    Parser.prototype._callOnError = function (msg, type) {
+        var parser = this;
+        var handler = parser.onerror || defaultOnError;
+        var e = makeParseError(msg, type);
+        handler(e);
+    };
+
+    // the next char that will be popped. undefined at end of input
+    Parser.prototype.peek = function () {
+        if (this.state.idx < this.state.raw.length) {
+            return this.state.raw[this.state.idx];
+        }
+    };
+
+    // pop a character off the input. returns undefined when end of input has
+    // been reached
+    Parser.prototype.popc = function () {
+        var parser = this;
+        if (parser.state.idx < parser.state.raw.length) {
+            var c = parser.state.raw[parser.state.idx];
+            parser.state.idx++;
+            return c;
+        }
+    };
+
+    // in single quote mode, only a ' changes state
+    function parse_char_quote_single(parser, c, i) {
+        if (c === undefined) {
+            parser._callOnError("unbalanced single quotes",
+                                Parser.errcodes.UNBALANCED_SINGLE_QUOTE);
+            return;
+        }
+        if (c == "'") {
+            return parse_char_normal;
+        }
+        parser.onliteral(c);
+    }
+
+    // in double quote mode, only a " changes state
+    function parse_char_quote_double(parser, c, i) {
+        if (c === undefined) {
+            parser._callOnError("unbalanced double quotes",
+                                Parser.errcodes.UNBALANCED_DOUBLE_QUOTE);
+            return;
+        }
+        if (c == '"') {
+            return parse_char_normal;
+        }
+        parser.onliteral(c);
+    }
+
+    function parse_char_escaped(parser, c, i) {
+        if (c === undefined) {
+            parser._callOnError("backslash at end of input",
+                                Parser.errcodes.TERMINATING_BACKSLASH);
+            return;
+        }
+        parser.onliteral(c);
+        // escaping only lasts one char
+        return parse_char_normal;
+    }
+
+    function parse_char_normal(parser, c, i) {
+        if (c === undefined) {
+            if (parser.state.parsingword) {
+                parser.onboundary();
+            }
+            return;
+        }
+        // these chars have special meaning
+        switch (c) {
+        case "'":
+            // Start new single quoted block
+            parser.state.quotestart = i;
+            parser.state.parsingword = true;
+            return parse_char_quote_single;
+        case '"':
+            // Start new double quoted block
+            parser.state.quotestart = i;
+            parser.state.parsingword = true;
+            return parse_char_quote_double;
+        case '\\':
+            parser.state.parsingword = true;
+            return parse_char_escaped;
+        case ' ':
+            // Word boundary
+            if (parser.state.parsingword) {
+                parser.onboundary();
+                parser.state.parsingword = false;
+            }
+            break;
+        case '*':
+            parser.onglobStar(i);
+            parser.state.parsingword = true;
+            break;
+        case '?':
+            parser.onglobQuestionmark(i);
+            parser.state.parsingword = true;
+            break;
+        case '|':
+            if (parser.state.parsingword) {
+                parser.onboundary();
+                parser.state.parsingword = false;
+            }
+            parser.onpipe();
+            break;
+        default:
+            parser.onliteral(c);
+            parser.state.parsingword = true;
+            break;
+        }
+    };
+
+    Parser.prototype.parse = function (raw) {
+        this.state = {
+            raw: "",
+            idx: 0,
+            quotetype: QUOTE_NONE,
             // Index of opening quote
-            start: null,
-        }
-        var i = 0;
-        // Incrementally increased until boundary then pushed on argv
-        // not runtime efficient but can easily be improved later by using indices
-        var word = null; // null = no word
-        // Push the current word on the argument list
-        var pushword = function () {
-            if (word !== null) {
-                argv.push(word);
-            }
-            word = null;
-        }
-        // Also a word if left empty (e.g. "")
-        var ensureword = function () {
-            word = word || {text: "", pos: i};
-        }
-        var pushchar = function (c) {
-            if (c === undefined) {
-                c = text[i];
-            }
-            ensureword();
-            word.text += c;
-        }
-        for (i = 0; i < text.length; i++) {
-            var c = text[i];
-            switch (c) {
-            case "'":
-                switch (quote.type) {
-                case QUOTE_NONE:
-                    // Start new single quoted block
-                    quote.type = QUOTE_SINGLE;
-                    quote.start = i;
-                    ensureword();
-                    break;
-                case QUOTE_SINGLE:
-                    // End single quoted block
-                    quote.type = QUOTE_NONE;
-                    break;
-                case QUOTE_DOUBLE:
-                    // Single quote in double quoted block: normal char
-                    pushchar();
-                    break;
-                }
-                break;
-            case '"':
-                switch (quote.type) {
-                case QUOTE_NONE:
-                    // Start new double quoted block
-                    quote.type = QUOTE_DOUBLE;
-                    quote.start = i;
-                    ensureword();
-                    break;
-                case QUOTE_SINGLE:
-                    // Double quotes in single quoted block: normal char
-                    pushchar();
-                    break;
-                case QUOTE_DOUBLE:
-                    // End double quoted block
-                    quote.type = QUOTE_NONE;
-                    break;
-                }
-                break;
-            case '\\':
-                if (i >= text.length - 1) {
-                    return parseerror("backslash at end of input", i);
-                }
-                // Yes, copy the backslash (this is lvl 1)
-                pushchar();
-                i++;
-                pushchar();
-                break;
-            case ' ':
-                if (quote.type) {
-                    // Quoted escape
-                    pushchar('\\');
-                    pushchar();
-                } else {
-                    // treat multiple consecutive spaces as one
-                    while (i < text.length - 1 && text[i+1] == ' ') {
-                        i++;
-                    }
-                    // Word boundary
-                    pushword();
-                }
-                break;
-            // Special characters outside quoting
-            case '*':
-            case '?':
-                if (quote.type) {
-                    pushchar('\\');
-                }
-                // fallthrough
-            default:
-                pushchar();
-                break;
-            }
-        }
-        pushword();
-        if (quote.type != QUOTE_NONE) {
-            var qname = (quote.type == QUOTE_DOUBLE ? "double" : "single");
-            return parseerror("unbalanced " + qname + " quotes", quote.start);
-        }
-        return argv;
-    };
-
-    // Contains an unescaped ? or *
-    var hasGlobChar = function (str) {
-        // equivalent: (?<=\\)[?*]
-        return /^(?:(?!\\[?*]).)*[?*]/.test(str)
-    };
-
-    // Escape a string such that parsing it will return the original string
-    Parser.prototype.escape = function (str) {
-        return str.replace(/([\\?* "'])/g, "\\$1");
-    };
-
-    Parser.prototype.unescape = function (str) {
-        return str.replace(/\\(.)/g, "$1");
-    };
-
-    // Parse array of level 1 blocks: file globbing
-    Parser.prototype._parseLvl2 = function (lvl1argv) {
-        if (!$.isArray(lvl1argv)) {
-            return lvl1argv;
-        }
-        var argv = [];
-        // please god i just wanna go to bed i really don't give a crap ill
-        // wrap this thing a thousand times if i have to just pass the friggin
-        // test ok
-        var thisfuckingthing = this;
-        var escape = function (x) {
-            return thisfuckingthing.escape(x);
+            quotestart: -1,
+            // when true the next boundary will trigger an "onboundary" event.
+            // idea behind this: set to true at every char that is part of a
+            // word (non-space, non-special like pipe), on every space char (or
+            // other special char) generate an onboundary event if this is false
+            // then set it to false. also generate the event at end of input.
+            parsingword: false,
         };
-        for (var i = 0; i < lvl1argv.length; i++) {
-            var arg = lvl1argv[i];
-            if (hasGlobChar(arg.text)) {
-                var files = this.glob(arg.text);
-                if (files.length == 0) {
-                    return parseerror("No match for pattern " + arg.text, arg.pos);
-                }
-                argv = argv.concat($.map(files, function (fname) {
-                    return {
-                        pos: arg.pos,
-                        text: escape(fname),
-                    };
-                }));
-            } else {
-                argv.push(arg);
-            }
+        if (this.oninit) {
+            this.oninit();
         }
-        return argv;
-    };
-
-    Parser.prototype.parse = function (text) {
-        var argv = this._parseLvl2(parseLvl1(text));
-        return argv;
+        if (!this.onliteral) {
+            this.onliteral = function () {};
+        }
+        if (!this.onboundary) {
+            this.onboundary = function () {};
+        }
+        if (!this.onpipe) {
+            this.onpipe = function () {
+                this.onliteral('|');
+            };
+        }
+        // if no callback specified for ? treat it as literal
+        if (!this.onglobQuestionmark) {
+            this.onglobQuestionmark = function () {
+                this.onliteral('?');
+            };
+        }
+        // if no callback specified for * treat it as literal
+        if (!this.onglobStar) {
+            this.onglobStar = function () {
+                this.onliteral('*');
+            };
+        }
+        // only called for parse errors
+        if (!this.onerror) {
+            this.onerror = defaultOnError;
+        }
+        this.state.raw = raw;
+        var f = parse_char_normal; // ISA state as function
+        var c;
+        // do while so that a last c === undefined still gets handled (notify
+        // state func of EOF)
+        do {
+            var i = this.state.idx;
+            c = this.popc();
+            f = f(this, c, i) || f;
+        } while (c !== undefined);
     };
 
     return Parser;

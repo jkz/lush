@@ -29,7 +29,7 @@
 
 "use strict";
 
-define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
+define(["jquery", "lush/Command", "lush/Parser", "lush/Pool", "lush/utils"],
        function ($, Command, Parser, Pool) {
 
     // prefix all special chars in arg by backslash
