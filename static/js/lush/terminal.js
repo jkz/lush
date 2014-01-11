@@ -77,12 +77,13 @@ define(["jquery",
             throw "second argument to terminal.js main function must be a Ctrl";
         }
         var cli = new Cli(processCmd);
-        var latestParseError, lastTxt;
+        var latestParseError;
         var $term = $('.terminal').terminal(function (x) {
-                if (latestParseError) {
-                    throw latestParseError;
-                }
-                cli.commit(x);
+                cli.setprompt(x).done(function () {
+                    cli.commit();
+                }).fail(function (e) {
+                    $term.error('Parse error: ' + e.message);
+                });
             }, {
             greetings: 'Welcome to Luyat shell',
             name: 'lush',
@@ -90,9 +91,6 @@ define(["jquery",
             tabcompletion: true,
             onCommandChange: function (txt) {
                 if (cli === undefined) {
-                    return;
-                }
-                if (txt == lastTxt) {
                     return;
                 }
                 // because of the way jQuery.terminal works, when a user hits
@@ -110,28 +108,12 @@ define(["jquery",
                 // because of other jQuery.terminal bugs, this is actually what
                 // happens anyway (it does not call setprompt() when the user
                 // hits backspace).
-                //
-                // doesnt ignore the first onCommandChange("") (hence the
-                // lastTxt !== undefined) to allow initializing the cli with the
-                // empty string.
-                if (lastTxt !== undefined && txt == "") {
+                if (txt == "") {
                     return;
                 }
-                try {
-                    cli.setprompt(txt);
-                } catch (e) {
-                    // ignore ParseErrors until command is actually committed
-                    if (e instanceof Error && e.name == "ParseError") {
-                        latestParseError = e;
-                        return;
-                    } else {
-                        throw e;
-                    }
-                }
-                latestParseError = undefined;
-                lastTxt = txt;
+                cli.setprompt(txt, true);
             },
-            // completion for files only (broken)
+            // completion for files only
             completion: function (term) {
                 cli.complete(function (partial, options) {
                     tabcompleteCallback(term, partial, options);

@@ -104,6 +104,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
         // a Deferred that resolves when the command tree is synced with the
         // latest call to setprompt()
         cli._syncingPrompt = $.Deferred().resolve();
+        cli._setprompt_safe = noConcurrentCalls(cli._setprompt_aux.bind(cli));
     };
 
     // An Ast node represents the (rich) argv of one command. the complete
@@ -203,6 +204,7 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
             throw "_parse requires text to parse";
         }
         var ctx = cli._parserctx;
+        ctx.ignoreErrors = ignoreParseError;
         ctx.parser.parse(txt);
         return ctx.firstast;
     };
@@ -479,21 +481,32 @@ define(["jquery", "lush/Command", "lush/Parser2", "lush/Pool", "lush/utils"],
     //
     // if ignoreParseError is true parse errors will be ignored when updating
     // the synced commands.
+    //
+    // beware: this function uses noConcurrentCalls thus, if called
+    // concurrently, returns deferreds that are never resolved nor rejected.
     Cli.prototype.setprompt = function (txt, ignoreParseError) {
+        var cli = this;
+        return cli._setprompt_safe(txt, ignoreParseError);
+    };
+
+    // bare version of setprompt (no locking)
+    Cli.prototype._setprompt_aux = function (txt, ignoreParseError) {
         var cli = this;
         if (!(typeof txt == "string")) {
             throw "argument to setprompt must be the raw prompt, as a string";
         }
         cli._latestPromptInput = txt;
-        cli._syncingPrompt = cli._syncingPrompt.then(function () {
-            if (cli._latestPromptInput == cli._lastParsedPrompt) {
-                return;
-            }
-            var ast = cli._parse(cli._latestPromptInput, ignoreParseError);
-            cli._lastParsedPrompt = cli._latestPromptInput;
-            return cli._syncPrompt(ast);
-        });
-        return cli._syncingPrompt;
+        // this specific syncing job (will be rejected on error)
+        var d = $.Deferred();
+        var ast;
+        try {
+            ast = cli._parse(cli._latestPromptInput, ignoreParseError);
+        } catch (e) {
+            d.reject(e);
+            return;
+        }
+        pipeDeferred(cli._syncPrompt(ast), d);
+        return d;
     };
 
     // commit the current prompt ([enter] button)

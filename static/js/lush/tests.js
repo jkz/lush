@@ -374,7 +374,7 @@ define(["jquery",
     });
 
     asyncTest("command-line interface model", function () {
-        expect(8);
+        expect(14);
         var cli = new Cli(buildMockCommand);
         var updatedPrompt;
         cli.onUpdatedPrompt = function (txt) {
@@ -405,7 +405,24 @@ define(["jquery",
         }).then(function () {
             equal(cli._cmd.cmd, "blabla", "updated entire prompt: command");
             deepEqual(cli._cmd.args, [], "updated entire prompt: args");
-            cli.setprompt("foodoofafa | haia | parapapapa");
+            return cli.setprompt("parse 'error");
+        }).then(function () {
+            throw "parse error didn't reject deferred!";
+        }, function (e) {
+            ok(e instanceof Error, "deferred returned by setprompt() rejected with Error on parse error");
+            equal(e.name, "ParseError", "error instance is a ParseError");
+            equal(cli._cmd.cmd, "blabla", "parse error doesn't affect old command");
+            return cli.setprompt("parse 'error", true);
+        }).then(function () {
+            equal(cli._cmd.cmd, "parse", "parse error ignored");
+            deepEqual(cli._cmd.args, ["error"], "ignored parse error doesn't affect output");
+            return cli.setprompt("parse 'error");
+        }).then(function () {
+            throw "repeated parse error didn't reject deferred!";
+        }, function (e) {
+            ok(true, "alternating ignoreErrors parameter does not spoil cache");
+            return cli.setprompt("foodoofafa | haia | parapapapa");
+        }).then(function () {
             // ... wait---how do I test this?
             // TODO: test pipeline
             // TODO: start the cmd through the cli (also icm w pipeline)
@@ -413,5 +430,70 @@ define(["jquery",
             // TODO: start random command in a synced pipeline
             // &c! (Cli object is friggin' complex man)
         }).always(start); // qunit
+    });
+
+    asyncTest("pipeDeferred: success", function () {
+        expect(1);
+        var d1 = $.Deferred();
+        var d2 = $.Deferred().done(function (x, y) {
+            equal(x * y, 15, "pass arguments to success handler");
+        }).fail(function () {
+            throw "failure handler called";
+        }).always(function () { start(); });
+        pipeDeferred(d1, d2);
+        d1.resolve(3, 5);
+    });
+
+    asyncTest("pipeDeferred: failure", function () {
+        expect(1);
+        var d3 = $.Deferred().reject(2, 10);
+        var d4 = $.Deferred().done(function () {
+            throw "success handler called";
+        }).fail(function (x, y) {
+            equal(x * y, 20, "pass arguments to failure handler");
+        }).always(function () { start(); });
+        pipeDeferred(d3, d4);
+    });
+
+    asyncTest("noConcurrentCalls()", function () {
+        expect(6);
+        var stack = "";
+        function push(c, crash) {
+            var d = $.Deferred();
+            setTimeout(function () {
+                stack += c;
+                if (crash) {
+                    d.reject("crashed");
+                } else {
+                    d.resolve(stack);
+                }
+            }, 10);
+            return d;
+        }
+        var f = noConcurrentCalls(push);
+        f("a").done(function (j) {
+            equal(stack, "a", "first deferred done before pending call");
+            equal(stack, j, "argument passed to direct success handler");
+        });
+        f("b");
+        f("c").always(function () {
+            throw "I should have been overwritten";
+        });
+        f("d");
+        f("e");
+        f("f").then(function (k) {
+            equal(stack, "af", "only one pending function at a time");
+            equal(stack, k, "argument passed to delayed success handler");
+            f("g", true).fail(function (msg) {
+                equal(msg, "crashed", "rejecting original deferred rejects wrapped deferred");
+            });
+            f("h", true).always(function () {
+                throw "I should have been overwritten";
+            });
+            f("i", true);
+            return f("j");
+        }).then(function () {
+            equal(stack, "afgj", "running wrapped function crash does not prevent pending call");
+        }).always(function () { start(); });
     });
 });

@@ -257,3 +257,85 @@ var syncPositionWithServer = function (node, ctrl, extraCallback) {
     });
     ctrl.send('getuserdata', 'position_' + node.id);
 };
+
+// PUZZLE BELOW!
+//
+// It took me much too long to get this function (noConcurrentCalls) right.
+// Feeling strong? Try looking at the unit tests and implement a version that
+// works without looking at the implementation.
+
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function (oThis) {
+    if (typeof this !== "function") {
+      // closest thing possible to the ECMAScript 5 internal IsCallable function
+      throw new TypeError("Function.prototype.bind - what is trying to be bound is not callable");
+    }
+
+    var aArgs = Array.prototype.slice.call(arguments, 1), 
+        fToBind = this, 
+        fNOP = function () {},
+        fBound = function () {
+          return fToBind.apply(this instanceof fNOP && oThis
+                                 ? this
+                                 : oThis,
+                               aArgs.concat(Array.prototype.slice.call(arguments)));
+        };
+
+    fNOP.prototype = this.prototype;
+    fBound.prototype = new fNOP();
+
+    return fBound;
+  };
+}
+
+// wait for d1 to complete, then proxy that to d2
+function pipeDeferred(d1, d2) {
+    d1.done(d2.resolve.bind(d2)).fail(d2.reject.bind(d2));
+}
+
+// wrap a function, that returns a deferred, to a "locked" version:
+//
+// (examples assuming calls 2 and 3 are made before the deferred returned by
+// call 1 is rejected or resolved)
+//
+// first call: everything normal, proxied directly.
+//
+// second call: delayed until first call completes. a deferred is returned that
+// resolves (or rejects) WHEN, if at all, this call completes.
+//
+// third call: delayed until first call completes, overriding the second call.
+// i.e.: call the wrapped function three times in a row (f(1); f(2); f(3)) and
+// f(2) will never actually get executed.
+//
+// this scales up to any number of calls: as long as the first one didn't
+// complete, only the last of all subsequent calls will be executed once it's
+// done.
+//
+// now the first call is done: back to initial state.
+//
+// see unit tests for details
+function noConcurrentCalls(f) {
+    var running = $.Deferred().resolve();
+    var pendingf;
+    return function () {
+        var args = arguments;
+        var closure = function () {
+            return f.apply(undefined, args);
+        };
+        var d = $.Deferred();
+        pendingf = function () {
+            var exe = $.Deferred();
+            var cd = closure().always(function () { exe.resolve(); });
+            pipeDeferred(cd, d);
+            return exe;
+        };
+        running = running.then(function () {
+            if (pendingf) {
+                var temp = pendingf;
+                pendingf = undefined;
+                return temp();
+            }
+        });
+        return d;
+    };
+}

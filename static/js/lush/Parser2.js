@@ -38,17 +38,22 @@ define(function () {
         TERMINATING_BACKSLASH: 3,
     };
 
-    function makeParseError(msg, errobj) {
-        return $.extend(new Error(msg), {name: "ParseError"}, errobj);
+    function makeParseError(msg, type) {
+        var e = new Error(msg);
+        e.name = "ParseError";
+        e.type = type;
+        return e;
     }
 
     function defaultOnError(err) {
         throw err;
     }
 
-    Parser.prototype._callOnError = function (errobj) {
+    Parser.prototype._callOnError = function (msg, type) {
         var parser = this;
-        (parser.onerror || defaultOnError)(makeParseError(errobj));
+        var handler = parser.onerror || defaultOnError;
+        var e = makeParseError(msg, type);
+        handler(e);
     };
 
     // the next char that will be popped. undefined at end of input
