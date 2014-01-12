@@ -382,10 +382,6 @@ define(["jquery",
             updatedPrompt = txt;
         };
         var errmsg;
-        cli.onerror = function (x) {
-            equal(typeof x, "string", "error message is of type string");
-            error = x;
-        };
         cli.setprompt("one two three").then(function () {
             ok(cli._cmd instanceof Command, "synchronized command with prompt");
             equal(cli._cmd.cmd, "one", "command name of synced command");
