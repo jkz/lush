@@ -8,6 +8,8 @@ The goal of lush is to reinvent interaction with an operating system. Currently
 there are two major players: the command line and graphical shells. Lush is a
 third option that leverages the webbrowser as the UI.
 
+See https://github.com/hraban/lush/wiki for more info.
+
 ## Lush on Linux
 
 Download and install:
