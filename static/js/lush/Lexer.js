@@ -29,10 +29,10 @@ define(function () {
     var QUOTE_SINGLE = 1;
     var QUOTE_DOUBLE = 2;
 
-    var Parser = function () {
+    var Lexer = function () {
     };
 
-    Parser.errcodes = {
+    Lexer.errcodes = {
         UNBALANCED_SINGLE_QUOTE: 1,
         UNBALANCED_DOUBLE_QUOTE: 2,
         TERMINATING_BACKSLASH: 3,
@@ -49,15 +49,15 @@ define(function () {
         throw err;
     }
 
-    Parser.prototype._callOnError = function (msg, type) {
-        var parser = this;
-        var handler = parser.onerror || defaultOnError;
+    Lexer.prototype._callOnError = function (msg, type) {
+        var lexer = this;
+        var handler = lexer.onerror || defaultOnError;
         var e = makeParseError(msg, type);
         handler(e);
     };
 
     // the next char that will be popped. undefined at end of input
-    Parser.prototype.peek = function () {
+    Lexer.prototype.peek = function () {
         if (this.state.idx < this.state.raw.length) {
             return this.state.raw[this.state.idx];
         }
@@ -65,56 +65,56 @@ define(function () {
 
     // pop a character off the input. returns undefined when end of input has
     // been reached
-    Parser.prototype.popc = function () {
-        var parser = this;
-        if (parser.state.idx < parser.state.raw.length) {
-            var c = parser.state.raw[parser.state.idx];
-            parser.state.idx++;
+    Lexer.prototype.popc = function () {
+        var lexer = this;
+        if (lexer.state.idx < lexer.state.raw.length) {
+            var c = lexer.state.raw[lexer.state.idx];
+            lexer.state.idx++;
             return c;
         }
     };
 
     // in single quote mode, only a ' changes state
-    function parse_char_quote_single(parser, c, i) {
+    function parse_char_quote_single(lexer, c, i) {
         if (c === undefined) {
-            parser._callOnError("unbalanced single quotes",
-                                Parser.errcodes.UNBALANCED_SINGLE_QUOTE);
+            lexer._callOnError("unbalanced single quotes",
+                                Lexer.errcodes.UNBALANCED_SINGLE_QUOTE);
             return;
         }
         if (c == "'") {
             return parse_char_normal;
         }
-        parser.onliteral(c);
+        lexer.onliteral(c);
     }
 
     // in double quote mode, only a " changes state
-    function parse_char_quote_double(parser, c, i) {
+    function parse_char_quote_double(lexer, c, i) {
         if (c === undefined) {
-            parser._callOnError("unbalanced double quotes",
-                                Parser.errcodes.UNBALANCED_DOUBLE_QUOTE);
+            lexer._callOnError("unbalanced double quotes",
+                                Lexer.errcodes.UNBALANCED_DOUBLE_QUOTE);
             return;
         }
         if (c == '"') {
             return parse_char_normal;
         }
-        parser.onliteral(c);
+        lexer.onliteral(c);
     }
 
-    function parse_char_escaped(parser, c, i) {
+    function parse_char_escaped(lexer, c, i) {
         if (c === undefined) {
-            parser._callOnError("backslash at end of input",
-                                Parser.errcodes.TERMINATING_BACKSLASH);
+            lexer._callOnError("backslash at end of input",
+                                Lexer.errcodes.TERMINATING_BACKSLASH);
             return;
         }
-        parser.onliteral(c);
+        lexer.onliteral(c);
         // escaping only lasts one char
         return parse_char_normal;
     }
 
-    function parse_char_normal(parser, c, i) {
+    function parse_char_normal(lexer, c, i) {
         if (c === undefined) {
-            if (parser.state.parsingword) {
-                parser.onboundary();
+            if (lexer.state.parsingword) {
+                lexer.onboundary();
             }
             return;
         }
@@ -122,47 +122,47 @@ define(function () {
         switch (c) {
         case "'":
             // Start new single quoted block
-            parser.state.quotestart = i;
-            parser.state.parsingword = true;
+            lexer.state.quotestart = i;
+            lexer.state.parsingword = true;
             return parse_char_quote_single;
         case '"':
             // Start new double quoted block
-            parser.state.quotestart = i;
-            parser.state.parsingword = true;
+            lexer.state.quotestart = i;
+            lexer.state.parsingword = true;
             return parse_char_quote_double;
         case '\\':
-            parser.state.parsingword = true;
+            lexer.state.parsingword = true;
             return parse_char_escaped;
         case ' ':
             // Word boundary
-            if (parser.state.parsingword) {
-                parser.onboundary();
-                parser.state.parsingword = false;
+            if (lexer.state.parsingword) {
+                lexer.onboundary();
+                lexer.state.parsingword = false;
             }
             break;
         case '*':
-            parser.onglobStar(i);
-            parser.state.parsingword = true;
+            lexer.onglobStar(i);
+            lexer.state.parsingword = true;
             break;
         case '?':
-            parser.onglobQuestionmark(i);
-            parser.state.parsingword = true;
+            lexer.onglobQuestionmark(i);
+            lexer.state.parsingword = true;
             break;
         case '|':
-            if (parser.state.parsingword) {
-                parser.onboundary();
-                parser.state.parsingword = false;
+            if (lexer.state.parsingword) {
+                lexer.onboundary();
+                lexer.state.parsingword = false;
             }
-            parser.onpipe();
+            lexer.onpipe();
             break;
         default:
-            parser.onliteral(c);
-            parser.state.parsingword = true;
+            lexer.onliteral(c);
+            lexer.state.parsingword = true;
             break;
         }
     };
 
-    Parser.prototype.parse = function (raw) {
+    Lexer.prototype.parse = function (raw) {
         this.state = {
             raw: "",
             idx: 0,
@@ -218,5 +218,5 @@ define(function () {
         } while (c !== undefined);
     };
 
-    return Parser;
+    return Lexer;
 });

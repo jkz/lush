@@ -29,8 +29,8 @@
 
 "use strict";
 
-define(["jquery", "lush/Command", "lush/Parser", "lush/Pool", "lush/utils"],
-       function ($, Command, Parser, Pool) {
+define(["jquery", "lush/Command", "lush/Lexer", "lush/Pool", "lush/utils"],
+       function ($, Command, Lexer, Pool) {
 
     // prefix all special chars in arg by backslash
     function pescape(txt) {
@@ -131,7 +131,7 @@ define(["jquery", "lush/Command", "lush/Parser", "lush/Pool", "lush/utils"],
         var cli = this;
         // context for the parser
         cli._parserctx = {
-            parser: new Parser(),
+            parser: new Lexer(),
             // the first parsed command, head of the linked list. pointer to the
             // next is in the "stdout" member of the ast node.
             firstast: undefined,

@@ -23,11 +23,11 @@
 var cmds = {};
 
 define(["jquery",
-        "lush/Parser",
+        "lush/Lexer",
         "lush/Cli",
         "lush/Command",
         "lush/Pool",
-        "lush/utils"], function ($, Parser, Cli, Command, Pool) {
+        "lush/utils"], function ($, Lexer, Cli, Command, Pool) {
     test("lcp(): longest common prefix", function () {
         equal(lcp(["abcd", "abab", "abba"]), "ab");
         equal(lcp([]), "", "common prefix of 0 strings");
@@ -45,28 +45,28 @@ define(["jquery",
         deepEqual("".splitn("", 1), []);
     });
     
-    test("parser: argv", function() {
+    test("lexer: argv", function() {
         // parsing context
         var ctx;
-        var parser = new Parser();
+        var lexer = new Lexer();
         // parse a new sentence
-        parser.oninit = function () {
+        lexer.oninit = function () {
             ctx = {
                 newarg: '',
                 argv: [],
             };
         };
         // a wild character appeared! add it to the current word
-        parser.onliteral = function (c) {
+        lexer.onliteral = function (c) {
             ctx.newarg += c;
         };
         // all literals found up to here: you are considered a word
-        parser.onboundary = function () {
+        lexer.onboundary = function () {
             ctx.argv.push(ctx.newarg);
             ctx.newarg = '';
         };
         var t = function (raw, out, name) {
-            parser.parse(raw);
+            lexer.parse(raw);
             deepEqual(ctx.argv, out, name);
         };
         t("foo bar baz", ['foo', 'bar', 'baz'], 'simple parsing');
@@ -82,32 +82,32 @@ define(["jquery",
         t("foo \\\\ bar", ['foo', "\\", 'bar'], 'escaped backslash');
     });
     
-    test("parser: globbing", function() {
-        // simple parser: replace literal globbing chars by an underscore.
+    test("lexer: globbing", function() {
+        // simple lexer: replace literal globbing chars by an underscore.
         // ensures that all globbing chars in the resulting argv are actually
         // intended to be globbing chars, which is all we want to test for.
         var ctx;
-        var parser = new Parser();
-        parser.oninit = function () {
+        var lexer = new Lexer();
+        lexer.oninit = function () {
             ctx = {
                 newarg: '',
                 argv: [],
             };
         };
-        parser.onliteral = function (c) {
+        lexer.onliteral = function (c) {
             ctx.newarg += c;
         };
-        parser.onglobQuestionmark = function () {
+        lexer.onglobQuestionmark = function () {
             ctx.newarg += 'GLOB_QM';
         };
-        parser.onglobStar = function () {
+        lexer.onglobStar = function () {
             ctx.newarg += 'GLOB_STAR';
         };
-        parser.onboundary = function () {
+        lexer.onboundary = function () {
             ctx.argv.push(ctx.newarg);
         };
         var t = function (raw, out, name) {
-            parser.parse(raw);
+            lexer.parse(raw);
             deepEqual(ctx.argv, out, name);
         };
         t('*', ['GLOB_STAR'], 'recognize bare globbing char (*)');
@@ -120,76 +120,76 @@ define(["jquery",
     });
 
     // test the indexing of globbing character positions
-    test("parser: globbing char indexing", function() {
+    test("lexer: globbing char indexing", function() {
         var ctx;
-        var parser = new Parser();
-        parser.oninit = function () {
+        var lexer = new Lexer();
+        lexer.oninit = function () {
             ctx = {
                 newarg: '',
                 argv: [],
             };
         };
         // a wild character appeared! add it to the current word
-        parser.onliteral = function (c) {
+        lexer.onliteral = function (c) {
             ctx.newarg += c;
         };
         // got a *
-        parser.onglobStar = function (idx) {
+        lexer.onglobStar = function (idx) {
             ctx.gotstar = idx;
         };
         // got a ?
-        parser.onglobQuestionmark = function (idx) {
+        lexer.onglobQuestionmark = function (idx) {
             ctx.gotquestionmark = idx;
         };
-        parser.onglobChoice = function (choices, idx) {
+        lexer.onglobChoice = function (choices, idx) {
             ctx.gotchoice = choices;
         };
-        parser.parse('*');
+        lexer.parse('*');
         strictEqual(ctx.gotstar, 0, 'indexed wildcard: * (0)');
-        parser.parse('foo*bar');
+        lexer.parse('foo*bar');
         strictEqual(ctx.gotstar, 3, 'indexed wildcard: * (3)');
-        parser.parse('?');
+        lexer.parse('?');
         strictEqual(ctx.gotquestionmark, 0, 'indexed wildcard: ?');
-        parser.parse('?*');
+        lexer.parse('?*');
         strictEqual(ctx.gotquestionmark, 0, 'indexed wildcards: ?');
         strictEqual(ctx.gotstar, 1, 'indexed wildcards: *');
         // Not implemented yet
-        //parser.parse('[abc]');
+        //lexer.parse('[abc]');
         //deepEqual(ctx.gotchoice, ['a', 'b', 'c'], 'wildcard choice: [abc]');
     });
 
-    test("parser: pipe syntax", function() {
+    test("lexer: pipe syntax", function() {
         var ctx;
-        var parser = new Parser();
-        parser.oninit = function () {
+        var lexer = new Lexer();
+        lexer.oninit = function () {
             ctx = {
                 newarg: '',
             };
             ctx.cur_argv = [];
             ctx.all_argv = [ctx.cur_argv];
         };
-        parser.onliteral = function (c) {
+        lexer.onliteral = function (c) {
             ctx.newarg += c;
         };
-        parser.onboundary = function () {
+        lexer.onboundary = function () {
             ctx.cur_argv.push(ctx.newarg);
             ctx.newarg = '';
         };
-        parser.onpipe = function () {
+        lexer.onpipe = function () {
             ctx.cur_argv = [];
             ctx.all_argv.push(ctx.cur_argv);
         };
 
-        parser.parse('trala blabla');
+        lexer.parse('trala blabla');
         deepEqual(ctx.all_argv, [["trala", "blabla"]], "no pipe");
 
-        parser.parse('echo foobar | cat');
+        lexer.parse('echo foobar | cat');
         deepEqual(ctx.all_argv, [["echo", "foobar"], ["cat"]], "pipe once");
 
-        parser.parse('abc | yeye | ohno!');
+        lexer.parse('abc | yeye | ohno!');
         deepEqual(ctx.all_argv, [["abc"], ["yeye"], ["ohno!"]], "pipe twice");
 
-        parser.parse('lookma|nospaces');
+        lexer.parse('lookma|nospaces');
         deepEqual(ctx.all_argv, [["lookma"], ["nospaces"]], "no spaces around pipe");
     });
 
