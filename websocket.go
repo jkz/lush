@@ -139,10 +139,12 @@ func wseventNew(s *server, optionsJSON string) error {
 	}
 	// subscribe everyone to status updates
 	c.Status().NotifyChange(func(status liblush.CmdStatus) error {
+		jsonstatus := cmdstatus2json(status)
+		s.web.Logger.Println("command", c.Id(), "with argv", c.Argv(), "changed status to", jsonstatus)
 		return notifyPropertyUpdate(&s.ctrlclients, getPropResponse{
 			Objname:  cmdId2Json(c.Id()),
 			Propname: "status",
-			Value:    cmdstatus2json(status),
+			Value:    jsonstatus,
 		})
 	})
 	return nil
