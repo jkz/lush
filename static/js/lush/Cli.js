@@ -180,15 +180,15 @@ define(["jquery", "lush/Command", "lush/Lexer", "lush/Pool", "lush/utils"],
                 throw err;
             }
             switch (err.type) {
-            case Parser.errcodes.UNBALANCED_SINGLE_QUOTE:
+            case Lexer.errcodes.UNBALANCED_SINGLE_QUOTE:
                 // ignore. can only happen at end of input, so finish up:
                 ctx.parser.onboundary();
                 break;
-            case Parser.errcodes.UNBALANCED_DOUBLE_QUOTE:
+            case Lexer.errcodes.UNBALANCED_DOUBLE_QUOTE:
                 // ignore
                 ctx.parser.onboundary();
                 break;
-            case Parser.errcodes.TERMINATING_BACKSLASH:
+            case Lexer.errcodes.TERMINATING_BACKSLASH:
                 // ignore!
                 ctx.parser.onboundary();
                 break;
