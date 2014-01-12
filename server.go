@@ -39,6 +39,10 @@ type server struct {
 	// indexed data store for arbitrary session data from client
 	userdata    map[string]string
 	ctrlclients liblush.FlexibleMultiWriter
+	// true iff everybody is allowed access to "master commands". when false
+	// (default) only the first connecting IP will be granted access. all
+	// others will be restricted to "safe" actions.
+	everybodyMaster bool
 }
 
 // name of this package (used to find the static resource files)

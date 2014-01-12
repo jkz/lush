@@ -26,9 +26,11 @@ import (
 )
 
 func main() {
-	listenaddr := flag.String("l", "localhost:8081", "listen address")
-	flag.Parse()
 	s := newServer()
+	listenaddr := flag.String("l", "localhost:8081", "listen address")
+	flag.BoolVar(&s.everybodyMaster, "everybodymaster", false,
+		"grant every incoming connection full privileges")
+	flag.Parse()
 	err := s.web.Run(*listenaddr)
 	if err != nil {
 		log.Fatalf("Failed to listen on %s: %v", *listenaddr, err)

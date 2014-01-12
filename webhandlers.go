@@ -53,6 +53,9 @@ func remoteAddr(ctx *web.Context) string {
 
 // claim that I am master. returns false if someone else already did
 func claimMaster(ctx *web.Context) bool {
+	if ctx.User.(*server).everybodyMaster {
+		return true
+	}
 	remote := remoteAddr(ctx)
 	if remote != masterAddr {
 		if masterAddr == "" {
