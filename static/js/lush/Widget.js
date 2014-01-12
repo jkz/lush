@@ -185,7 +185,7 @@ define(["jquery",
             // (NOP if already root)
             $('#group' + cmd.nid).appendTo('#root' + cmd.nid)
                                  .removeAttr('data-parent-stream');
-            $('root' + cmd.nid).removeClass('empty');
+            $('#root' + cmd.nid).removeClass('empty');
         });
     };
 
