@@ -29,17 +29,14 @@
 
 "use strict";
 
-define(["jquery", "lush/Command", "lush/Lexer", "lush/Pool", "lush/utils"],
-       function ($, Command, Lexer, Pool) {
-
-    // prefix all special chars in arg by backslash
-    function pescape(txt) {
-        return txt.replace(/([\\?*\s"'])/g, "\\$1");
-    }
-
-    function punescape(txt) {
-        return txt.replace(/\\(.)/g, "$1");
-    }
+define(["jquery",
+        "lush/Ast",
+        "lush/Command",
+        "lush/Lexer",
+        "lush/Parser",
+        "lush/Pool",
+        "lush/utils"],
+       function ($, Ast, Command, Lexer, Parser, Pool) {
 
     function startsWithDot(str) {
         return str[0] == ".";
@@ -92,7 +89,7 @@ define(["jquery", "lush/Command", "lush/Lexer", "lush/Pool", "lush/utils"],
         // Locally identify this specific command line
         cli._guid = guid();
         cli._processCmd = processCmd;
-        cli._initParser();
+        cli._parser = new Parser();
         // Prepared commands pool for quicker turn-around after hitting enter
         cli._cmdpool = new Pool();
         // Pre-fetch five commands for the pool
@@ -105,108 +102,6 @@ define(["jquery", "lush/Command", "lush/Lexer", "lush/Pool", "lush/utils"],
         // latest call to setprompt()
         cli._syncingPrompt = $.Deferred().resolve();
         cli._setprompt_safe = noConcurrentCalls(cli._setprompt_aux.bind(cli));
-    };
-
-    // An Ast node represents the (rich) argv of one command. the complete
-    // command line consists of one or more commands chained by pipes. it is
-    // represented as a linked list of AST nodes.
-    function Ast() {
-        var ast = this;
-        // updated after each call to setprompt()
-        ast.argv = [];
-        // building the next argument
-        ast._newarg = '';
-        // true when _newarg contains a globbing char
-        ast.hasglob = false;
-        // pointer to next command, if any
-        ast.stdout = undefined;
-    }
-
-    Ast.prototype.getName = function () {
-        var ast = this;
-        return ast.argv.join(' ');
-    };
-
-    Cli.prototype._initParser = function () {
-        var cli = this;
-        // context for the parser
-        cli._parserctx = {
-            parser: new Lexer(),
-            // the first parsed command, head of the linked list. pointer to the
-            // next is in the "stdout" member of the ast node.
-            firstast: undefined,
-            // The command currently being parsed
-            ast: undefined,
-            ignoreErrors: false,
-        };
-        var ctx = cli._parserctx; // shorthand
-        ctx.parser.oninit = function () {
-            ctx.firstast = ctx.ast = new Ast();
-        };
-        ctx.parser.onliteral = function (c) {
-            // internal representation is escaped
-            ctx.ast._newarg += pescape(c);
-        };
-        ctx.parser.onglobQuestionmark = function () {
-            ctx.ast.hasglob = true;
-            ctx.ast._newarg += '?';
-        };
-        ctx.parser.onglobStar = function () {
-            ctx.ast.hasglob = true;
-            ctx.ast._newarg += '*';
-        };
-        ctx.parser.onboundary = function () {
-            if (ctx.ast.hasglob) {
-                var matches = glob(ctx.ast._newarg);
-                // TODO: error if matches is empty
-                ctx.ast.argv.push.apply(ctx.ast.argv, matches);
-            } else {
-                // undo internal escape representation
-                ctx.ast.argv.push(punescape(ctx.ast._newarg));
-            }
-            ctx.ast._newarg = '';
-        };
-        // encountered a | character
-        ctx.parser.onpipe = function () {
-            // this is a fresh command
-            var newast = new Ast();
-            // which is the child of the previously parsed cmd
-            ctx.ast.stdout = newast;
-            // haiku
-            ctx.ast = newast;
-        };
-        ctx.parser.onerror = function (err, type) {
-            if (!ctx.ignoreErrors) {
-                throw err;
-            }
-            switch (err.type) {
-            case Lexer.errcodes.UNBALANCED_SINGLE_QUOTE:
-                // ignore. can only happen at end of input, so finish up:
-                ctx.parser.onboundary();
-                break;
-            case Lexer.errcodes.UNBALANCED_DOUBLE_QUOTE:
-                // ignore
-                ctx.parser.onboundary();
-                break;
-            case Lexer.errcodes.TERMINATING_BACKSLASH:
-                // ignore!
-                ctx.parser.onboundary();
-                break;
-            default:
-                throw "unknown parser error: " + err;
-            }
-        };
-    };
-
-    Cli.prototype._parse = function (txt, ignoreParseError) {
-        var cli = this;
-        if (typeof txt !== "string") {
-            throw "_parse requires text to parse";
-        }
-        var ctx = cli._parserctx;
-        ctx.ignoreErrors = ignoreParseError;
-        ctx.parser.parse(txt);
-        return ctx.firstast;
     };
 
     // ask the server for a new command and put it in "CLI mode"
@@ -370,7 +265,7 @@ define(["jquery", "lush/Command", "lush/Lexer", "lush/Pool", "lush/utils"],
         var argvs = [];
         // couldn't resist.
         mapCmdTree(cmd, function (cmd) {
-            var argv = cmd.getArgv().map(pescape);
+            var argv = cmd.getArgv().map(Parser.Escape);
             argvs.push.apply(argvs, argv);
             if (cmd.stdoutto > 0) {
                 argvs.push('|');
@@ -500,7 +395,7 @@ define(["jquery", "lush/Command", "lush/Lexer", "lush/Pool", "lush/utils"],
         var d = $.Deferred();
         var ast;
         try {
-            ast = cli._parse(cli._latestPromptInput, ignoreParseError);
+            ast = cli._parser.parse(txt, ignoreParseError);
         } catch (e) {
             return d.reject(e);
         }
@@ -555,20 +450,19 @@ define(["jquery", "lush/Command", "lush/Lexer", "lush/Pool", "lush/utils"],
             // TODO: prettier
             throw "cmd not ready for tab completion";
         }
-        var ctx = cli._parserctx;
-        var argv = ctx.ast.argv;
+        var argv = cli.parser.ctx.ast.argv;
         if (argv.length < 2) {
             // only works on filenames
             // TODO: also on executables plz
             return;
         }
         var partial = argv.pop();
-        var pattern = punescape(partial) + "*";
+        var pattern = Parser.Unescape(partial) + "*";
         $.get('/files.json', {pattern: pattern}).done(function (options) {
             // also pass the partial to the callback here because he needs it.
             // TODO should that stuff not be handled here then? too tired and
             // hungry to think about that
-            callback(partial, options.map(pescape));
+            callback(partial, options.map(Parser.Escape));
         });
     };
 

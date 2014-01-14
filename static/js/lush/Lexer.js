@@ -32,7 +32,7 @@ define(function () {
     var Lexer = function () {
     };
 
-    Lexer.errcodes = {
+    Lexer.ERRCODES = {
         UNBALANCED_SINGLE_QUOTE: 1,
         UNBALANCED_DOUBLE_QUOTE: 2,
         TERMINATING_BACKSLASH: 3,
@@ -51,9 +51,8 @@ define(function () {
 
     Lexer.prototype._callOnError = function (msg, type) {
         var lexer = this;
-        var handler = lexer.onerror || defaultOnError;
         var e = makeParseError(msg, type);
-        handler(e);
+        lexer.onerror(e);
     };
 
     // the next char that will be popped. undefined at end of input
@@ -78,7 +77,7 @@ define(function () {
     function parse_char_quote_single(lexer, c, i) {
         if (c === undefined) {
             lexer._callOnError("unbalanced single quotes",
-                                Lexer.errcodes.UNBALANCED_SINGLE_QUOTE);
+                                Lexer.ERRCODES.UNBALANCED_SINGLE_QUOTE);
             return;
         }
         if (c == "'") {
@@ -91,7 +90,7 @@ define(function () {
     function parse_char_quote_double(lexer, c, i) {
         if (c === undefined) {
             lexer._callOnError("unbalanced double quotes",
-                                Lexer.errcodes.UNBALANCED_DOUBLE_QUOTE);
+                                Lexer.ERRCODES.UNBALANCED_DOUBLE_QUOTE);
             return;
         }
         if (c == '"') {
@@ -103,7 +102,7 @@ define(function () {
     function parse_char_escaped(lexer, c, i) {
         if (c === undefined) {
             lexer._callOnError("backslash at end of input",
-                                Lexer.errcodes.TERMINATING_BACKSLASH);
+                                Lexer.ERRCODES.TERMINATING_BACKSLASH);
             return;
         }
         lexer.onliteral(c);

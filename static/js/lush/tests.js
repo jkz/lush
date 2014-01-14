@@ -23,11 +23,15 @@
 var cmds = {};
 
 define(["jquery",
-        "lush/Lexer",
+        "lush/Ast",
         "lush/Cli",
         "lush/Command",
+        "lush/Lexer",
+        "lush/Parser",
         "lush/Pool",
-        "lush/utils"], function ($, Lexer, Cli, Command, Pool) {
+        "lush/utils"],
+       function ($, Ast, Cli, Command, Lexer, Parser, Pool) {
+
     test("lcp(): longest common prefix", function () {
         equal(lcp(["abcd", "abab", "abba"]), "ab");
         equal(lcp([]), "", "common prefix of 0 strings");
@@ -191,6 +195,37 @@ define(["jquery",
 
         lexer.parse('lookma|nospaces');
         deepEqual(ctx.all_argv, [["lookma"], ["nospaces"]], "no spaces around pipe");
+    });
+
+    test("lexer: errors", function () {
+        var lexer = new Lexer();
+        var e;
+        lexer.onerror = function (x) {
+            e = x;
+        };
+        function testError(txt, type) {
+            var lead = "parsing <" + txt + "> ";
+            lexer.parse(txt);
+            ok(e instanceof Error, lead + "yields Error object");
+            equal(e.name, "ParseError",  lead + "yields ParseError");
+            equal(e.type, type, lead + "yields expected error type");
+        }
+        ok(Lexer.ERRCODES.UNBALANCED_SINGLE_QUOTE !== undefined &&
+           Lexer.ERRCODES.UNBALANCED_DOUBLE_QUOTE !== undefined &&
+           Lexer.ERRCODES.TERMINATING_BACKSLASH !== undefined,
+           "expected error codes are defined");
+        testError('what is "that?', Lexer.ERRCODES.UNBALANCED_DOUBLE_QUOTE);
+        testError("it's a monster!!!", Lexer.ERRCODES.UNBALANCED_SINGLE_QUOTE);
+        testError("/o\\", Lexer.ERRCODES.TERMINATING_BACKSLASH);
+    });
+
+    test("parser", function () {
+        var parser = new Parser();
+        parser.parse('le batman');
+        ok(parser.ctx.firstast instanceof Ast, "parser yields an AST");
+        var ast = parser.ctx.firstast;
+        deepEqual(ast.argv, ["le", "batman"], "Ast contains parse results");
+        // TODO: expand
     });
 
     // TODO: obsolete!
