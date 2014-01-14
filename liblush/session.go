@@ -51,7 +51,6 @@ func (s *session) NewCommand(name string, arg ...string) Cmd {
 	}
 	s.environlock.RUnlock()
 	c := newcmd(s.newid(), execcmd)
-	c.done.Add(1)
 	s.cmds[c.id] = c
 	return c
 }

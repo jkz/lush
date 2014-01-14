@@ -218,5 +218,6 @@ func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
 	c.execCmd.Stdout = c.stdout
 	c.execCmd.Stderr = c.stderr
 	c.name = c.execCmd.Path
+	c.done.Add(1)
 	return c
 }
