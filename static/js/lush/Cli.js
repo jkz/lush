@@ -38,31 +38,6 @@ define(["jquery",
         "lush/utils"],
        function ($, Ast, Command, Lexer, Parser, Pool) {
 
-    function startsWithDot(str) {
-        return str[0] == ".";
-    }
-
-    // list of files matching a pattern. if showhidden is false this excludes files
-    // starting with a dot. if showhidden is not specified this only shows those
-    // files if the pattern itself starts with a dot.
-    function glob(pattern, showhidden) {
-        var files = [];
-        $.ajax('/files.json', {
-            data: {pattern: pattern},
-            success: function (x) {
-                files = x;
-            },
-            async: false});
-        if (showhidden === undefined) {
-            showhidden = startsWithDot(pattern);
-        }
-        if (!showhidden) {
-            // hide files starting with a dot
-            files = $.grep(files, startsWithDot, true);
-        }
-        return files;
-    }
-
     // Manage context of a command line interface. purely conceptual, no UI.
     // processCmd arg is a function, called by the cli to actually invoke a
     // command (after parsing etc).

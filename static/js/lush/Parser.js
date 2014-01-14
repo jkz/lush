@@ -27,6 +27,31 @@ define(["lush/Ast",
         "lush/Lexer",],
        function (Ast, Lexer) {
 
+    function startsWithDot(str) {
+        return str[0] == ".";
+    }
+
+    // list of files matching a pattern. if showhidden is false this excludes files
+    // starting with a dot. if showhidden is not specified this only shows those
+    // files if the pattern itself starts with a dot.
+    function glob(pattern, showhidden) {
+        var files = [];
+        $.ajax('/files.json', {
+            data: {pattern: pattern},
+            success: function (x) {
+                files = x;
+            },
+            async: false});
+        if (showhidden === undefined) {
+            showhidden = startsWithDot(pattern);
+        }
+        if (!showhidden) {
+            // hide files starting with a dot
+            files = $.grep(files, startsWithDot, true);
+        }
+        return files;
+    }
+
     // Simple interface, "parse everything at once" parser. No callbacks, no
     // state between calls, just call .parse("your command string"), and access
     // .ctx.firstast. or .ctx.ast for the last node.
