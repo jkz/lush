@@ -1,6 +1,6 @@
 #!/bin/bash
 
-go test ./... || exit 1
+go test . ./liblush  || exit 1
 
 phantompath="$(which phantomjs)"
 if [[ -z "$phantompath" ]]
