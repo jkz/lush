@@ -443,27 +443,20 @@ define(["jquery",
 
     // user hit <tab>. assumes pointer is at end of input, as previously set
     // with setprompt(). oo! bery easy!
-    Cli.prototype.complete = function (callback) {
+    Cli.prototype.complete = function (filenameCallback) {
         var cli = this;
         var cmd = cli._cmd;
         if (!cmd) {
             // TODO: prettier
             throw "cmd not ready for tab completion";
         }
-        var argv = cli.parser.ctx.ast.argv;
+        var argv = cli._parser.ctx.ast.argv;
         if (argv.length < 2) {
             // only works on filenames
             // TODO: also on executables plz
             return;
         }
-        var partial = argv.pop();
-        var pattern = Parser.Unescape(partial) + "*";
-        $.get('/files.json', {pattern: pattern}).done(function (options) {
-            // also pass the partial to the callback here because he needs it.
-            // TODO should that stuff not be handled here then? too tired and
-            // hungry to think about that
-            callback(partial, options.map(Parser.Escape));
-        });
+        filenameCallback(argv.pop());
     };
 
     return Cli;

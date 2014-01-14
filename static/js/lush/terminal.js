@@ -26,10 +26,11 @@
 define(["jquery",
         "lush/Cli",
         "lush/Ctrl",
+        "lush/Parser",
         "lush/utils",
         "jquery.terminal",
         "jquery.ui"],
-       function ($, Cli, Ctrl) {
+       function ($, Cli, Ctrl, Parser) {
     // Print text to this terminal. Ensures the text always ends in newline.
     $.fn.termPrintln = function (text, finalize) {
         // term.echo will always append newline so strip one off if exists
@@ -118,8 +119,11 @@ define(["jquery",
             },
             // completion for files only
             completion: function (term) {
-                cli.complete(function (partial, options) {
-                    tabcompleteCallback(term, partial, options);
+                cli.complete(function (partial) {
+                    var pattern = Parser.Unescape(partial) + "*";
+                    $.get('/files.json', {pattern: pattern}).done(function (options) {
+                        tabcompleteCallback(term, partial, options.map(Parser.Escape));
+                    });
                 });
             },
             exit: false,

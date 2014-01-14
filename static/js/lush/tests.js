@@ -409,7 +409,7 @@ define(["jquery",
     });
 
     asyncTest("command-line interface model", function () {
-        expect(14);
+        expect(15);
         var cli = new Cli(buildMockCommand);
         var updatedPrompt;
         cli.onUpdatedPrompt = function (txt) {
@@ -452,6 +452,15 @@ define(["jquery",
             throw "repeated parse error didn't reject deferred!";
         }, function (e) {
             ok(true, "alternating ignoreErrors parameter does not spoil cache");
+            return cli.setprompt("echo monk");
+        }).then(function () {
+            var d = $.Deferred();
+            cli.complete(function (name) {
+                d.resolve(name);
+            });
+            return d;
+        }).then(function (name) {
+            equal(name, "monk", "tab completion");
             return cli.setprompt("foodoofafa | haia | parapapapa");
         }).then(function () {
             // ... wait---how do I test this?
