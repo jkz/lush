@@ -26,21 +26,7 @@ import (
 	"testing"
 )
 
-// If this function returns the environment is safe for use in testing (i.e. it
-// contains echo executable in PATH)
-func checkTestEnvironment(t *testing.T) {
-	c := exec.Command("echo", "superman", "<", "batman")
-	out, err := c.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Couldn't run echo binary: %v", err)
-	}
-	if !bytes.Equal(out, []byte("superman < batman\n")) {
-		t.Fatalf("echo binary produced unexpected output: %s", out)
-	}
-}
-
-func TestCommand(t *testing.T) {
-	checkTestEnvironment(t)
+func TestCommandOutput(t *testing.T) {
 	execcmd := exec.Command("echo", "poeh", "poeh", "nou", "nou")
 	c := newcmd(1, execcmd)
 	var b bytes.Buffer
@@ -54,5 +40,30 @@ func TestCommand(t *testing.T) {
 	}
 	if b.String() != "poeh poeh nou nou\n" {
 		t.Errorf("unexpected output from command: %q", b.String())
+	}
+}
+
+func TestCommandPipe(t *testing.T) {
+	echoc := newcmd(1, exec.Command("echo", "batman", ">", "superman"))
+	catc := newcmd(2, exec.Command("cat"))
+	var b bytes.Buffer
+	echoc.Stdout().AddWriter(catc.Stdin())
+	catc.Stdout().AddWriter(&b)
+	func(cmds ...*cmd) {
+		for _, c := range cmds {
+			err := c.Start()
+			if err != nil {
+				t.Fatalf("error starting command %s: %v", c.Name(), err)
+			}
+		}
+		for _, c := range cmds {
+			err := c.Wait()
+			if err != nil {
+				t.Fatalf("error running command %s: %v", c.Name(), err)
+			}
+		}
+	}(echoc, catc)
+	if b.String() != "batman > superman\n" {
+		t.Errorf("unexpected output from piped command: %q", b.String())
 	}
 }
