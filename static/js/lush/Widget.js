@@ -56,14 +56,25 @@ define(["jquery",
         'jsPlumb',
         "lush/utils"],
        function ($) {
+
+    // disable this dom element a specified amount of time (prevent double
+    // click)
+    function disableAWhile(el, ms) {
+        if (ms === undefined) {
+            ms = 1000;
+        }
+        $(el).prop('disabled', true);
+        setTimeout(function () {
+            $(el).prop('disabled', false);
+        }, ms);
+    }
+
     // build jquery node containing [▶] button that starts cmd in background
     var makeStartButton = function (cmd) {
         return $('<button class=start>▶</button>').click(function (e) {
-            $(this).html('⌚');
-            $(this).prop('disabled', true);
+            e.preventDefault();
+            disableAWhile(this);
             cmd.start();
-            // stop bubbling: prevent terminal from losing focus
-            return false;
         });
     };
 
@@ -71,8 +82,7 @@ define(["jquery",
     var makeStopButton = function (cmd) {
         return $('<button class=stop>◼</button>').click(function (e) {
             e.preventDefault();
-            $(this).html('⌚');
-            $(this).prop('disabled', true);
+            disableAWhile(this);
             cmd.stop();
         });
     };
