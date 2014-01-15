@@ -74,3 +74,22 @@ func TestCommandPipe(t *testing.T) {
 		t.Errorf("unexpected output from piped command: %q", b.String())
 	}
 }
+
+func TestCommandNotFound(t *testing.T) {
+	var c *cmd
+	var err error
+	c = newcmd(0, exec.Command("cecinestpasuncommand"))
+	// is allowed to succeed at Start(), IF it fails at Wait()
+	err = c.Start()
+	if err == nil {
+		err = c.Wait()
+		if err == nil {
+			t.Errorf("Expected error from nonexistent command .Wait()")
+		}
+	}
+	c = newcmd(0, exec.Command("cecinestpasuncommand"))
+	err = c.Run()
+	if err == nil {
+		t.Errorf("Expected error from nonexistent command .Run()")
+	}
+}
