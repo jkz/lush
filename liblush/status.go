@@ -69,6 +69,16 @@ func (s *cmdstatus) Err() error {
 	return s.err
 }
 
+func (s *cmdstatus) setErr(e error) {
+	if s.err != nil {
+		panic("cannot reset error state of command")
+	}
+	if e != nil {
+		s.err = e
+		s.changed()
+	}
+}
+
 func (s *cmdstatus) NotifyChange(f func(CmdStatus) error) {
 	s.listeners = append(s.listeners, f)
 }

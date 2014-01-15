@@ -340,8 +340,12 @@ func wseventStart(s *server, idstr string) error {
 		return err
 	}
 	err = c.Start()
-	if err != nil {
+	if err != nil && c.Status().Err() == nil {
+		// only explicitly notify non-status errors
 		return lushError{fmt.Errorf("Couldn't start command: %v", err)}
+		// kind of ugly because technically, this action failed, so it
+		// should return an error, but if you do that the user gets a double
+		// error message. sooo yeah that's the problem.
 	}
 	// status update will be sent to subscribed clients automatically
 	return nil

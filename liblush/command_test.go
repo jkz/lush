@@ -81,13 +81,15 @@ func TestCommandNotFound(t *testing.T) {
 	var c *cmd
 	var err error
 	c = newcmd(0, exec.Command("cecinestpasuncommand"))
-	// is allowed to succeed at Start(), IF it fails at Wait()
 	err = c.Start()
 	if err == nil {
-		err = c.Wait()
-		if err == nil {
-			t.Errorf("Expected error from nonexistent command .Wait()")
-		}
+		t.Errorf("Expected error from starting nonexistent command")
+	}
+	if c.Status().Started() != nil {
+		t.Errorf("non-existent command cannot have a start time")
+	}
+	if c.Status().Err() == nil {
+		t.Errorf("starting non-existent command must set status to error")
 	}
 	c = newcmd(0, exec.Command("cecinestpasuncommand"))
 	err = c.Run()

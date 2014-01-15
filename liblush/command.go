@@ -98,8 +98,8 @@ func (c *cmd) Run() error {
 
 func (c *cmd) Start() error {
 	var err error
-	if c.status.started != nil {
-		return errors.New("command already started")
+	if wasStarted(c) {
+		return errors.New("command has already been started")
 	}
 	// If not set explicitly bind stdin to a system pipe. This allows the
 	// spawned process to close it without reading if it is not needed.
@@ -110,7 +110,6 @@ func (c *cmd) Start() error {
 		}
 		c.stdin = newLightPipe(c, pw)
 	}
-	c.status.startNow()
 	// Lookup the executable
 	p, err := exec.LookPath(c.execCmd.Args[0])
 	if err != nil {
@@ -119,14 +118,16 @@ func (c *cmd) Start() error {
 	c.execCmd.Path = p
 	err = c.execCmd.Start()
 	if err != nil {
-		c.status.err = err
+		c.status.setErr(err)
 		return err
 	}
+	c.status.startNow()
 	// TODO: cute, but needs some unit tests.
 	// also, schizos are always pair programming :D
 	// ... or D:
 	go func() {
-		c.status.err = c.execCmd.Wait()
+		err := c.execCmd.Wait()
+		c.status.setErr(err)
 		c.stdout.Close()
 		c.stderr.Close()
 		c.status.exitNow()
@@ -177,6 +178,11 @@ func (c *cmd) SetUserData(data interface{}) {
 // TODO: refactor that code and remove this function
 func isRunning(c *cmd) bool {
 	return c.status.started != nil && c.status.exited == nil
+}
+
+// race &c
+func wasStarted(c *cmd) bool {
+	return c.status.started != nil || c.status.err != nil
 }
 
 func (c *cmd) Signal(sig os.Signal) error {

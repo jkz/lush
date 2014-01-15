@@ -71,6 +71,11 @@ func pipedcmd(outs liblush.OutStream) liblush.Cmd {
 }
 
 func cmdstatus2int(s liblush.CmdStatus) (i int) {
+	// not very pretty then again this entire integer status thing is bollocks
+	// anyway might as well abuse it all the way
+	if s.Err() != nil {
+		return 3
+	}
 	if s.Exited() == nil {
 		if s.Started() == nil {
 			i = 0
