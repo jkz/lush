@@ -44,25 +44,32 @@ func TestCommandOutput(t *testing.T) {
 }
 
 func TestCommandPipe(t *testing.T) {
-	echoc := newcmd(1, exec.Command("echo", "batman", ">", "superman"))
-	catc := newcmd(2, exec.Command("cat"))
+	var LEN_PIPELINE int
+	if testing.Short() {
+		LEN_PIPELINE = 3
+	} else {
+		LEN_PIPELINE = 1000
+	}
+	cmds := make([]*cmd, LEN_PIPELINE)
+	cmds[0] = newcmd(0, exec.Command("echo", "batman", ">", "superman"))
+	for i := 1; i < LEN_PIPELINE; i++ {
+		cmds[i] = newcmd(CmdId(i), exec.Command("cat"))
+		cmds[i-1].Stdout().AddWriter(cmds[i].Stdin())
+	}
 	var b bytes.Buffer
-	echoc.Stdout().AddWriter(catc.Stdin())
-	catc.Stdout().AddWriter(&b)
-	func(cmds ...*cmd) {
-		for _, c := range cmds {
-			err := c.Start()
-			if err != nil {
-				t.Fatalf("error starting command %s: %v", c.Name(), err)
-			}
+	cmds[LEN_PIPELINE-1].Stdout().AddWriter(&b)
+	for i, c := range cmds {
+		err := c.Start()
+		if err != nil {
+			t.Fatalf("error starting command %s (%d): %v", c.Name(), i, err)
 		}
-		for _, c := range cmds {
-			err := c.Wait()
-			if err != nil {
-				t.Fatalf("error running command %s: %v", c.Name(), err)
-			}
+	}
+	for i, c := range cmds {
+		err := c.Wait()
+		if err != nil {
+			t.Fatalf("error running command %s (%d): %v", c.Name(), i, err)
 		}
-	}(echoc, catc)
+	}
 	if b.String() != "batman > superman\n" {
 		t.Errorf("unexpected output from piped command: %q", b.String())
 	}
