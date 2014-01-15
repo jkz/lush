@@ -137,7 +137,7 @@ define(["jquery",
         var groupnode = $('#rootcontainer_template')
             .clone()
             .attr('id', 'root' + cmd.nid)
-            .appendTo('#cmds')
+            .prependTo('#cmds')
             .find('.groupwidget')
                 .attr("id", "group" + cmd.nid)[0];
         widget.node = $(groupnode).find('.cmdwidget')
