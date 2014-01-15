@@ -341,11 +341,25 @@ func wseventStart(s *server, idstr string) error {
 	}
 	err = c.Start()
 	if err != nil && c.Status().Err() == nil {
-		// only explicitly notify non-status errors
+		// only explicitly notify non-status errors.
 		return lushError{fmt.Errorf("Couldn't start command: %v", err)}
-		// kind of ugly because technically, this action failed, so it
-		// should return an error, but if you do that the user gets a double
-		// error message. sooo yeah that's the problem.
+		// if the Start() failed but also set the status.err, then it was
+		// indeed started, in the sense that it cannot be started again. so,
+		// the "start" action completed, but the status is now on error.
+		// this is maybe not the best place nor the best way to make that
+		// distinction, but it has to be done somewhere.
+		// TODO: better place for status errors vs "real" errors (like
+		// restarting, &c). also note: if a command was already started,
+		// THEN caused a status error, and then is started AGAIN, that
+		// second "start" action (this function we're in right here) should
+		// indeed fail because a command MUST NOT be restarted. BUT it will
+		// not, because it uses c.status.err != nil to check what the type
+		// of the error returned by c.Start() is, which is clearly
+		// ridiculous, because it should, obviously, use the actual returned
+		// error object itself to check what type it is. why is that not
+		// done? I would need to start being consistent about wrapping
+		// errors in custom error types &c, and I don't feel like doing that
+		// today. but yeah, TODO.
 	}
 	// status update will be sent to subscribed clients automatically
 	return nil
