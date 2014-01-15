@@ -341,7 +341,7 @@ func wseventStart(s *server, idstr string) error {
 	}
 	err = c.Start()
 	if err != nil {
-		return fmt.Errorf("Couldn't start command: %v", err)
+		return lushError{fmt.Errorf("Couldn't start command: %v", err)}
 	}
 	// status update will be sent to subscribed clients automatically
 	return nil
