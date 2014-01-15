@@ -27,7 +27,6 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-	"time"
 )
 
 // command life-time phases
@@ -89,9 +88,19 @@ func (c *cmd) SetArgv(argv []string) error {
 }
 
 func (c *cmd) Run() error {
-	startt := time.Now()
-	c.status.started = &startt
-	c.status.changed()
+	var err error
+	err = c.Start()
+	if err != nil {
+		return err
+	}
+	return c.Wait()
+}
+
+func (c *cmd) Start() error {
+	var err error
+	if c.status.started != nil {
+		return errors.New("command already started")
+	}
 	// If not set explicitly bind stdin to a system pipe. This allows the
 	// spawned process to close it without reading if it is not needed.
 	if c.stdin == nil {
@@ -101,31 +110,35 @@ func (c *cmd) Run() error {
 		}
 		c.stdin = newLightPipe(c, pw)
 	}
+	c.status.startNow()
 	// Lookup the executable
 	p, err := exec.LookPath(c.execCmd.Args[0])
 	if err != nil {
 		p = c.execCmd.Args[0]
 	}
 	c.execCmd.Path = p
-	c.status.err = c.execCmd.Run()
-	c.stdout.Close()
-	c.stderr.Close()
-	exitt := time.Now()
-	c.status.exited = &exitt
-	c.status.changed()
-	c.done.Done()
-	return c.status.err
-}
-
-func (c *cmd) Start() error {
-	if c.status.started != nil {
-		return errors.New("command already started")
+	err = c.execCmd.Start()
+	if err != nil {
+		c.status.err = err
+		return err
 	}
-	go c.Run()
+	// TODO: cute, but needs some unit tests.
+	// also, schizos are always pair programming :D
+	// ... or D:
+	go func() {
+		c.status.err = c.execCmd.Wait()
+		c.stdout.Close()
+		c.stderr.Close()
+		c.status.exitNow()
+		c.done.Done()
+	}()
 	return nil
 }
 
 func (c *cmd) Wait() error {
+	if c.status.started == nil {
+		return errors.New("must start command before calling Wait()")
+	}
 	c.done.Wait()
 	return c.status.err
 }
@@ -159,16 +172,26 @@ func (c *cmd) SetUserData(data interface{}) {
 	c.user = data
 }
 
+// WARNING: CODE SMELL. all code using this function is almost certainly
+// race sensitive.
+// TODO: refactor that code and remove this function
+func isRunning(c *cmd) bool {
+	return c.status.started != nil && c.status.exited == nil
+}
+
 func (c *cmd) Signal(sig os.Signal) error {
+	// race race race
+	if !isRunning(c) {
+		return errors.New("can only send signal to running command")
+	}
 	return c.execCmd.Process.Signal(sig)
 }
 
 // free all resources associated with this command. error if command is
 // running.
 func (c *cmd) release() error {
-	running := (c.status.started != nil) && (c.status.exited == nil)
 	// haha so how about them race conditions eh?
-	if running {
+	if isRunning(c) {
 		return errors.New("cannot free running command")
 	}
 	var firsterr error

@@ -22,7 +22,9 @@ package liblush
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -91,5 +93,37 @@ func TestCommandNotFound(t *testing.T) {
 	err = c.Run()
 	if err == nil {
 		t.Errorf("Expected error from nonexistent command .Run()")
+	}
+}
+
+func TestCommandIllegalAPIUse(t *testing.T) {
+	c := newcmd(0, exec.Command("echo"))
+	err := c.Wait()
+	if err == nil {
+		t.Errorf("expected error calling .Wait() without .Start()")
+	}
+	err = c.Signal(os.Interrupt)
+	if err == nil {
+		t.Errorf("expected error sending SIGINT before .Start()")
+	}
+	err = c.Start()
+	if err != nil {
+		t.Errorf("unexpected error starting echo command: %v", err)
+	}
+	err = c.SetArgv(strings.Split("echo mosterd na de maaltijd", " "))
+	if err == nil {
+		t.Errorf("expected error calling .SetArgv() after .Start()")
+	}
+	err = c.Start()
+	if err == nil {
+		t.Errorf("expected error calling .Start() twice")
+	}
+	err = c.Wait()
+	if err != nil {
+		t.Errorf("unexpected error running echo command: %v", err)
+	}
+	err = c.Signal(os.Kill)
+	if err == nil {
+		t.Errorf("expected error sending SIGKILL after .Wait()")
 	}
 }

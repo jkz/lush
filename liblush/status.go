@@ -24,11 +24,33 @@ import (
 	"time"
 )
 
+// TODO: Im not happy about the consistency of this type; what, exactly, are
+// the semantics of (the concepts) error, done, started, &c? what does it mean
+// to have a nil or non-nil error, in combination with nil or non-nil started,
+// nil or non-nil exited, ...? this should be defined.
 type cmdstatus struct {
 	started   *time.Time
 	exited    *time.Time
 	err       error
 	listeners []func(CmdStatus) error
+}
+
+func (s *cmdstatus) startNow() {
+	if s.started != nil {
+		panic("re-starting status not allowed")
+	}
+	t := time.Now()
+	s.started = &t
+	s.changed()
+}
+
+func (s *cmdstatus) exitNow() {
+	if s.exited != nil {
+		panic("status can only be exited once")
+	}
+	t := time.Now()
+	s.exited = &t
+	s.changed()
 }
 
 func (s *cmdstatus) Started() *time.Time {
