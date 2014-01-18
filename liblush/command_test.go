@@ -29,7 +29,8 @@ import (
 )
 
 func TestCommandOutput(t *testing.T) {
-	execcmd := exec.Command("echo", "poeh", "poeh", "nou", "nou")
+	// extra spaces and a 4-byte UTF-8 char (FO9F98AC)
+	execcmd := exec.Command("echo", "look,", "unicode   smiley:", "😬")
 	c := newcmd(1, execcmd)
 	var b bytes.Buffer
 	c.Stdout().AddWriter(&b)
@@ -40,7 +41,7 @@ func TestCommandOutput(t *testing.T) {
 	if !c.Status().Success() {
 		t.Errorf("unexpected status: %#v", c.Status())
 	}
-	if b.String() != "poeh poeh nou nou\n" {
+	if b.String() != "look, unicode   smiley: 😬\n" {
 		t.Errorf("unexpected output from command: %q", b.String())
 	}
 }
@@ -53,6 +54,8 @@ func TestCommandPipe(t *testing.T) {
 		LEN_PIPELINE = 1000
 	}
 	cmds := make([]*cmd, LEN_PIPELINE)
+	// the > also verifies that exec.Command is not secretly passed through a
+	// shell
 	cmds[0] = newcmd(0, exec.Command("echo", "batman", ">", "superman"))
 	for i := 1; i < LEN_PIPELINE; i++ {
 		cmds[i] = newcmd(CmdId(i), exec.Command("cat"))
