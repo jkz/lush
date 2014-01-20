@@ -62,12 +62,7 @@ func iscmd(w io.Writer) liblush.Cmd {
 
 // return command that this stream pipes to, if any
 func pipedcmd(outs liblush.OutStream) liblush.Cmd {
-	for _, w := range outs.Writers() {
-		if c := iscmd(w); c != nil {
-			return c
-		}
-	}
-	return nil
+	return iscmd(outs.GetListener())
 }
 
 func cmdstatus2int(s liblush.CmdStatus) (i int) {

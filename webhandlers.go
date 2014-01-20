@@ -254,7 +254,7 @@ func handleWsStream(ctx *web.Context, idstr, streamname string) error {
 	default:
 		return web.WebError{400, "No such stream: " + streamname}
 	}
-	stream.AddWriter(ctx.WebsockConn)
+	stream.Peeker().AddWriter(ctx.WebsockConn)
 	buf := make([]byte, 1)
 	ctx.WebsockConn.Read(buf)
 	return nil

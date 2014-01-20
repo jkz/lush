@@ -50,7 +50,7 @@ func (s *session) NewCommand(name string, arg ...string) Cmd {
 		execcmd.Env = append(execcmd.Env, k+"="+v)
 	}
 	s.environlock.RUnlock()
-	c := newcmd(s.newid(), execcmd)
+	c := newcmdPanicOnError(s.newid(), execcmd)
 	s.cmds[c.id] = c
 	return c
 }

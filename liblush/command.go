@@ -101,15 +101,6 @@ func (c *cmd) Start() error {
 	if wasStarted(c) {
 		return errors.New("command has already been started")
 	}
-	// If not set explicitly bind stdin to a system pipe. This allows the
-	// spawned process to close it without reading if it is not needed.
-	if c.stdin == nil {
-		pw, err := c.execCmd.StdinPipe()
-		if err != nil {
-			return err
-		}
-		c.stdin = newLightPipe(c, pw)
-	}
 	// Lookup the executable
 	p, err := exec.LookPath(c.execCmd.Args[0])
 	if err != nil {
@@ -145,11 +136,6 @@ func (c *cmd) Wait() error {
 }
 
 func (c *cmd) Stdin() InStream {
-	if c.stdin == nil {
-		pr, pw := io.Pipe()
-		c.stdin = newLightPipe(c, pw)
-		c.execCmd.Stdin = pr
-	}
 	return c.stdin
 }
 
@@ -237,16 +223,36 @@ func (d devnull) Close() error {
 
 // stdout and stderr data is discarded by default, call Stdout/err().SetPipe()
 // to save
-func newcmd(id CmdId, execcmd *exec.Cmd) *cmd {
+func newcmd(id CmdId, execCmd *exec.Cmd) (*cmd, error) {
+	pw, err := execCmd.StdinPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdin pipe: %v", err)
+	}
 	c := &cmd{
 		id:      id,
-		execCmd: execcmd,
-		stdout:  newRichPipe(1000),
-		stderr:  newRichPipe(1000),
+		execCmd: execCmd,
+		stdout:  newRichPipe(Devnull, 1000),
+		stderr:  newRichPipe(Devnull, 1000),
 	}
+	// by doing this here it is guaranteed you can start writing to a new
+	// command's stdin, even before it is started.
+	c.stdin = newLightPipe(c, pw)
 	c.execCmd.Stdout = c.stdout
 	c.execCmd.Stderr = c.stderr
 	c.name = c.execCmd.Path
 	c.done.Add(1)
+	return c, nil
+}
+
+// sorry man I just really don't wanna include error checking in all places
+// that call newcmd right now. this is an easier find & replace. besides, what
+// are the odds os.Pipe fails, these days, anyway? and do you really wanna live
+// in a world like that?
+// no, seriously; TODO.
+func newcmdPanicOnError(id CmdId, execCmd *exec.Cmd) *cmd {
+	c, err := newcmd(id, execCmd)
+	if err != nil {
+		panic(err.Error())
+	}
 	return c
 }

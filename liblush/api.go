@@ -59,14 +59,27 @@ type Ringbuffer interface {
 
 // Output stream of a command
 type OutStream interface {
-	// Send all output to this writer. Multiple writers can be hooked up and
-	// unloaded at any time. If this writer's Write returns an error it is
-	// removed from the list without affecting anything else.  Output is
-	// blocked if no writers are configured.
-	AddWriter(w io.Writer)
-	// Remove a writer previously set with AddWriter. Returns false if not set.
-	RemoveWriter(w io.Writer) bool
-	Writers() []io.Writer
+	// An output stream has one main listener it forwards all its data to. If
+	// none is set, all output the command tries to write to this stream will
+	// cause an error. Yes sir it will. When the command writes data this
+	// OutStream will call the main listener's Write method and wait for that
+	// to complete.  Does Write return an error? Then that error will be
+	// returned back to the command, nothing else; the listener is kept around.
+	SetListener(io.Writer)
+	// Return what was passed as an argument to the last call of SetListener
+	// (nil if none)
+	GetListener() io.Writer
+	// A peeker is like the main listener, except that it's a
+	// FlexibleMultiWriter, so:
+	//
+	//     * errors writing to a peeker cause the peeker to be unloaded and are
+	//       not propagated back up
+	//     * you can register more than one peeker
+	//
+	// One common point with the main listener: a peeker that hangs on its
+	// .Write method will cause the entire stream to hang. You might want
+	// something different, but that's life.
+	Peeker() *FlexibleMultiWriter
 	Scrollback() Ringbuffer
 }
 

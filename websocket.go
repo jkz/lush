@@ -93,7 +93,7 @@ func wseventSubscribe(s *server, options string) error {
 	w := newPrefixedWriter(&s.ctrlclients, []byte("stream;"+idstr+";"+streamname+";"))
 	// do not close websocket stream when command exits
 	wc := newNopWriteCloser(w)
-	stream.AddWriter(wc)
+	stream.Peeker().AddWriter(wc)
 	return nil
 }
 
@@ -121,8 +121,8 @@ func wseventNew(s *server, optionsJSON string) error {
 		return fmt.Errorf("malformed JSON: %v", err)
 	}
 	c := s.session.NewCommand(options.Cmd, options.Args...)
-	c.Stdout().AddWriter(liblush.Devnull)
-	c.Stderr().AddWriter(liblush.Devnull)
+	c.Stdout().SetListener(liblush.Devnull)
+	c.Stderr().SetListener(liblush.Devnull)
 	c.Stdout().Scrollback().Resize(options.StdoutScrollback)
 	c.Stderr().Scrollback().Resize(options.StderrScrollback)
 	c.SetName(options.Name)
@@ -314,7 +314,12 @@ func connectCmdsById(s *server, fromId, toId liblush.CmdId, streamname string) e
 	if to == nil {
 		return errors.New("unknown command in to")
 	}
-	stream.AddWriter(to.Stdin())
+	if pipedcmd(stream) != nil {
+		// not strictly necessary but makes for simpler API. service to the
+		// user! because that is how we roll. EaaS.
+		return errors.New("already connected to another command")
+	}
+	stream.SetListener(to.Stdin())
 	return nil
 }
 
@@ -324,11 +329,7 @@ func disconnectStream(stream liblush.OutStream) error {
 	if fwd == nil {
 		return errors.New("no connected command found")
 	}
-	ok := stream.RemoveWriter(fwd.Stdin())
-	if !ok {
-		// TODO: yeah so ehh well this is just not supposed to happen
-		panic("Couldn't remove forwarded stdout writer")
-	}
+	stream.SetListener(liblush.Devnull)
 	return nil
 }
 
