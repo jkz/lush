@@ -196,7 +196,17 @@ func TestCommandDeadPipe(t *testing.T) {
 	}
 	err = c1.Wait()
 	if err == nil {
-		t.Fatalf("expected error from piping echo to non-existent command")
+		// Actually, I'm getting mixed results here on different machines (even
+		// across different runs on the same machine). This is because kernel
+		// pipes are buffered. Disabling this test for now because I'm not sure
+		// how to create a deterministically reproducible test case.
+		// TODO: I'd still like to be able to connect two commands and inform
+		// the writer about errors on the reader. I'm okay with them ocurring
+		// on close(), e.g. Unfortunately using a copy of 'echo' that always
+		// explicitly closes stdout on exit, and actually checks the result,
+		// does not always cause an error either. I.e. with buffered pipes, you
+		// really can't know.
+		//t.Fatalf("expected error from piping echo to non-existent command")
 	}
 }
 
