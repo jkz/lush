@@ -265,6 +265,16 @@ define(["jquery",
         }
         var srcid = parseTrailingInteger(info.sourceId);
         var trgtid = parseTrailingInteger(info.targetId);
+        var srccmd = cmds[srcid];
+        var trgtcmd = cmds[trgtid];
+        if (srccmd === undefined || trgtcmd === undefined) {
+            throw "Illegal source id or target id";
+        }
+        if (srccmd.gid == trgtid) {
+            // TODO: Log to the user
+            console.log("circular pipes not supported by the UI");
+            return false;
+        }
         var stream = info.connection.endpoints[0].getParameter("stream");
         requestConnect(srcid, trgtid, stream, globals.ctrl);
         // if server accepts, it will generate an event that will cause binding

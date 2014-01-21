@@ -236,7 +236,6 @@ define(["jquery",
             delete cmd.stderrep;
             // todo: stdin endpoint deleted on detach, so should be detached if
             // applicable
-            $(widget.node).off('.jsplumb');
         }).one('done wasreleased', function () {
             var cmd = this;
             $(cmd).trigger('release_jsplumb');
