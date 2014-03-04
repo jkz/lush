@@ -53,6 +53,7 @@ requirejs.config({
         "jquery.terminal": ["jquery"],
         "jsPlumb": ["jquery"],
         "jquery.ui": ["jquery"],
+        "noConcurrentCalls": ["jquery"],
     },
     "waitSeconds": 100000, // i have the patience of a monk
 });

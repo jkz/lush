@@ -29,7 +29,8 @@ define(["jquery",
         "lush/Lexer",
         "lush/Parser",
         "lush/Pool",
-        "lush/utils"],
+        "lush/utils",
+        "noConcurrentCalls"],
        function ($, Ast, Cli, Command, Lexer, Parser, Pool) {
 
     test("lcp(): longest common prefix", function () {
@@ -48,7 +49,7 @@ define(["jquery",
         deepEqual("".splitn(",", 1), [""]);
         deepEqual("".splitn("", 1), []);
     });
-    
+
     test("lexer: argv", function() {
         // parsing context
         var ctx;
@@ -85,7 +86,7 @@ define(["jquery",
         t("foo \\' bar", ['foo', "'", 'bar'], 'escaped single quote');
         t("foo \\\\ bar", ['foo', "\\", 'bar'], 'escaped backslash');
     });
-    
+
     test("lexer: globbing", function() {
         // simple lexer: replace literal globbing chars by an underscore.
         // ensures that all globbing chars in the resulting argv are actually
@@ -329,7 +330,7 @@ define(["jquery",
         $(cmd).on('updated.args', function (e, name) {
             updatedArgsEventCount++;
         });
-        
+
         // Perform the update
         var oldCmdCopy = $.extend({}, cmd);
         var updata = {name: "echo 2"};
